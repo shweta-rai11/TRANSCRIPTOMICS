@@ -1,0 +1,14 @@
+module,size,cor_RA,p_RA,cor_Male,p_Male,direction
+yellow,708,0.556,1.91e-15,-0.176,0.0206,UP in RA
+turquoise,2584,0.369,6.09e-07,-0.254,0.000732,UP in RA
+red,525,0.289,0.000118,0.047,0.538,UP in RA
+grey,6019,0.161,0.0342,-0.099,0.197,UP in RA
+pink,172,0.073,0.337,-0.02,0.796,UP in RA
+tan,34,-0.097,0.204,0.09,0.241,DOWN in RA
+magenta,127,-0.156,0.0406,0.013,0.866,DOWN in RA
+black,295,-0.212,0.00512,0.14,0.0671,DOWN in RA
+greenyellow,108,-0.216,0.00423,0.087,0.257,DOWN in RA
+blue,2554,-0.286,0.000134,0.265,0.000431,DOWN in RA
+purple,120,-0.317,2.1e-05,-0.039,0.611,DOWN in RA
+green,639,-0.362,9.59e-07,-0.093,0.226,DOWN in RA
+brown,1878,-0.59,1.29e-17,0.19,0.0122,DOWN in RA

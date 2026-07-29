@@ -1,0 +1,145 @@
+Warning message:
+package ‘data.table’ was built under R version 4.4.3 
+
+==========================================================================
+STEP 1  DATA
+==========================================================================
+samples 183 | female 145 (RA 86) | male 38 (RA 17) | batches 6
+genes 15763
+NOTE: interaction power is ~1/4 of main-effect power at the same n, and the
+      male stratum contributes only 17 RA cases. Treat the count as a FLOOR.
+
+==========================================================================
+STEP 2  DIAGNOSIS x SEX INTERACTION
+==========================================================================
+  [PRIMARY qnorm + batch       ] FDR<0.05:    53 genes | with |logFC|>0.1:    53 | resid df 174
+  [sensitivity ComBat          ] FDR<0.05:   270 genes | with |logFC|>0.1:   270 | resid df 179
+  [composition-adjusted        ] FDR<0.05:     7 genes | with |logFC|>0.1:     7 | resid df 171
+                                          model                    matrix_used
+                                         <char>                         <char>
+1:       PRIMARY: qnorm + batch_full (reported) pre-ComBat quantile-normalised
+2:    sensitivity: ComBat matrix, no batch term               ComBat-corrected
+3: sensitivity: qnorm + batch + composition PCs pre-ComBat quantile-normalised
+   n_interaction_FDR05 resid_df
+                 <int>    <int>
+1:                  53      174
+2:                 270      179
+3:                   7      171
+                                                                                note
+                                                                              <char>
+1:                     conservative; batch modelled explicitly, df correctly debited
+2: INFLATED: ComBat mod = ~group+sex protects main effects only, not the interaction
+3:           tests whether the interaction survives leukocyte-composition adjustment
+
+==========================================================================
+STEP 3  WITHIN-SEX EFFECTS AND PATTERN CLASSIFICATION
+==========================================================================
+within-sex models fitted on the SAME pre-ComBat matrix and batch design as
+the interaction, so the three estimates are mutually consistent.
+
+interaction genes at FDR < 0.05 : 53
+                   pattern     N
+                    <char> <int>
+1:         MALE-restricted    35
+2:    MAGNITUDE difference    12
+3:      OPPOSITE direction     4
+4: neither sex significant     1
+5:       FEMALE-restricted     1
+of these, 7 of 53 survive leukocyte-composition adjustment (13%)
+
+top 25 interaction genes:
+        gene int_logFC int_FDR F_logFC   F_FDR M_logFC   M_FDR
+      <char>     <num>   <num>   <num>   <num>   <num>   <num>
+ 1:   ZNF800     0.750 0.00242  -0.104 2.8e-01   0.727 2.1e-05
+ 2:   BCLAF1     0.796 0.00242  -0.128 1.9e-01   0.868 1.2e-05
+ 3:   MAP4K5     1.057 0.00242  -0.144 3.1e-01   1.053 6.3e-06
+ 4:    UBXN4     0.517 0.00517   0.007 9.4e-01   0.620 2.0e-05
+ 5:     RIF1     0.829 0.00564  -0.047 7.2e-01   1.012 3.1e-06
+ 6:    RAB2A     0.419 0.00671   0.091 9.7e-02   0.534 1.4e-05
+ 7:    KDM5D    -0.472 0.01060   0.002 9.8e-01  -0.210 1.6e-01
+ 8:    PDSS1     0.573 0.03000  -0.127 1.5e-01   0.469 3.6e-04
+ 9:      SLK     0.444 0.03570   0.216 2.2e-04   0.620 2.1e-05
+10:   KLHL28     0.643 0.03610   0.238 4.3e-03   0.953 4.7e-05
+11:   ZNF398    -0.333 0.03610  -0.066 2.0e-01  -0.387 1.1e-04
+12:   PTPN22     0.585 0.03820   0.171 4.6e-02   0.893 1.2e-06
+13:    TRPM7     0.556 0.03820  -0.031 7.7e-01   0.575 2.6e-04
+14:    THOC2     0.386 0.03870  -0.189 4.7e-04   0.287 7.0e-03
+15:    KIF5B     0.379 0.03870   0.128 1.9e-02   0.607 9.5e-07
+16:   UQCRC1    -0.385 0.03870  -0.135 4.0e-03  -0.604 1.7e-04
+17: KIAA1586     0.550 0.03870   0.288 9.4e-05   0.983 8.2e-06
+18:   ATP2B1     0.407 0.03870   0.025 7.5e-01   0.397 1.4e-03
+19:     MTF2     0.403 0.03870   0.100 1.0e-01   0.601 5.8e-06
+20:    SASS6     0.451 0.03870   0.122 7.0e-02   0.658 1.7e-05
+21:      GLS     0.540 0.03870  -0.003 9.8e-01   0.635 6.1e-04
+22:    ABCD2     0.607 0.03870   0.092 3.7e-01   0.808 4.1e-05
+23:     KTN1     0.671 0.03870   0.020 8.9e-01   0.867 3.0e-05
+24:   GALNT1     0.392 0.03870   0.154 6.1e-03   0.691 1.1e-06
+25:   ZNF75A     0.376 0.03870  -0.108 2.3e-02   0.305 4.7e-02
+        gene int_logFC int_FDR F_logFC   F_FDR M_logFC   M_FDR
+      <char>     <num>   <num>   <num>   <num>   <num>   <num>
+                    pattern
+                     <char>
+ 1:         MALE-restricted
+ 2:         MALE-restricted
+ 3:         MALE-restricted
+ 4:         MALE-restricted
+ 5:         MALE-restricted
+ 6:         MALE-restricted
+ 7: neither sex significant
+ 8:         MALE-restricted
+ 9:    MAGNITUDE difference
+10:    MAGNITUDE difference
+11:         MALE-restricted
+12:    MAGNITUDE difference
+13:         MALE-restricted
+14:      OPPOSITE direction
+15:    MAGNITUDE difference
+16:    MAGNITUDE difference
+17:    MAGNITUDE difference
+18:         MALE-restricted
+19:         MALE-restricted
+20:         MALE-restricted
+21:         MALE-restricted
+22:         MALE-restricted
+23:         MALE-restricted
+24:    MAGNITUDE difference
+25:      OPPOSITE direction
+                    pattern
+                     <char>
+
+panel genes among the interaction set: 0 of 9
+  none - the panels are sex-STRATIFIED, not sex-SPECIFIC. This is the
+  expected result and must be stated plainly in the thesis: the panel genes
+  are not shown to behave differently between the sexes.
+
+==========================================================================
+STEP 4  ENRICHMENT OF THE INTERACTION GENES
+==========================================================================
+
+
+mapped 51 of 53 interaction genes to Entrez (universe 15013)
+no terms enriched at q < 0.2 - report this as a NEGATIVE result, not as
+an absence of analysis. With 53 genes the ORA is underpowered.
+Warning messages:
+1: In bitr(sig$gene, "SYMBOL", "ENTREZID", org.Hs.eg.db) :
+  3.77% of input gene IDs are fail to map...
+2: In bitr(univ, "SYMBOL", "ENTREZID", org.Hs.eg.db) :
+  4.78% of input gene IDs are fail to map...
+
+==========================================================================
+READING RULE FOR THE THESIS
+==========================================================================
+  REPORT the 53-gene interaction set from the PRIMARY model. It is the only
+  direct evidence in this project that the RA blood transcriptome differs
+  between the sexes, and it must appear in the Results.
+  DO NOT report the ComBat count (270) as the headline - it is inflated.
+  DO NOT claim the panels are sex-specific on the strength of it: the panels
+  and the interaction set are separate analyses answering separate questions.
+  DO state that interaction power is ~1/4 of main-effect power, so this is a
+  floor on the number of sex-differential genes, not an estimate of it.
+
+Wrote DEG_interaction_full.csv, DEG_interaction_significant.csv,
+DEG_interaction_patterns.csv, DEG_interaction_model_comparison.csv,
+DEG_interaction_enrichment.csv and interaction_objects.rds
+
+DONE

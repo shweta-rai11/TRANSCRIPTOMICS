@@ -1,0 +1,48 @@
+Warning messages:
+1: package ‘data.table’ was built under R version 4.4.3 
+2: package ‘ggVennDiagram’ was built under R version 4.4.3 
+3: package ‘ggplot2’ was built under R version 4.4.3 
+disease modules: yellow + brown
+  yellow      n=708   cor(ME,RA)=+0.556  ->  UP-in-RA overlap is the CONSISTENT one: YES
+  brown       n=1878  cor(ME,RA)=-0.590  ->  UP-in-RA overlap is the CONSISTENT one: NO (module is DOWN in RA)
+
+===== Female : 2238 up-in-RA / 2893 down-in-RA DEGs =====
+Coordinate system already present.
+ℹ Adding new coordinate system, which will replace the existing one.
+Coordinate system already present.
+ℹ Adding new coordinate system, which will replace the existing one.
+  yellow      cor=+0.56 | n DEG_up=595   n DEG_down=0      (consistent = up)
+Coordinate system already present.
+ℹ Adding new coordinate system, which will replace the existing one.
+Coordinate system already present.
+ℹ Adding new coordinate system, which will replace the existing one.
+  brown       cor=-0.59 | n DEG_up=0     n DEG_down=1450   (consistent = down)
+
+===== Male : 2510 up-in-RA / 3310 down-in-RA DEGs =====
+Coordinate system already present.
+ℹ Adding new coordinate system, which will replace the existing one.
+Coordinate system already present.
+ℹ Adding new coordinate system, which will replace the existing one.
+  yellow      cor=+0.56 | n DEG_up=585   n DEG_down=0      (consistent = up)
+Coordinate system already present.
+ℹ Adding new coordinate system, which will replace the existing one.
+Coordinate system already present.
+ℹ Adding new coordinate system, which will replace the existing one.
+  brown       cor=-0.59 | n DEG_up=0     n DEG_down=1494   (consistent = down)
+
+===== DIRECTION SUMMARY =====
+      sex module module_size cor_ME_RA module_direction n_overlap_up
+   <char> <char>       <int>     <num>           <char>        <int>
+1: Female yellow         708     0.556         UP in RA          595
+2: Female  brown        1878    -0.590       DOWN in RA            0
+3:   Male yellow         708     0.556         UP in RA          585
+4:   Male  brown        1878    -0.590       DOWN in RA            0
+   n_overlap_down n_consistent n_inconsistent
+            <int>        <int>          <int>
+1:              0          595              0
+2:           1450         1450              0
+3:              0          585              0
+4:           1494         1494              0
+
+A well-behaved disease module has n_consistent >> n_inconsistent.
+DONE

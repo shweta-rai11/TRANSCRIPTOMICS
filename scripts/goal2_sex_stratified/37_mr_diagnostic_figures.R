@@ -1,0 +1,133 @@
+#!/usr/bin/env Rscript
+# =============================================================================
+# 37_mr_diagnostic_figures.R  —  rebuild the MR diagnostic figures from the
+# CURRENT MR objects (data/processed/new/MR_primary_objects.rds, 16 Jul).
+#
+# WHY: the previous MR figures (fig_mr_fig4A/4B/5A/5B/6_*) were built on 15 Jul
+# from the SUPERSEDED MR29_* cache and the old hardcoded green/brown candidate
+# split. They were archived. This script regenerates them from the MR run that
+# actually produced the FS_input causal genes used throughout the thesis.
+#
+# IMPORTANT CONSTRAINT (reported honestly in the figures):
+#   Most causal genes are instrumented by a SINGLE cis-eQTL SNP (median 1).
+#   Funnel plots, leave-one-out and MR-Egger require >= 3 SNPs, so those
+#   sensitivity panels can only be drawn for the subset of genes that have them.
+#   Genes with 1 SNP are Wald-ratio estimates and cannot be interrogated this way.
+#
+# Outputs -> results/figures/current/
+#   FIG_MR_01_forest_{female,male}.png        OR + 95% CI, all causal genes
+#   FIG_MR_02_snp_support_{female,male}.png   instrument count per causal gene
+#   FIG_MR_03_funnel_{female,male}.png        funnel, genes with >=3 SNPs
+#   FIG_MR_04_leaveoneout_{female,male}.png   leave-one-out, genes with >=3 SNPs
+#   results/tables/MR_diagnostics_availability.csv
+# ---- REFERENCES -------------------------------------------------------------
+#   Hemani G, et al. eLife 2018;7:e34408. (TwoSampleMR / MR-Base)
+#   Burgess S, Butterworth A, Thompson SG. Genet Epidemiol 2013;37(7):658-665. (IVW)
+#   Bowden J, Davey Smith G, Burgess S. Int J Epidemiol 2015;44(2):512-525. (MR-Egger)
+#   Bowden J, et al. Genet Epidemiol 2016;40(4):304-314. (weighted median)
+#   Okada Y, et al. Nature 2014;506(7488):376-381. (RA GWAS outcome, ieu-a-832)
+#   Vosa U, et al. Nat Genet 2021;53(9):1300-1310. (eQTLGen cis-eQTL exposures)
+# ---------------------------------------------------------------------------
+suppressMessages({library(data.table); library(ggplot2); library(ggrepel)})
+proc <- "data/processed"; tab <- "results/tables"
+figd <- "results/figures/current"; dir.create(figd, showWarnings=FALSE, recursive=TRUE)
+
+o    <- readRDS(file.path(proc,"new","MR_primary_objects.rds"))
+prim <- as.data.table(o$primary); dat <- as.data.table(o$dat)
+fs   <- list(female=fread(file.path(tab,"FS_input_female.csv"))$gene,
+             male  =fread(file.path(tab,"FS_input_male.csv"))$gene)
+th <- theme_bw(base_size=11) + theme(panel.grid.minor=element_blank(),
+        plot.title=element_text(face="bold", size=12))
+
+## ---- instrument availability (drives what is drawable) ---------------------
+# named integer vector avoids any data.table scoping ambiguity inside j-expressions
+nsnp_tab <- dat[mr_keep==TRUE, .N, by=gene]
+nsnp_v   <- setNames(as.integer(nsnp_tab$N), nsnp_tab$gene)
+lookup_n <- function(g){ v <- as.integer(nsnp_v[g]); v[is.na(v)] <- 0L; v }
+avail <- rbindlist(lapply(names(fs), function(s){
+  d <- data.table(sex=s, gene=fs[[s]]); d[, n_snp := lookup_n(gene)]; d }))
+avail[, diagnostics_possible := fifelse(n_snp>=3, "funnel/LOO/Egger",
+                                fifelse(n_snp==2, "IVW only", "Wald ratio only"))]
+fwrite(avail, file.path(tab,"MR_diagnostics_availability.csv"))
+cat("=== instrument availability among causal genes ===\n")
+print(avail[, .N, by=.(sex, diagnostics_possible)][order(sex, -N)])
+
+for (s in names(fs)){
+  P <- prim[gene %in% fs[[s]]]
+  P[, n_snp := lookup_n(gene)]
+  P[, dirn := fifelse(OR>1, "risk (OR>1)", "protective (OR<1)")]
+
+  ## ---- FIG 1: forest of all causal genes ---------------------------------
+  Pf <- P[order(OR)]; Pf[, gene := factor(gene, levels=gene)]
+  g <- ggplot(Pf, aes(OR, gene, colour=dirn)) +
+    geom_vline(xintercept=1, linetype=2, colour="grey40") +
+    geom_errorbarh(aes(xmin=OR_lo, xmax=OR_hi), height=0, linewidth=.45) +
+    geom_point(size=1.6) + scale_x_log10() +
+    scale_colour_manual(values=c("risk (OR>1)"="#B2182B","protective (OR<1)"="#2166AC"), name=NULL) +
+    labs(title=sprintf("MR causal genes, %s (Okada 2014 RA, ieu-a-832)", s),
+         subtitle=sprintf("%d genes | primary estimate per gene (IVW > Wald > median > Egger)", nrow(Pf)),
+         x="Odds ratio for RA (log scale)", y=NULL) +
+    th + theme(axis.text.y=element_text(size=5.5), legend.position="top")
+  ggsave(file.path(figd, sprintf("FIG_MR_01_forest_%s.png", s)), g,
+         width=7.2, height=max(5, nrow(Pf)*0.13), dpi=300, limitsize=FALSE)
+
+  ## ---- FIG 2: instrument support ------------------------------------------
+  A <- avail[sex==s]
+  g2 <- ggplot(A, aes(factor(n_snp))) + geom_bar(fill="#4d9221") +
+    geom_text(stat="count", aes(label=after_stat(count)), vjust=-.35, size=3) +
+    labs(title=sprintf("Instrument support per causal gene, %s", s),
+         subtitle="Funnel / leave-one-out / MR-Egger require >= 3 SNPs",
+         x="Number of cis-eQTL instruments retained after harmonisation",
+         y="Number of genes") + th
+  ggsave(file.path(figd, sprintf("FIG_MR_02_snp_support_%s.png", s)), g2,
+         width=6.4, height=4.4, dpi=300)
+
+  ## ---- FIG 3/4: funnel + leave-one-out for genes with >=3 SNPs ------------
+  multi <- A[n_snp>=3]$gene
+  D <- dat[gene %in% multi & mr_keep==TRUE]
+  if (nrow(D) > 0){
+    D[, wald := beta.outcome/beta.exposure]
+    D[, prec := abs(beta.exposure)/se.outcome]      # instrument strength / precision
+    gf <- ggplot(D, aes(wald, prec, colour=gene)) +
+      geom_point(size=1.8, alpha=.85) +
+      geom_vline(xintercept=0, linetype=2, colour="grey45") +
+      labs(title=sprintf("Funnel plot, %s (genes with >= 3 instruments)", s),
+           subtitle=sprintf("%d genes, %d SNPs | asymmetry indicates directional pleiotropy",
+                            length(multi), nrow(D)),
+           x="SNP-specific Wald ratio (beta outcome / beta exposure)",
+           y="Instrument precision |beta exposure| / SE outcome") +
+      th + theme(legend.position=if(length(multi)<=12) "right" else "none")
+    ggsave(file.path(figd, sprintf("FIG_MR_03_funnel_%s.png", s)), gf,
+           width=7.6, height=5.4, dpi=300)
+
+    # leave-one-out: recompute IVW omitting each SNP, per gene
+    loo <- rbindlist(lapply(multi, function(gn){
+      d <- D[gene==gn]
+      rbindlist(lapply(seq_len(nrow(d)), function(i){
+        dd <- d[-i]
+        w  <- 1/(dd$se.outcome^2)
+        b  <- sum(w*dd$beta.outcome*dd$beta.exposure)/sum(w*dd$beta.exposure^2)
+        data.table(gene=gn, omitted=d$SNP[i], OR=exp(b)) }))
+    }), fill=TRUE)
+    allp <- rbindlist(lapply(multi, function(gn){
+      d <- D[gene==gn]; w <- 1/(d$se.outcome^2)
+      data.table(gene=gn, omitted="(all SNPs)",
+                 OR=exp(sum(w*d$beta.outcome*d$beta.exposure)/sum(w*d$beta.exposure^2))) }))
+    L <- rbind(loo, allp)
+    gl <- ggplot(L, aes(OR, omitted)) +
+      geom_vline(xintercept=1, linetype=2, colour="grey45") +
+      geom_point(aes(colour=omitted=="(all SNPs)"), size=1.9) +
+      scale_colour_manual(values=c(`TRUE`="#B2182B",`FALSE`="grey30"), guide="none") +
+      facet_wrap(~gene, scales="free_y") + scale_x_log10() +
+      labs(title=sprintf("Leave-one-out analysis, %s", s),
+           subtitle="Red = estimate using all SNPs. A large shift when one SNP is dropped indicates that SNP drives the result.",
+           x="IVW odds ratio omitting each SNP (log scale)", y=NULL) +
+      th + theme(axis.text.y=element_text(size=6), strip.text=element_text(size=7))
+    ggsave(file.path(figd, sprintf("FIG_MR_04_leaveoneout_%s.png", s)), gl,
+           width=9, height=max(4.5, ceiling(length(multi)/3)*2.1), dpi=300, limitsize=FALSE)
+    cat(sprintf("  %-6s : forest(%d genes), funnel+LOO(%d genes >=3 SNPs)\n",
+                s, nrow(Pf), length(multi)))
+  } else cat(sprintf("  %-6s : forest(%d genes); NO gene has >=3 SNPs -> funnel/LOO not drawable\n",
+                     s, nrow(Pf)))
+}
+cat("\nWrote MR diagnostic figures to", figd, "\n")

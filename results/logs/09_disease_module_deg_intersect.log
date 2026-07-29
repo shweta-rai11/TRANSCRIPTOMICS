@@ -1,0 +1,49 @@
+Warning messages:
+1: package ‘data.table’ was built under R version 4.4.3 
+2: package ‘ggVennDiagram’ was built under R version 4.4.3 
+3: package ‘ggplot2’ was built under R version 4.4.3 
+
+===== INPUTS =====
+WGCNA power              : 12
+genes in network         : 15763  (variance filter dropped 0)
+disease modules          : yellow + brown
+  selection rule         : |cor(ME,RA)| >= 0.50 & p < 1e-08
+disease-module genes     : 2586
+DEG cutoff in force      : |log2FC| > 0.10 & FDR < 0.05
+   module  size cor_RA     p_RA cor_Male p_Male  direction
+   <char> <int>  <num>    <num>    <num>  <num>     <char>
+1: yellow   708  0.556 1.91e-15   -0.176 0.0206   UP in RA
+2:  brown  1878 -0.590 1.29e-17    0.190 0.0122 DOWN in RA
+
+===== INTERSECTION =====
+      sex n_sig_DEG n_disease_module_genes n_candidates n_up_in_RA n_down_in_RA
+   <char>     <int>                  <int>        <int>      <int>        <int>
+1: Female      5131                   2586         2045        595         1450
+2:   Male      5820                   2586         2079        585         1494
+   DEGs_lost_to_variance_filter pct_DEG_lost            per_module
+                          <int>        <num>                <char>
+1:                            0            0 yellow=595 brown=1450
+2:                            0            0 yellow=585 brown=1494
+
+Female candidates : 2045
+Male candidates   : 2079
+shared by both    : 1773
+union             : 2351
+Coordinate system already present.
+ℹ Adding new coordinate system, which will replace the existing one.
+  wrote fig_venn_female_disease_candidates.png
+Coordinate system already present.
+ℹ Adding new coordinate system, which will replace the existing one.
+  wrote fig_venn_male_disease_candidates.png
+Coordinate system already present.
+ℹ Adding new coordinate system, which will replace the existing one.
+Coordinate system already present.
+ℹ Adding new coordinate system, which will replace the existing one.
+
+  wrote fig_disease_module_selection_composite.{png,pdf}
+Warning message:
+Vectorized input to `element_text()` is not officially supported.
+ℹ Results may be unexpected or may change in future versions of ggplot2. 
+
+Wrote candidates_{female,male}_disease.csv -> consumed by the MR step (10/11)
+DONE

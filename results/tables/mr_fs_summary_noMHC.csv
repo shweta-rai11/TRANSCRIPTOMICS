@@ -1,0 +1,3 @@
+sex,candidate_set,n_samples,n_candidates,n_lasso,n_rf,n_svmrfe,n_consensus,consensus_genes
+Female,MHC-free (FS_input_*_noMHC),145,14,6,4,7,4,CDC37; IKZF3; MED1; SMARCC2
+Male,MHC-free (FS_input_*_noMHC),38,14,10,6,9,5,MED1; NCOA5; PHF19; SMARCC2; TAB1

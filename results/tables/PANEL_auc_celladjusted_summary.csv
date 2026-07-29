@@ -1,0 +1,7 @@
+sex,dataset,n,AUC_panel,AUC_composition,delta,LRT_p,evidence_tier,perfect_separation,verdict
+Female,Train,145,0.831,0.662,0.169,1.21e-10,primary,FALSE,PANEL ADDS SIGNAL beyond composition
+Female,Internal test,61,0.721,0.714,0.007,0.00142,primary,FALSE,MARGINAL - statistically additive but AUC gain < 0.02
+Female,External blood,24,1,0.429,0.571,2.42e-05,primary,TRUE,"PANEL ADDS SIGNAL beyond composition [AUC = 1.000: perfect separation, treat as unstable]"
+Male,Train,38,0.933,0.857,0.076,5.21e-05,EXPLORATORY (underpowered),FALSE,EXPLORATORY - not interpretable at this n
+Male,Internal test,13,1,0.798,0.202,1,EXPLORATORY (underpowered),TRUE,"EXPLORATORY - not interpretable at this n [AUC = 1.000: perfect separation, treat as unstable]"
+Male,External blood,9,0.725,0.575,0.15,0.118,EXPLORATORY (underpowered),FALSE,EXPLORATORY - not interpretable at this n

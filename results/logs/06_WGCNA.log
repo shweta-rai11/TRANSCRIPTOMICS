@@ -1,0 +1,225 @@
+Warning messages:
+1: package ‘WGCNA’ was built under R version 4.4.3 
+2: package ‘data.table’ was built under R version 4.4.3 
+3: package ‘ggplot2’ was built under R version 4.4.3 
+4: package ‘igraph’ was built under R version 4.4.3 
+5: package ‘ggrepel’ was built under R version 4.4.3 
+
+==========================================================================
+STEP 0  CONFIGURATION
+==========================================================================
+cache key            : 00048f2e
+network / TOM type   : signed / signed
+variance filter      : DISABLED (all genes kept)
+correlation          : pearson (maxPOutliers = 0.05)
+disease-module rule  : |cor(ME, RA)| >= 0.50  AND  p < 1e-08
+
+==========================================================================
+STEP 1  LOAD DATA
+==========================================================================
+expression : 15763 genes x 183 samples
+groups     : RA=103  HC=80
+sex        : F=145   M=38
+
+==========================================================================
+STEP 2  QUALITY CONTROL
+==========================================================================
+goodSamplesGenes: 15763/15763 genes OK, 183/183 samples OK
+outlier cut height : 69.32  (mean + 3*sd of merge heights)
+sample outliers    : 10  -> REMOVED
+  GSM2449671, GSM2449748, GSM2449655, GSM2449732, GSM2449876, GSM2981062, GSM2981092, GSM2981125, GSM2981129, GSM2981299
+
+==========================================================================
+STEP 3  GENE FILTER
+==========================================================================
+variance filter : DISABLED (var_quantile = 0)
+  Rationale: filtering before the network permanently excludes those genes
+  from every disease module, hence from `disease-module n sex-DEG`.
+genes retained : 15763 of 15763  (dropped 0)
+final matrix   : 173 samples x 15763 genes
+
+==========================================================================
+STEP 4  TRAIT MATRIX
+==========================================================================
+       RA        HC    Female      Male RA_Female   RA_Male HC_Female   HC_Male 
+       95        78       138        35        80        15        58        20 
+
+==========================================================================
+STEP 5  SOFT-THRESHOLDING POWER
+==========================================================================
+Allowing parallel execution with up to 9 working processes.
+   Power SFT.R.sq  slope truncated.R.sq mean.k. median.k. max.k.
+1      1   0.0525   6.81          0.779 7900.00  7910.000   8190
+2      2   0.8150 -19.10          0.898 4130.00  4070.000   4820
+3      3   0.8730 -10.30          0.944 2240.00  2170.000   3060
+4      4   0.7980  -6.06          0.864 1260.00  1180.000   2050
+5      5   0.8560  -3.62          0.872  736.00   659.000   1430
+6      6   0.8610  -3.00          0.901  447.00   375.000   1110
+7      7   0.8860  -2.58          0.941  281.00   218.000    904
+8      8   0.8950  -2.30          0.958  184.00   129.000    756
+9      9   0.8970  -2.11          0.967  125.00    78.000    645
+10    10   0.9030  -1.96          0.976   87.80    47.800    558
+11    12   0.9010  -1.78          0.978   47.40    18.700    432
+12    14   0.9080  -1.69          0.982   28.20     7.790    344
+13    16   0.9090  -1.65          0.980   18.00     3.350    280
+14    18   0.9070  -1.63          0.976   12.10     1.500    231
+15    20   0.9140  -1.60          0.978    8.47     0.698    193
+scale-free fit reaches R^2 >= 0.85 : YES
+pickSoftThreshold estimate        : 3
+WGCNA FAQ table (n=173, signed)     : 12   [applies only if fit FAILS]
+POWER USED                        : 12   (mode = 12)
+  scale-free R^2 at chosen power   : 0.901
+  mean connectivity at that power  : 47.4
+   power signed_R2  slope mean_k
+1      1    -0.052   6.81 7898.9
+2      2     0.815 -19.07 4128.3
+3      3     0.873 -10.26 2240.3
+4      4     0.798  -6.06 1261.0
+5      5     0.856  -3.62  736.4
+6      6     0.861  -3.00  446.6
+7      7     0.886  -2.58  281.4
+8      8     0.895  -2.30  184.2
+9      9     0.897  -2.11  125.0
+10    10     0.903  -1.96   87.8
+11    12     0.901  -1.78   47.4
+12    14     0.908  -1.69   28.2
+13    16     0.909  -1.65   18.0
+14    18     0.907  -1.63   12.1
+15    20     0.914  -1.60    8.5
+
+==========================================================================
+STEP 6  NETWORK CONSTRUCTION
+==========================================================================
+loaded cached network (key 00048f2e)
+modules detected: 12 (plus grey = 6019 unassigned genes)
+moduleColors
+       grey   turquoise        blue       brown      yellow       green 
+       6019        2584        2554        1878         708         639 
+        red       black        pink     magenta      purple greenyellow 
+        525         295         172         127         120         108 
+        tan 
+         34 
+
+==========================================================================
+STEP 7  MODULE EIGENGENES
+==========================================================================
+eigengenes: 13 modules x 173 samples
+
+==========================================================================
+STEP 8  MODULE-TRAIT CORRELATION
+==========================================================================
+         module  size cor_RA     p_RA cor_Male   p_Male  direction
+         <char> <int>  <num>    <num>    <num>    <num>     <char>
+ 1:      yellow   708  0.556 1.91e-15   -0.176 0.020600   UP in RA
+ 2:   turquoise  2584  0.369 6.09e-07   -0.254 0.000732   UP in RA
+ 3:         red   525  0.289 1.18e-04    0.047 0.538000   UP in RA
+ 4:        grey  6019  0.161 3.42e-02   -0.099 0.197000   UP in RA
+ 5:        pink   172  0.073 3.37e-01   -0.020 0.796000   UP in RA
+ 6:         tan    34 -0.097 2.04e-01    0.090 0.241000 DOWN in RA
+ 7:     magenta   127 -0.156 4.06e-02    0.013 0.866000 DOWN in RA
+ 8:       black   295 -0.212 5.12e-03    0.140 0.067100 DOWN in RA
+ 9: greenyellow   108 -0.216 4.23e-03    0.087 0.257000 DOWN in RA
+10:        blue  2554 -0.286 1.34e-04    0.265 0.000431 DOWN in RA
+11:      purple   120 -0.317 2.10e-05   -0.039 0.611000 DOWN in RA
+12:       green   639 -0.362 9.59e-07   -0.093 0.226000 DOWN in RA
+13:       brown  1878 -0.590 1.29e-17    0.190 0.012200 DOWN in RA
+
+==========================================================================
+STEP 9  DISEASE MODULE SELECTION (data-driven)
+==========================================================================
+rule            : |cor(ME,RA)| >= 0.50 AND p < 1e-08
+DISEASE MODULES : yellow (r=+0.56, n=708) | brown (r=-0.59, n=1878)
+disease genes   : 2586
+
+==========================================================================
+STEP 10  kME AND GENE SIGNIFICANCE
+==========================================================================
+gene table: 15763 genes | in a disease module: 2586
+
+==========================================================================
+STEP 11  HUB GENES PER DISEASE MODULE
+==========================================================================
+  yellow        708 genes | hubs (|kME|>0.80 & |GS|>0.20): 217
+  brown        1878 genes | hubs (|kME|>0.80 & |GS|>0.20): 144
+
+==========================================================================
+STEP 12  ENRICHMENT OF DISEASE-MODULE GENES
+==========================================================================
+'select()' returned 1:many mapping between keys and columns
+'select()' returned 1:1 mapping between keys and columns
+Reading KEGG annotation online: "https://rest.kegg.jp/link/hsa/pathway"...
+Reading KEGG annotation online: "https://rest.kegg.jp/list/pathway/hsa"...
+GO terms (p.adj<0.05)   : 218  top: mRNA processing
+KEGG pathways (p.adj<.05): 16  top: Spliceosome
+
+==========================================================================
+STEP 13  SEX NETWORKS AND MODULE PRESERVATION
+==========================================================================
+female n=138 | male n=35  (WGCNA FAQ minimum 15, preferred >=20)
+loaded cached sex networks
+female modules: 15 | male modules: 11
+genes passing QC in BOTH sexes: 15763 / 15763
+loaded cached preservation
+         module moduleSize Zsummary   status
+         <char>      <num>    <num>   <fctr>
+ 1:        grey       1000     4.61 Moderate
+ 2:         tan         34     8.63 Moderate
+ 3: greenyellow        108    11.84   Strong
+ 4:        pink        172    16.42   Strong
+ 5:      purple        120    21.02   Strong
+ 6:     magenta        127    23.03   Strong
+ 7:       green        639    26.00   Strong
+ 8:         red        525    27.24   Strong
+ 9:        gold       1000    34.19   Strong
+10:       brown       1000    36.95   Strong
+11:       black        295    38.38   Strong
+12:        blue       1000    44.43   Strong
+13:      yellow        708    48.14   Strong
+14:   turquoise       1000    51.60   Strong
+
+==========================================================================
+STEP 14  DISEASE-MODULE  n  SEX-DEG   (the candidate step)
+==========================================================================
+DEG cutoff in force: |log2FC| > 0.10 & FDR < 0.05
+      sex n_sigDEG n_disease_genes n_candidates DEGs_lost_to_variance_filter
+   <char>    <int>           <int>        <int>                        <int>
+1: Female     5131            2586         2045                            0
+2:   Male     5820            2586         2079                            0
+   pct_DEG_lost
+          <num>
+1:            0
+2:            0
+
+Candidates written: WGCNA_11_candidates_female.csv / _male.csv
+Female n=2045 | Male n=2079 | shared=1773
+
+==========================================================================
+STEP 15  EXPORT
+==========================================================================
+wrote data/processed/wgcna_results.rds
+
+==========================================================================
+FIGURES
+==========================================================================
+Warning message:
+In int_abline(a = a, b = b, h = h, v = v, untf = untf, ...) : NaNs produced
+null device 
+          1 
+null device 
+          1 
+null device 
+          1 
+null device 
+          1 
+null device 
+          1 
+null device 
+          1 
+null device 
+          1 
+null device 
+          1 
+null device 
+          1 
+null device 
+          1 

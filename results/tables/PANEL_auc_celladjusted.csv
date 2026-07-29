@@ -1,0 +1,25 @@
+sex,dataset,model,n,n_RA,n_HC,n_panel_genes,AUC,AUC_lo,AUC_hi,CI_method,evidence_tier
+Female,Train,A panel only,145,86,59,6,0.831,0.764,0.897,DeLong,primary
+Female,Train,B composition only,145,86,59,6,0.662,0.571,0.752,DeLong,primary
+Female,Train,C panel + composition,145,86,59,6,0.828,0.761,0.895,DeLong,primary
+Female,Train,D panel residualised,145,86,59,6,0.779,0.703,0.855,DeLong,primary
+Female,Internal test,A panel only,61,36,25,6,0.721,0.585,0.857,DeLong,primary
+Female,Internal test,B composition only,61,36,25,6,0.714,0.584,0.845,DeLong,primary
+Female,Internal test,C panel + composition,61,36,25,6,0.77,0.646,0.894,DeLong,primary
+Female,Internal test,D panel residualised,61,36,25,6,0.679,0.541,0.816,DeLong,primary
+Female,External blood,A panel only,24,14,10,6,1,1,1,DeLong,primary
+Female,External blood,B composition only,24,14,10,6,0.429,0.187,0.671,DeLong,primary
+Female,External blood,C panel + composition,24,14,10,6,0.943,0.83,1,DeLong,primary
+Female,External blood,D panel residualised,24,14,10,6,0.954,0.874,1,DeLong,primary
+Male,Train,A panel only,38,17,21,6,0.933,0.847,1,DeLong,EXPLORATORY (underpowered)
+Male,Train,B composition only,38,17,21,6,0.857,0.723,0.991,DeLong,EXPLORATORY (underpowered)
+Male,Train,C panel + composition,38,17,21,6,0.924,0.839,1,DeLong,EXPLORATORY (underpowered)
+Male,Train,D panel residualised,38,17,21,6,0.734,0.555,0.913,DeLong,EXPLORATORY (underpowered)
+Male,Internal test,A panel only,13,6,7,6,1,1,1,bootstrap (n<20),EXPLORATORY (underpowered)
+Male,Internal test,B composition only,13,6,7,6,0.798,0.512,1,bootstrap (n<20),EXPLORATORY (underpowered)
+Male,Internal test,C panel + composition,13,6,7,6,0.952,0.786,1,bootstrap (n<20),EXPLORATORY (underpowered)
+Male,Internal test,D panel residualised,13,6,7,6,0.595,0.262,0.929,bootstrap (n<20),EXPLORATORY (underpowered)
+Male,External blood,A panel only,9,4,5,6,0.725,0.35,1,bootstrap (n<20),EXPLORATORY (underpowered)
+Male,External blood,B composition only,9,4,5,6,0.575,0.175,0.95,bootstrap (n<20),EXPLORATORY (underpowered)
+Male,External blood,C panel + composition,9,4,5,6,0.725,0.35,1,bootstrap (n<20),EXPLORATORY (underpowered)
+Male,External blood,D panel residualised,9,4,5,6,0.525,0.15,0.875,bootstrap (n<20),EXPLORATORY (underpowered)

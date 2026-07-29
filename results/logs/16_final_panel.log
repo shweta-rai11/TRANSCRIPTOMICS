@@ -1,0 +1,93 @@
+Warning messages:
+1: package ‘ggplot2’ was built under R version 4.4.3 
+2: package ‘lattice’ was built under R version 4.4.3 
+3: package ‘data.table’ was built under R version 4.4.3 
+Final recommended models (nested CV + locked external)...
+
+Warning messages:
+1: from glmnet C++ code (error code -99); Convergence for 99th lambda value not reached after maxit=100000 iterations; solutions for larger lambdas returned 
+2: from glmnet C++ code (error code -94); Convergence for 94th lambda value not reached after maxit=100000 iterations; solutions for larger lambdas returned 
+3: from glmnet C++ code (error code -99); Convergence for 99th lambda value not reached after maxit=100000 iterations; solutions for larger lambdas returned 
+4: from glmnet C++ code (error code -100); Convergence for 100th lambda value not reached after maxit=100000 iterations; solutions for larger lambdas returned 
+Warning messages:
+1: In lognet(x, is.sparse, y, weights, offset, alpha, nobs, nvars,  :
+  one multinomial or binomial class has fewer than 8  observations; dangerous ground
+2: In lognet(x, is.sparse, y, weights, offset, alpha, nobs, nvars,  :
+  one multinomial or binomial class has fewer than 8  observations; dangerous ground
+3: In lognet(x, is.sparse, y, weights, offset, alpha, nobs, nvars,  :
+  one multinomial or binomial class has fewer than 8  observations; dangerous ground
+
+==================  FINAL RECOMMENDED PANEL  ==================
+      sex              evidence_tier                  candidate
+   <char>                     <char>                     <char>
+1: Female                    primary MR-causal BH-FDR<0.05 (32)
+2:   Male EXPLORATORY (underpowered) MR-causal BH-FDR<0.05 (25)
+                                                                                                                                                                                                    n_train
+                                                                                                                                                                                                      <int>
+1:                                                                                                                                                                                                      145
+2:                                                                                                                                                                                                       38
+                                                                                                                                                                                                 n_internal
+                                                                                                                                                                                                      <int>
+1:                                                                                                                                                                                                       61
+2:                                                                                                                                                                                                       13
+                                                                                                                                                                                                 n_external
+                                                                                                                                                                                                      <int>
+1:                                                                                                                                                                                                       24
+2:                                                                                                                                                                                                        9
+                     nested_CV nested_per_repeat
+                        <char>            <char>
+1: 0.809 (0.738-0.879) [n=145]   0.804 +/- 0.020
+2:  0.952 (0.893-1.000) [n=38]   0.944 +/- 0.013
+                           internal_test             external_blood
+                                  <char>                     <char>
+1:            0.860 (0.768-0.952) [n=61] 0.850 (0.690-1.000) [n=24]
+2: 1.000 (1.000-1.000) [n=13] SEPARATION  0.900 (0.600-1.000) [n=9]
+                                                                                                                                                                                          median_genes_used
+                                                                                                                                                                                                      <int>
+1:                                                                                                                                                                                                       11
+2:                                                                                                                                                                                                       20
+                                                                                                                             interpretation
+                                                                                                                                     <char>
+1:                                                                                         Reportable as a diagnostic performance estimate.
+2: POWER-LIMITED. Not a validated panel. Any AUC marked SEPARATION is a perfect-separation artefact of small n, not a performance estimate.
+
+Female locked coefficients:
+       sex        term    coef alpha
+    <char>      <char>   <num> <num>
+ 1: Female (Intercept)  0.5742   0.1
+ 2: Female       WDR46 -0.1518   0.1
+ 3: Female        AIF1 -0.0451   0.1
+ 4: Female       VPS52 -0.1104   0.1
+ 5: Female        GNL1 -0.3318   0.1
+ 6: Female       VARS2  0.1901   0.1
+ 7: Female       AP4B1  0.0794   0.1
+ 8: Female      CSNK2B  0.1091   0.1
+ 9: Female        LSM2 -0.0722   0.1
+10: Female    HLA.DPA1 -0.1360   0.1
+11: Female        BRD2 -0.0910   0.1
+12: Female    C6orf136 -0.2930   0.1
+13: Female       IKZF3 -0.2005   0.1
+14: Female       NCOA5  0.1038   0.1
+15: Female        DAXX  0.0504   0.1
+16: Female       ZBTB9 -0.0244   0.1
+17: Female        MED1 -0.3980   0.1
+18: Female      INPP5B  0.0248   0.1
+19: Female      ZNF785 -0.0190   0.1
+20: Female     SMARCC2 -0.1841   0.1
+21: Female       SH2B1 -0.0824   0.1
+22: Female      LPCAT2 -0.0154   0.1
+23: Female       CDC37 -0.1029   0.1
+24: Female       ESYT1 -0.3467   0.1
+25: Female        LAX1 -0.0624   0.1
+26: Female      RETSAT -0.0577   0.1
+27: Female      FCGR2B  0.2305   0.1
+       sex        term    coef alpha
+    <char>      <char>   <num> <num>
+
+------------------  EVIDENCE TIER WARNINGS  ------------------
+  Male: EXPLORATORY - train n=38, internal n=13, external n=9.
+     Report as a power-limited exploratory analysis. Do NOT present its
+     AUCs alongside the female estimates as if they were comparable, and
+     do NOT quote any interval marked SEPARATION as a performance figure.
+
+Saved mr_final_panel_summary.csv, mr_final_coefs_bysex.csv, mr_final_objects.rds

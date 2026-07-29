@@ -1,0 +1,3 @@
+sex,evidence_tier,n,n_candidates_primary,n_candidates_noMHC,nested_AUC_primary,nested_AUC_noMHC,delta_AUC,med_genes_primary,med_genes_noMHC
+Female,primary,145,32,14,0.805 (0.735-0.875) [n=145],0.781 (0.706-0.855) [n=145],-0.024,5,3
+Male,EXPLORATORY (underpowered),38,25,14,0.796 (0.647-0.944) [n=38],0.734 (0.570-0.897) [n=38],-0.062,3,3

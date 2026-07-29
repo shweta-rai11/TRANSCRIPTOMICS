@@ -1,0 +1,3 @@
+module,size,cor_RA,p_RA,cor_Male,p_Male,direction
+yellow,708,0.556,1.91e-15,-0.176,0.0206,UP in RA
+brown,1878,-0.59,1.29e-17,0.19,0.0122,DOWN in RA

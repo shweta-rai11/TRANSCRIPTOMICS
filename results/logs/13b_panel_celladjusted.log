@@ -1,0 +1,153 @@
+Warning message:
+package ‘data.table’ was built under R version 4.4.3 
+
+==========================================================================
+STEP 1  LOAD PANELS, EXPRESSION AND CELL FRACTIONS
+==========================================================================
+panels: female 6 genes (C6orf136, ESYT1, GNL1, IKZF3, MED1, SMARCC2)
+        male   6 genes (ESYT1, HLA-DMA, INPP5B, MED1, SMARCC2, VPS52)
+datasets: Train n=183 | Internal test n=74 | External blood n=33
+
+==========================================================================
+STEP 2  COMPOSITION PCs PER DATASET
+==========================================================================
+Train           14 LM22 subsets -> 3 PCs, 62.1% of composition variance
+Internal test   15 LM22 subsets -> 3 PCs, 57.2% of composition variance
+External blood  14 LM22 subsets -> 3 PCs, 59.2% of composition variance
+
+==========================================================================
+STEP 4  PANEL vs COMPOSITION
+==========================================================================
+
+---------------- Female panel ----------------
+  [Train         ] n=145  A panel 0.831 | B composition 0.662 | C both 0.828 | D residualised 0.779
+                    DeLong p (A vs B) = 1.33e-05 | LRT p (panel beyond composition) = 1.21e-10
+  [Internal test ] n= 61  A panel 0.721 | B composition 0.714 | C both 0.770 | D residualised 0.679
+                    DeLong p (A vs B) = 0.931 | LRT p (panel beyond composition) = 0.00142
+  [External blood] n= 24  A panel 1.000 | B composition 0.429 | C both 0.943 | D residualised 0.954
+                    DeLong p (A vs B) = 3.67e-06 | LRT p (panel beyond composition) = 2.42e-05  [SEPARATION WARNING]
+
+---------------- Male panel ----------------
+  [Train         ] n= 38  A panel 0.933 | B composition 0.857 | C both 0.924 | D residualised 0.734
+                    DeLong p (A vs B) = 0.271 | LRT p (panel beyond composition) = 5.21e-05  [SEPARATION WARNING]
+  [Internal test ] n= 13  A panel 1.000 | B composition 0.798 | C both 0.952 | D residualised 0.595
+                    DeLong p (A vs B) = 0.152 | LRT p (panel beyond composition) = 1  [SEPARATION WARNING]
+  [External blood] n=  9  A panel 0.725 | B composition 0.575 | C both 0.725 | D residualised 0.525
+                    DeLong p (A vs B) = 0.491 | LRT p (panel beyond composition) = 0.118  [SEPARATION WARNING]
+Warning messages:
+1: In predict.lm(object, newdata, se.fit, scale = 1, type = if (type ==  :
+  prediction from rank-deficient fit; attr(*, "non-estim") has doubtful cases
+2: In predict.lm(object, newdata, se.fit, scale = 1, type = if (type ==  :
+  prediction from rank-deficient fit; attr(*, "non-estim") has doubtful cases
+3: In predict.lm(object, newdata, se.fit, scale = 1, type = if (type ==  :
+  prediction from rank-deficient fit; attr(*, "non-estim") has doubtful cases
+4: In predict.lm(object, newdata, se.fit, scale = 1, type = if (type ==  :
+  prediction from rank-deficient fit; attr(*, "non-estim") has doubtful cases
+5: In predict.lm(object, newdata, se.fit, scale = 1, type = if (type ==  :
+  prediction from rank-deficient fit; attr(*, "non-estim") has doubtful cases
+6: In predict.lm(object, newdata, se.fit, scale = 1, type = if (type ==  :
+  prediction from rank-deficient fit; attr(*, "non-estim") has doubtful cases
+7: In predict.lm(object, newdata, se.fit, scale = 1, type = if (type ==  :
+  prediction from rank-deficient fit; attr(*, "non-estim") has doubtful cases
+8: In predict.lm(object, newdata, se.fit, scale = 1, type = if (type ==  :
+  prediction from rank-deficient fit; attr(*, "non-estim") has doubtful cases
+9: In predict.lm(object, newdata, se.fit, scale = 1, type = if (type ==  :
+  prediction from rank-deficient fit; attr(*, "non-estim") has doubtful cases
+
+==========================================================================
+STEP 5  VERDICT
+==========================================================================
+Index: <perfect_separation>
+      sex        dataset     n AUC_panel AUC_composition delta    LRT_p
+   <char>         <char> <int>     <num>           <num> <num>    <num>
+1: Female          Train   145     0.831           0.662 0.169 1.21e-10
+2: Female  Internal test    61     0.721           0.714 0.007 1.42e-03
+3: Female External blood    24     1.000           0.429 0.571 2.42e-05
+4:   Male          Train    38     0.933           0.857 0.076 5.21e-05
+5:   Male  Internal test    13     1.000           0.798 0.202 1.00e+00
+6:   Male External blood     9     0.725           0.575 0.150 1.18e-01
+                evidence_tier perfect_separation
+                       <char>             <lgcl>
+1:                    primary              FALSE
+2:                    primary              FALSE
+3:                    primary               TRUE
+4: EXPLORATORY (underpowered)              FALSE
+5: EXPLORATORY (underpowered)               TRUE
+6: EXPLORATORY (underpowered)              FALSE
+                                                                                          verdict
+                                                                                           <char>
+1:                                                           PANEL ADDS SIGNAL beyond composition
+2:                                          MARGINAL - statistically additive but AUC gain < 0.02
+3:      PANEL ADDS SIGNAL beyond composition [AUC = 1.000: perfect separation, treat as unstable]
+4:                                                      EXPLORATORY - not interpretable at this n
+5: EXPLORATORY - not interpretable at this n [AUC = 1.000: perfect separation, treat as unstable]
+6:                                                      EXPLORATORY - not interpretable at this n
+
+---- full AUC table ----
+       sex        dataset                 model     n   AUC AUC_lo AUC_hi
+    <char>         <char>                <char> <int> <num>  <num>  <num>
+ 1: Female          Train          A panel only   145 0.831  0.764  0.897
+ 2: Female          Train    B composition only   145 0.662  0.571  0.752
+ 3: Female          Train C panel + composition   145 0.828  0.761  0.895
+ 4: Female          Train  D panel residualised   145 0.779  0.703  0.855
+ 5: Female  Internal test          A panel only    61 0.721  0.585  0.857
+ 6: Female  Internal test    B composition only    61 0.714  0.584  0.845
+ 7: Female  Internal test C panel + composition    61 0.770  0.646  0.894
+ 8: Female  Internal test  D panel residualised    61 0.679  0.541  0.816
+ 9: Female External blood          A panel only    24 1.000  1.000  1.000
+10: Female External blood    B composition only    24 0.429  0.187  0.671
+11: Female External blood C panel + composition    24 0.943  0.830  1.000
+12: Female External blood  D panel residualised    24 0.954  0.874  1.000
+13:   Male          Train          A panel only    38 0.933  0.847  1.000
+14:   Male          Train    B composition only    38 0.857  0.723  0.991
+15:   Male          Train C panel + composition    38 0.924  0.839  1.000
+16:   Male          Train  D panel residualised    38 0.734  0.555  0.913
+17:   Male  Internal test          A panel only    13 1.000  1.000  1.000
+18:   Male  Internal test    B composition only    13 0.798  0.512  1.000
+19:   Male  Internal test C panel + composition    13 0.952  0.786  1.000
+20:   Male  Internal test  D panel residualised    13 0.595  0.262  0.929
+21:   Male External blood          A panel only     9 0.725  0.350  1.000
+22:   Male External blood    B composition only     9 0.575  0.175  0.950
+23:   Male External blood C panel + composition     9 0.725  0.350  1.000
+24:   Male External blood  D panel residualised     9 0.525  0.150  0.875
+       sex        dataset                 model     n   AUC AUC_lo AUC_hi
+    <char>         <char>                <char> <int> <num>  <num>  <num>
+           CI_method              evidence_tier
+              <char>                     <char>
+ 1:           DeLong                    primary
+ 2:           DeLong                    primary
+ 3:           DeLong                    primary
+ 4:           DeLong                    primary
+ 5:           DeLong                    primary
+ 6:           DeLong                    primary
+ 7:           DeLong                    primary
+ 8:           DeLong                    primary
+ 9:           DeLong                    primary
+10:           DeLong                    primary
+11:           DeLong                    primary
+12:           DeLong                    primary
+13:           DeLong EXPLORATORY (underpowered)
+14:           DeLong EXPLORATORY (underpowered)
+15:           DeLong EXPLORATORY (underpowered)
+16:           DeLong EXPLORATORY (underpowered)
+17: bootstrap (n<20) EXPLORATORY (underpowered)
+18: bootstrap (n<20) EXPLORATORY (underpowered)
+19: bootstrap (n<20) EXPLORATORY (underpowered)
+20: bootstrap (n<20) EXPLORATORY (underpowered)
+21: bootstrap (n<20) EXPLORATORY (underpowered)
+22: bootstrap (n<20) EXPLORATORY (underpowered)
+23: bootstrap (n<20) EXPLORATORY (underpowered)
+24: bootstrap (n<20) EXPLORATORY (underpowered)
+           CI_method              evidence_tier
+              <char>                     <char>
+
+READING RULE FOR THE THESIS
+  Model A (panel only) may no longer be reported on its own. Every panel AUC
+  must be accompanied by model B, the composition-only benchmark, and by the
+  LRT of C against B. A panel that does not beat B is a white-cell count.
+  Every Male row is EXPLORATORY: n = 38/13/9 cannot support a diagnostic claim.
+
+Wrote PANEL_auc_celladjusted.csv, PANEL_incremental_value_LRT.csv,
+PANEL_auc_celladjusted_summary.csv and panel_celladjusted_objects.rds
+
+DONE

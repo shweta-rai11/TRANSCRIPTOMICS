@@ -1,0 +1,49 @@
+# =============================================================================
+# .gitignore — sex-stratified RA biomarker pipeline
+#
+# WHAT IS TRACKED: all code, all documentation, all results TABLES and FIGURES.
+# A reader can therefore see every reported number and every figure, and can tie
+# each one to the exact script version that produced it.
+#
+# WHAT IS NOT TRACKED: large binary intermediates and raw expression matrices.
+# These are regenerable from the scripts, and several exceed GitHub's file-size
+# limits. The cached network-derived artefacts (MR instruments, coloc regions)
+# are the exception that matters for reproducibility — see REPRODUCIBILITY.md
+# section 3 — and they must be archived alongside a release rather than in git.
+# =============================================================================
+
+# ---- raw data (symlink to a sibling tree; not self-contained) ----------------
+data/raw/
+
+# ---- large binary intermediates (regenerable) --------------------------------
+*.rds
+*.RData
+*.rda
+*.csv.gz
+
+# ---- raw expression matrices at the repository root (15-34 MB each) ----------
+GSE73622_expression_matrix.csv
+GSE73622_Exprs_annotated.csv
+GSE73622_probe_annotation.csv
+GSE73622_sample_metadata.csv
+
+# ---- oversized derived tables ------------------------------------------------
+# Per-gene full DE tables and instrument tables run to tens of MB. The
+# significant/summary versions ARE tracked.
+results/tables/*_full.csv
+results/tables/MR_*_TABLE1_instruments.csv
+results/tables/DEG_interaction_full.csv
+results/tables/DEG_celladjusted_*.csv
+
+# ---- run artefacts -----------------------------------------------------------
+results/logs/*.pid
+.Rhistory
+.RData
+.Rproj.user/
+renv/library/
+renv/staging/
+
+# ---- OS / editor -------------------------------------------------------------
+.DS_Store
+*~
+.Rproj.user
