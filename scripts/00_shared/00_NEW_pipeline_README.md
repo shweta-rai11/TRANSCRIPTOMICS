@@ -57,6 +57,7 @@ is not evidence of causality, and the pipeline no longer says it is.
 | 10 | `10_MR.R` | two-sample MR: eQTLGen cis-eQTL → Okada RA, within-stratum FDR | `FS_input_{female,male}.csv` |
 | **10c** | `10c_MR_mhc_sensitivity.R` | **MHC-excluded re-run of the whole MR** (offline, from the `10_MR.R` cache) | `MR_MHC_sensitivity_*.csv`, `FS_input_*_noMHC.csv` |
 | **10d** | `10d_coloc_panel_genes.R` | **colocalisation (coloc.abf, two priors) for every prioritised gene** | `COLOC_results.csv`, `COLOC_panel_genes.csv` |
+| **10e** | `10e_coloc_susie_mhc.R` | **multi-causal-variant colocalisation (coloc.susie) for the MHC**, where coloc.abf's assumption fails | `COLOC_SUSIE_mhc.csv`, `COLOC_combined_abf_susie.csv` |
 | 30 | `30_methodology_flowchart.R` | methods flowchart | `fig_methodology_flowchart` |
 
 ---
@@ -85,6 +86,7 @@ is not evidence of causality, and the pipeline no longer says it is.
 | 16 | `16_model_training_final_panel.R` | locked final models, **with evidence tiers** | `mr_final_panel_summary.csv` |
 | 16b | `16b_model_training_final_panel_noMHC.R` | **primary vs MHC-free, head-to-head under nested CV** | `PANEL_primary_vs_noMHC_{nestedcv,delong,performance}.csv` |
 | 16c | `16c_model_training_nested_cv_transcriptomewide.R` | transcriptome-wide LASSO baseline (no MR prior) | `fig_nested_cv_roc` |
+| **16d** | `16d_nested_cv_reconciliation.R` | **the ONE authoritative nested-CV table** — every candidate-set x selector variant, one process, one seed policy | `NESTED_CV_AUTHORITATIVE.csv`, `NESTED_CV_legacy_reconciliation.csv` |
 
 ### Stage 4 + 5 — INTERNAL TESTING (BLOOD) and EXTERNAL TESTING (BLOOD)
 
@@ -169,6 +171,7 @@ Report both. Do not quietly substitute one for the other.
 ## Reporting rules (non-negotiable)
 
 1. **"MR-prioritised", never "MR-causal".** No gene survives colocalisation.
+0. **Cite `NESTED_CV_AUTHORITATIVE.csv` for every nested-CV figure.** Nothing else. The recommended row is `noMHC` x `consensus`.
 2. Every panel AUC is reported with its **composition-only benchmark** and the
    LRT of panel+composition against composition alone.
 3. The **male arm is EXPLORATORY** in every table, figure and sentence. Never
@@ -189,11 +192,8 @@ Report both. Do not quietly substitute one for the other.
 - `results/README_GOALS.md`, `results/FIGURE_PROVENANCE.md`,
   `scripts/build_figure_provenance.py` and `scripts/AUDIT_independent_checks.R`
   are referenced in places but **do not exist** in this tree.
-- `14_model_training_nested_cv.R:148` hard-codes `flat_train_CV_AUC` from a
-  superseded run, and that value is written into `mr_nested_cv_summary.csv`.
-- `mr_nested_cv_summary.csv` and `mr_final_panel_summary.csv` report different
-  nested-CV AUCs from different scripts, unreconciled.
 - `data/raw` is a **symlink** outside the project; the tree is not self-contained.
 - No medication or disease-activity adjustment.
-- MHC colocalisation needs `coloc.susie` (multiple causal variants) to be done
-  properly; `coloc.abf` cannot settle it either way.
+- MHC colocalisation is only partly settled: `coloc.susie` (`10e`) resolved 3 of
+  14 genes; the other 11 need in-sample LD, which is not released by eQTLGen or
+  Okada.

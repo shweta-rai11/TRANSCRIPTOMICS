@@ -10,12 +10,22 @@
 #   That question has to be asked at two levels, because they answer different
 #   things and only one of them is honest about selection bias:
 #
-#   (1) PROCEDURE level - NESTED CV. The whole pipeline (three selectors +
-#       3-method consensus + logistic model) is re-run inside every outer
-#       training fold, once starting from the MHC-retained candidate set and
-#       once from the MHC-free set. The held-out fold is never seen during
-#       selection. This is the leakage-free comparison and it is the one to
-#       report. It compares two PROCEDURES, not two fixed gene lists.
+#   (1) PROCEDURE level - NESTED CV. Read from NESTED_CV_AUTHORITATIVE.csv,
+#       produced by 16d_nested_cv_reconciliation.R.
+#
+#       **This script no longer computes nested CV itself.** It used to, and that
+#       was a mistake: it was the THIRD implementation of the same procedure in
+#       this repository, and it disagreed with the other two - male AUC 0.796
+#       against 0.896 from 14_model_training_nested_cv.R, a gap of 0.100 on 38
+#       samples. 16d re-runs every variant in one process under one seed policy
+#       and reproduces script 14 EXACTLY (0.816 female, 0.896 male), which
+#       corroborates the engine against an independently-written older script and
+#       identifies this script's duplicate loop as the outlier.
+#
+#       The fix is deletion, not repair. Three implementations of one procedure
+#       is the defect; finding which line differed would only have left three
+#       implementations that happened to agree today. Nested CV now has exactly
+#       one implementation (16d) and one output table.
 #
 #   (2) PANEL level - LOCKED MODEL. The fixed consensus panels from 12 and 12b
 #       are trained once on the full training set and applied unchanged to the
@@ -157,94 +167,71 @@ select_infold <- function(X, y) {
 }
 
 # =============================================================================
-# STEP 3 — NESTED CV: PROCEDURE-LEVEL COMPARISON (the honest one)
+# STEP 3 — NESTED CV: READ THE AUTHORITATIVE TABLE (do not recompute)
 # =============================================================================
-hdr("STEP 3  NESTED CV - PROCEDURE-LEVEL COMPARISON")
+hdr("STEP 3  NESTED CV - FROM NESTED_CV_AUTHORITATIVE.csv (16d)")
+auth_path <- file.path(tab, "NESTED_CV_AUTHORITATIVE.csv")
+if (!file.exists(auth_path))
+  stop("Missing ", auth_path, " - run 16d_nested_cv_reconciliation.R first.")
+auth <- fread(auth_path)
 
-run_nested <- function(genes, sx, kfold, repeats, label) {
-  genes <- unique(genes[genes %in% rownames(expr)])
-  cols <- meta$sample[meta$sex == sx]
-  X0 <- t(expr[genes, cols, drop = FALSE]); colnames(X0) <- make.names(genes)
-  y <- factor(meta$group[match(cols, meta$sample)], levels = c("HC", "RA"))
-  preds <- list(); nsel <- integer(0)
-  for (rp in seq_len(repeats)) {
-    set.seed(1000 + rp)
-    folds <- createFolds(y, k = kfold, returnTrain = FALSE)
-    rp_pred <- data.table()
-    for (fi in seq_along(folds)) {
-      te <- folds[[fi]]; tr <- setdiff(seq_along(y), te)
-      if (length(unique(y[tr])) < 2) next
-      Xtr <- X0[tr, , drop = FALSE]; Xte <- X0[te, , drop = FALSE]
-      P <- select_infold(Xtr, y[tr]); nsel <- c(nsel, length(P))
-      mu <- colMeans(Xtr[, P, drop = FALSE])
-      sg <- apply(Xtr[, P, drop = FALSE], 2, sd); sg[sg == 0 | is.na(sg)] <- 1
-      Ztr <- scale(Xtr[, P, drop = FALSE], center = mu, scale = sg)
-      Zte <- scale(Xte[, P, drop = FALSE], center = mu, scale = sg)
-      fit <- suppressWarnings(glm(y[tr] ~ ., data = data.frame(y = y[tr], Ztr,
-                                                              check.names = FALSE),
-                                  family = binomial))
-      p <- as.numeric(predict(fit, newdata = data.frame(Zte, check.names = FALSE),
-                              type = "response"))
-      rp_pred <- rbind(rp_pred, data.table(sample = rownames(Xte), prob = p, obs = y[te]))
-    }
-    preds[[rp]] <- rp_pred
-  }
-  agg <- rbindlist(preds)[, .(prob = mean(prob), obs = obs[1]), by = sample]
-  ro <- roc(agg$obs, agg$prob, levels = c("HC", "RA"), direction = "<", quiet = TRUE)
-  a <- auc_ci(ro)
-  say("  [%-8s %s] nested-CV AUC = %s | median genes used %d",
-      label, sx, fmt(a, length(y)), as.integer(median(nsel)))
-  list(roc = ro, auc = a, agg = agg, n = length(y), med = as.integer(median(nsel)))
-}
-
-nested <- list()
-for (v in c("primary", "noMHC")) {
-  nested[[v]] <- list(
-    F = run_nested(cand[[v]]$F, "F", 10, 5, v),
-    M = run_nested(cand[[v]]$M, "M", 5, 10, v))
-}
-
-nest_tab <- rbindlist(lapply(c("F", "M"), function(sx) {
-  sexlab <- if (sx == "F") "Female" else "Male"
+pick <- function(sexlab, cs) auth[sex == sexlab & candidate_set == cs & selector == "consensus"]
+nest_tab <- rbindlist(lapply(c("Female", "Male"), function(sexlab) {
+  a <- pick(sexlab, "primary"); b <- pick(sexlab, "noMHC")
+  sx <- if (sexlab == "Female") "F" else "M"
   data.table(
     sex = sexlab,
-    evidence_tier = if (sx == "M") "EXPLORATORY (underpowered)" else "primary",
-    n = nested$primary[[sx]]$n,
+    evidence_tier = a$evidence_tier,
+    n = a$n,
     n_candidates_primary = length(cand$primary[[sx]]),
     n_candidates_noMHC   = length(cand$noMHC[[sx]]),
-    nested_AUC_primary = fmt(nested$primary[[sx]]$auc, nested$primary[[sx]]$n),
-    nested_AUC_noMHC   = fmt(nested$noMHC[[sx]]$auc,   nested$noMHC[[sx]]$n),
-    delta_AUC = round(nested$noMHC[[sx]]$auc[1] - nested$primary[[sx]]$auc[1], 3),
-    med_genes_primary = nested$primary[[sx]]$med,
-    med_genes_noMHC   = nested$noMHC[[sx]]$med)
+    nested_AUC_primary = sprintf("%.3f (%.3f-%.3f)", a$nested_AUC, a$CI_lo, a$CI_hi),
+    nested_AUC_noMHC   = sprintf("%.3f (%.3f-%.3f)", b$nested_AUC, b$CI_lo, b$CI_hi),
+    delta_AUC = round(b$nested_AUC - a$nested_AUC, 3),
+    per_repeat_sd_primary = a$per_repeat_sd,
+    per_repeat_sd_noMHC   = b$per_repeat_sd,
+    med_genes_primary = a$median_genes_used,
+    med_genes_noMHC   = b$median_genes_used,
+    source = "16d_nested_cv_reconciliation.R (single authoritative implementation)")
 }))
 fwrite(nest_tab, file.path(tab, "PANEL_primary_vs_noMHC_nestedcv.csv"))
 print(nest_tab[, .(sex, n, nested_AUC_primary, nested_AUC_noMHC, delta_AUC)])
 
-# DeLong on the paired pooled out-of-fold predictions
-delong_rows <- lapply(c("F", "M"), function(sx) {
-  a <- nested$primary[[sx]]$agg; b <- nested$noMHC[[sx]]$agg
-  m <- merge(a, b, by = "sample", suffixes = c("_pri", "_no"))
-  r1 <- roc(m$obs_pri, m$prob_pri, levels = c("HC", "RA"), direction = "<", quiet = TRUE)
-  r2 <- roc(m$obs_pri, m$prob_no,  levels = c("HC", "RA"), direction = "<", quiet = TRUE)
-  p <- tryCatch(suppressWarnings(roc.test(r1, r2, method = "delong", paired = TRUE)$p.value),
-                error = function(e) NA_real_)
-  data.table(sex = if (sx == "F") "Female" else "Male",
-             comparison = "nested CV: primary vs MHC-free",
-             AUC_primary = round(as.numeric(auc(r1)), 3),
-             AUC_noMHC = round(as.numeric(auc(r2)), 3),
-             delong_p = signif(p, 3),
-             verdict = fifelse(is.na(p), "indeterminate",
-                        fifelse(p >= 0.05,
-                                "NO significant difference - MHC removal costs nothing detectable",
-                                fifelse(as.numeric(auc(r2)) < as.numeric(auc(r1)),
-                                        "MHC-free panel significantly WORSE",
-                                        "MHC-free panel significantly BETTER"))))
-})
-delong_tab <- rbindlist(delong_rows)
-fwrite(delong_tab, file.path(tab, "PANEL_primary_vs_noMHC_delong.csv"))
-say("")
-print(delong_tab)
+# The DeLong test needs paired per-sample predictions, which live in 16d's
+# saved object. If it is present, use it; otherwise say so rather than guess.
+delong_tab <- NULL
+auth_rds <- file.path(procN, "nested_cv_authoritative.rds")
+if (file.exists(auth_rds)) {
+  A <- readRDS(auth_rds)
+  delong_tab <- rbindlist(lapply(c("F", "M"), function(sx) {
+    ra <- A$results[[paste("primary consensus", sx)]]
+    rb <- A$results[[paste("noMHC consensus",   sx)]]
+    if (is.null(ra) || is.null(rb)) return(NULL)
+    m <- merge(ra$agg, rb$agg, by = "sample", suffixes = c("_pri", "_no"))
+    r1 <- roc(m$obs_pri, m$prob_pri, levels = c("HC", "RA"), direction = "<", quiet = TRUE)
+    r2 <- roc(m$obs_pri, m$prob_no,  levels = c("HC", "RA"), direction = "<", quiet = TRUE)
+    p <- tryCatch(suppressWarnings(roc.test(r1, r2, method = "delong",
+                                            paired = TRUE)$p.value),
+                  error = function(e) NA_real_)
+    data.table(sex = if (sx == "F") "Female" else "Male",
+               comparison = "nested CV: primary vs MHC-free (consensus selector)",
+               AUC_primary = round(as.numeric(auc(r1)), 3),
+               AUC_noMHC   = round(as.numeric(auc(r2)), 3),
+               delong_p = signif(p, 3),
+               verdict = fifelse(is.na(p), "indeterminate",
+                          fifelse(p >= 0.05,
+                            "NO significant difference - MHC removal costs nothing detectable",
+                          fifelse(as.numeric(auc(r2)) < as.numeric(auc(r1)),
+                            "MHC-free panel significantly WORSE",
+                            "MHC-free panel significantly BETTER"))))
+  }))
+  if (!is.null(delong_tab) && nrow(delong_tab)) {
+    fwrite(delong_tab, file.path(tab, "PANEL_primary_vs_noMHC_delong.csv"))
+    say(""); print(delong_tab)
+  }
+} else {
+  say("nested_cv_authoritative.rds absent - DeLong comparison skipped.")
+}
 
 # =============================================================================
 # STEP 4 — LOCKED PANELS APPLIED TO HELD-OUT DATA
@@ -304,7 +291,7 @@ perf_tab <- rbindlist(rows)
 fwrite(perf_tab, file.path(tab, "PANEL_primary_vs_noMHC_performance.csv"))
 print(perf_tab[, .(sex, panel, dataset, n, reported, evidence_tier)])
 
-saveRDS(list(nested = nested, nested_tab = nest_tab, delong = delong_tab,
+saveRDS(list(nested_tab = nest_tab, delong = delong_tab,
              performance = perf_tab, panels = panel, candidates = cand),
         file.path(procN, "panel_noMHC_objects.rds"))
 
@@ -312,6 +299,7 @@ saveRDS(list(nested = nested, nested_tab = nest_tab, delong = delong_tab,
 # STEP 5 — VERDICT
 # =============================================================================
 hdr("STEP 5  VERDICT")
+if (is.null(delong_tab)) delong_tab <- data.table()
 for (i in seq_len(nrow(delong_tab))) {
   d <- delong_tab[i]
   say("%s: nested-CV AUC %.3f (primary) vs %.3f (MHC-free), DeLong p = %s",
@@ -320,7 +308,9 @@ for (i in seq_len(nrow(delong_tab))) {
 }
 say("")
 say("READING RULE FOR THE THESIS")
-say("  Report the NESTED-CV comparison, not the locked-panel training numbers.")
+say("  CITE NESTED_CV_AUTHORITATIVE.csv for every nested-CV figure. This script")
+  say("  reads it; it does not recompute it. There is one implementation (16d).")
+  say("  Report the NESTED-CV comparison, not the locked-panel training numbers.")
 say("  The nested comparison is between two PROCEDURES and is leakage-free; the")
 say("  locked 'Train (apparent)' rows are optimistic by construction and are")
 say("  labelled as such in the output.")

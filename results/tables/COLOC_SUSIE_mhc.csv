@@ -1,0 +1,15 @@
+gene,n_snps,n_cs_eqtl,n_cs_gwas,status,n_pairs,best_PP_H3,best_PP_H4,max_PP_H4_any_pair,susie_verdict,in_panel
+WDR46,422,1,9,ok,9,0.082,0.918,0.918,COLOCALISED with an RA signal (multi-variant model),FALSE
+HLA-DMA,432,3,9,ok,27,0.569,0.323,0.323,INCONCLUSIVE under the multi-variant model,TRUE
+GNL1,424,1,10,ok,10,1,0,0,DISTINCT VARIANTS (valid: multiple signals modelled),TRUE
+HLA-DRB1,432,0,9,SuSiE found no credible set in one or both traits,,,,,NOT RESOLVABLE - SuSiE found no credible set in one or both traits,FALSE
+C6orf136,421,1,0,SuSiE found no credible set in one or both traits,,,,,NOT RESOLVABLE - SuSiE found no credible set in one or both traits,TRUE
+ZBTB9,442,0,0,SuSiE found no credible set in one or both traits,,,,,NOT RESOLVABLE - SuSiE found no credible set in one or both traits,FALSE
+VPS52,422,1,0,SuSiE found no credible set in one or both traits,,,,,NOT RESOLVABLE - SuSiE found no credible set in one or both traits,TRUE
+CSNK2B,435,0,10,SuSiE found no credible set in one or both traits,,,,,NOT RESOLVABLE - SuSiE found no credible set in one or both traits,FALSE
+AIF1,437,0,10,SuSiE found no credible set in one or both traits,,,,,NOT RESOLVABLE - SuSiE found no credible set in one or both traits,FALSE
+LSM2,435,0,10,SuSiE found no credible set in one or both traits,,,,,NOT RESOLVABLE - SuSiE found no credible set in one or both traits,FALSE
+BRD2,439,0,10,SuSiE found no credible set in one or both traits,,,,,NOT RESOLVABLE - SuSiE found no credible set in one or both traits,FALSE
+DAXX,417,0,10,SuSiE found no credible set in one or both traits,,,,,NOT RESOLVABLE - SuSiE found no credible set in one or both traits,FALSE
+VARS2,442,0,10,SuSiE found no credible set in one or both traits,,,,,NOT RESOLVABLE - SuSiE found no credible set in one or both traits,FALSE
+HLA-DPA1,438,0,10,SuSiE found no credible set in one or both traits,,,,,NOT RESOLVABLE - SuSiE found no credible set in one or both traits,FALSE

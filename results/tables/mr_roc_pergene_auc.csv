@@ -1,0 +1,37 @@
+sex,dataset,gene,present,AUC,AUC_lo,AUC_hi,concordant
+Female,Train,C6orf136,TRUE,0.784,0.707,0.862,TRUE
+Female,Train,ESYT1,TRUE,0.81,0.741,0.879,TRUE
+Female,Train,GNL1,TRUE,0.765,0.689,0.842,TRUE
+Female,Train,IKZF3,TRUE,0.738,0.658,0.819,TRUE
+Female,Train,MED1,TRUE,0.793,0.718,0.868,TRUE
+Female,Train,SMARCC2,TRUE,0.795,0.721,0.868,TRUE
+Female,Internal test,C6orf136,TRUE,0.804,0.691,0.918,TRUE
+Female,Internal test,ESYT1,TRUE,0.8,0.691,0.909,TRUE
+Female,Internal test,GNL1,TRUE,0.593,0.443,0.743,TRUE
+Female,Internal test,IKZF3,TRUE,0.66,0.518,0.802,TRUE
+Female,Internal test,MED1,TRUE,0.713,0.582,0.845,TRUE
+Female,Internal test,SMARCC2,TRUE,0.837,0.731,0.942,TRUE
+Female,External blood,C6orf136,TRUE,0.964,0.89,1,TRUE
+Female,External blood,ESYT1,TRUE,0.836,0.663,1,TRUE
+Female,External blood,GNL1,TRUE,0.7,0.479,0.921,TRUE
+Female,External blood,IKZF3,TRUE,0.521,0.277,0.765,TRUE
+Female,External blood,MED1,TRUE,0.586,0.337,0.835,TRUE
+Female,External blood,SMARCC2,TRUE,0.657,0.432,0.882,TRUE
+Male,Train,ESYT1,TRUE,0.938,0.863,1,TRUE
+Male,Train,HLA-DMA,TRUE,0.927,0.849,1,TRUE
+Male,Train,INPP5B,TRUE,0.812,0.678,0.946,TRUE
+Male,Train,MED1,TRUE,0.863,0.727,0.999,TRUE
+Male,Train,SMARCC2,TRUE,0.938,0.869,1,TRUE
+Male,Train,VPS52,TRUE,0.877,0.771,0.982,TRUE
+Male,Internal test,ESYT1,TRUE,1,1,1,TRUE
+Male,Internal test,HLA-DMA,TRUE,0.952,0.81,1,TRUE
+Male,Internal test,INPP5B,TRUE,0.952,0.81,1,TRUE
+Male,Internal test,MED1,TRUE,0.976,0.857,1,TRUE
+Male,Internal test,SMARCC2,TRUE,1,1,1,TRUE
+Male,Internal test,VPS52,TRUE,1,1,1,TRUE
+Male,External blood,ESYT1,TRUE,0.7,0.25,1,TRUE
+Male,External blood,HLA-DMA,TRUE,0.975,0.85,1,TRUE
+Male,External blood,INPP5B,TRUE,0.55,0,1,TRUE
+Male,External blood,MED1,TRUE,0.35,0,0.8,FALSE
+Male,External blood,SMARCC2,TRUE,0.6,0.1,1,TRUE
+Male,External blood,VPS52,TRUE,0.35,0,0.8,FALSE

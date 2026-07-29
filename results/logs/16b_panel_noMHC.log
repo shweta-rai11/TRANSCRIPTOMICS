@@ -13,30 +13,21 @@ noMHC    F : 14 candidates -> 4-gene panel (CDC37, IKZF3, MED1, SMARCC2)
 noMHC    M : 14 candidates -> 5-gene panel (MED1, NCOA5, PHF19, SMARCC2, TAB1)
 
 ==========================================================================
-STEP 3  NESTED CV - PROCEDURE-LEVEL COMPARISON
+STEP 3  NESTED CV - FROM NESTED_CV_AUTHORITATIVE.csv (16d)
 ==========================================================================
-  [primary  F] nested-CV AUC = 0.805 (0.735-0.875) [n=145] | median genes used 5
-  [primary  M] nested-CV AUC = 0.796 (0.647-0.944) [n=38] | median genes used 3
-  [noMHC    F] nested-CV AUC = 0.781 (0.706-0.855) [n=145] | median genes used 3
-  [noMHC    M] nested-CV AUC = 0.734 (0.570-0.897) [n=38] | median genes used 3
-Warning messages:
-1: from glmnet C++ code (error code -94); Convergence for 94th lambda value not reached after maxit=100000 iterations; solutions for larger lambdas returned 
-2: from glmnet C++ code (error code -97); Convergence for 97th lambda value not reached after maxit=100000 iterations; solutions for larger lambdas returned 
-3: from glmnet C++ code (error code -95); Convergence for 95th lambda value not reached after maxit=100000 iterations; solutions for larger lambdas returned 
-4: from glmnet C++ code (error code -95); Convergence for 95th lambda value not reached after maxit=100000 iterations; solutions for larger lambdas returned 
-      sex     n          nested_AUC_primary            nested_AUC_noMHC
-   <char> <int>                      <char>                      <char>
-1: Female   145 0.805 (0.735-0.875) [n=145] 0.781 (0.706-0.855) [n=145]
-2:   Male    38  0.796 (0.647-0.944) [n=38]  0.734 (0.570-0.897) [n=38]
-   delta_AUC
-       <num>
-1:    -0.024
-2:    -0.062
+      sex     n  nested_AUC_primary    nested_AUC_noMHC delta_AUC
+   <char> <int>              <char>              <char>     <num>
+1: Female   145 0.816 (0.747-0.884) 0.798 (0.725-0.871)    -0.018
+2:   Male    38 0.896 (0.800-0.993) 0.924 (0.841-1.000)     0.028
 
-      sex                     comparison AUC_primary AUC_noMHC delong_p
-   <char>                         <char>       <num>     <num>    <num>
-1: Female nested CV: primary vs MHC-free       0.805     0.781    0.349
-2:   Male nested CV: primary vs MHC-free       0.796     0.734    0.356
+      sex                                          comparison AUC_primary
+   <char>                                              <char>       <num>
+1: Female nested CV: primary vs MHC-free (consensus selector)       0.816
+2:   Male nested CV: primary vs MHC-free (consensus selector)       0.896
+   AUC_noMHC delong_p
+       <num>    <num>
+1:     0.798    0.322
+2:     0.924    0.582
                                                             verdict
                                                              <char>
 1: NO significant difference - MHC removal costs nothing detectable
@@ -77,12 +68,14 @@ STEP 4  LOCKED PANELS ON INTERNAL AND EXTERNAL DATA
 ==========================================================================
 STEP 5  VERDICT
 ==========================================================================
-Female: nested-CV AUC 0.805 (primary) vs 0.781 (MHC-free), DeLong p = 0.349
+Female: nested-CV AUC 0.816 (primary) vs 0.798 (MHC-free), DeLong p = 0.322
    -> NO significant difference - MHC removal costs nothing detectable
-Male: nested-CV AUC 0.796 (primary) vs 0.734 (MHC-free), DeLong p = 0.356
+Male: nested-CV AUC 0.896 (primary) vs 0.924 (MHC-free), DeLong p = 0.582
    -> NO significant difference - MHC removal costs nothing detectable
 
 READING RULE FOR THE THESIS
+  CITE NESTED_CV_AUTHORITATIVE.csv for every nested-CV figure. This script
+  reads it; it does not recompute it. There is one implementation (16d).
   Report the NESTED-CV comparison, not the locked-panel training numbers.
   The nested comparison is between two PROCEDURES and is leakage-free; the
   locked 'Train (apparent)' rows are optimistic by construction and are

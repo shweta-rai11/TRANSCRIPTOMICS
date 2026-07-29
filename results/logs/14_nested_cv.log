@@ -1,0 +1,64 @@
+Warning messages:
+1: package ‘e1071’ was built under R version 4.4.3 
+2: package ‘ggplot2’ was built under R version 4.4.3 
+3: package ‘lattice’ was built under R version 4.4.3 
+4: package ‘data.table’ was built under R version 4.4.3 
+Nested CV (feature selection redone inside every fold; a few minutes)...
+[Female] nested-CV pooled AUC = 0.816 (95% CI 0.747-0.884) | per-repeat 0.811 +/- 0.010 | 50 folds
+Warning messages:
+1: from glmnet C++ code (error code -94); Convergence for 94th lambda value not reached after maxit=100000 iterations; solutions for larger lambdas returned 
+2: from glmnet C++ code (error code -97); Convergence for 97th lambda value not reached after maxit=100000 iterations; solutions for larger lambdas returned 
+3: from glmnet C++ code (error code -95); Convergence for 95th lambda value not reached after maxit=100000 iterations; solutions for larger lambdas returned 
+4: from glmnet C++ code (error code -95); Convergence for 95th lambda value not reached after maxit=100000 iterations; solutions for larger lambdas returned 
+[Male] nested-CV pooled AUC = 0.896 (95% CI 0.800-0.993) | per-repeat 0.822 +/- 0.060 | 50 folds
+apparent (no resampling)   : female 0.869 | male 1.000
+flat CV (selection once)   : female 0.801 | male 0.821
+nested CV (selection in-fold): female 0.816 | male 0.896
+optimism (apparent - nested): female +0.054 | male +0.104
+
+============== NESTED CV vs FLAT (leaky) TRAIN CV ==============
+      sex                                                      procedure
+   <char>                                                         <char>
+1: Female 3-selector consensus re-derived in-fold (LASSO n RF n SVM-RFE)
+2:   Male 3-selector consensus re-derived in-fold (LASSO n RF n SVM-RFE)
+   apparent_AUC flat_CV_AUC nested_CV_AUC   nested_CI
+          <num>       <num>         <num>      <char>
+1:        0.869       0.801         0.816 0.747-0.884
+2:        1.000       0.821         0.896 0.800-0.993
+   optimism_apparent_minus_nested flat_minus_nested
+                            <num>             <num>
+1:                          0.054            -0.014
+2:                          0.104            -0.076
+                                                                                                                                      flat_column_caveat
+                                                                                                                                                  <char>
+1: flat CV is NOT a clean bias estimate: nested pooling across repeats with fold-specific panels is an ensemble and raises AUC. Use the optimism column.
+2: flat CV is NOT a clean bias estimate: nested pooling across repeats with fold-specific panels is an ensemble and raises AUC. Use the optimism column.
+   per_repeat_mean per_repeat_sd
+             <num>         <num>
+1:           0.811          0.01
+2:           0.822          0.06
+                                                          authoritative
+                                                                 <char>
+1: NO - see NESTED_CV_AUTHORITATIVE.csv (16d) for the reconciled figure
+2: NO - see NESTED_CV_AUTHORITATIVE.csv (16d) for the reconciled figure
+
+Female consensus re-selection frequency:
+       gene reselect_pct
+     <char>        <num>
+1:    ESYT1          100
+2:     MED1           94
+3: C6orf136           88
+4:     GNL1           70
+5:    IKZF3           50
+6:  SMARCC2           16
+Male consensus re-selection frequency:
+      gene reselect_pct
+    <char>        <num>
+1: HLA-DMA           76
+2:   ESYT1           52
+3:    MED1           52
+4: SMARCC2           52
+5:  INPP5B            0
+6:   VPS52            0
+
+Saved mr_nested_cv_summary.csv, stability tables, mr_nested_objects.rds

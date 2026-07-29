@@ -172,6 +172,43 @@ regional SNP density is the limiting factor for the five inconclusive genes.
 Those are **untested**, not negative. Repeating the analysis against a modern
 RA GWAS would be the single most informative follow-up.
 
+
+### Resolving the MHC properly: coloc.susie (`10e`)
+
+`coloc.abf` could not settle the MHC, so the multi-causal-variant model was run.
+**SuSiE finds 9–10 independent RA credible sets in every MHC region tested** —
+direct confirmation that `coloc.abf`'s single-causal-variant assumption was
+badly violated there, and that the earlier PP.H3 ≈ 1.0 values were not
+interpretable.
+
+Of the 14 MHC genes, **3 are now resolved and 11 are not**:
+
+| Gene | Panel | eQTL sets | RA sets | PP.H4 | Verdict under the multi-variant model |
+|---|---|---|---|---|---|
+| GNL1 | **yes** | 1 | 10 | 0.000 | **DISTINCT VARIANTS — valid.** The MR estimate is LD-confounded, now demonstrated rather than assumed |
+| WDR46 | no | 1 | 9 | **0.918** | **COLOCALISED** with an RA signal — the only MHC gene with positive support |
+| HLA-DMA | **yes** | 3 | 9 | 0.323 | Inconclusive |
+| C6orf136, VPS52 | **yes** | 1 | 0 | — | Not resolvable |
+| 9 others | no | 0 | 9–10 | — | Not resolvable |
+
+The 11 unresolved cases fail on the **eQTL** side: SuSiE could not identify an
+independent eQTL credible set within a 450-SNP window using an out-of-sample LD
+reference. That is a statement about power and LD-reference quality, **not**
+evidence of absence.
+
+**Limitations that keep this INDICATIVE rather than definitive.** The LD matrix
+is 1000 Genomes EUR (n ≈ 500), not in-sample. In the MHC, where haplotype
+structure is extreme, LD mismatch can both create and destroy credible sets
+(Zou et al. 2022). Regions were also truncated to the 450 most significant shared
+SNPs by the server-side `ld_matrix` cap, which can drop a causal variant.
+Settling the MHC definitively requires in-sample LD, and neither eQTLGen nor
+Okada release it.
+
+**Net effect on the panels.** `GNL1` moves from "unreliable" to *demonstrably
+LD-confounded*. `HLA-DMA`, `C6orf136` and `VPS52` remain unresolved. None of the
+four gains causal support. This does not change the recommendation — the MHC-free
+panel avoids all four — but it does convert one of them from unknown to known.
+
 ---
 
 ## 3. Leukocyte composition differs by disease status and drives much of the signature
@@ -235,6 +272,62 @@ removes part of the real effect. Therefore:
 Both are reported. The thesis may keep the unadjusted model as primary for the
 diagnostic argument, but may no longer make mechanistic claims about any gene
 that does not survive adjustment.
+
+
+---
+
+## 3a. One authoritative nested-CV table (`16d`)
+
+Three scripts previously reported a "nested-CV AUC" that a reader would take to
+be the same quantity, and they disagreed — male 0.796 / 0.896 / 0.952, a spread
+of 0.156 on 38 samples. `16d_nested_cv_reconciliation.R` recomputes **every**
+variant in one process under one seed policy, and the differences are now
+columns rather than separate files.
+
+It reproduces `14_model_training_nested_cv.R` **exactly** (0.816 female, 0.896
+male), which corroborates the engine against an independently written older
+script, and identified `16b`'s duplicate loop as the outlier. **That duplicate
+was deleted rather than patched** — three implementations of one procedure was
+the defect; making them agree by hand would have left three implementations that
+happened to agree today. Nested CV now has one implementation and one output
+table, `NESTED_CV_AUTHORITATIVE.csv`.
+
+| Sex | Candidate set | Selector | AUC (95% CI) | Median genes | Recommended |
+|---|---|---|---|---|---|
+| Female | **noMHC** | **consensus** | **0.798 (0.725–0.871)** | 3 | **yes** |
+| Female | noMHC | elasticnet | 0.791 (0.716–0.866) | 7 | |
+| Female | primary | consensus | 0.816 (0.747–0.884) | 5 | |
+| Female | primary | elasticnet | 0.801 (0.730–0.873) | 12 | |
+| Male* | **noMHC** | **consensus** | **0.924 (0.841–1.000)** | 3 | **yes** |
+| Male* | noMHC | elasticnet | 0.961 (0.909–1.000) | 13 | |
+| Male* | primary | consensus | 0.896 (0.800–0.993) | 3 | |
+| Male* | primary | elasticnet | 0.958 (0.902–1.000) | 20 | |
+
+\* EXPLORATORY at n = 38. The male spread across procedures is a statement about
+sample size, not about which procedure is better: at 5-fold with 17 cases, one
+sample changing side moves a fold AUC by ~0.1.
+
+Updated MHC comparison under the single engine: female 0.816 → 0.798
+(DeLong p = 0.32), male 0.896 → **0.924** (p = 0.58). **Removing the MHC still
+costs nothing detectable, and in men the point estimate rises.**
+
+### Optimism, now measured rather than asserted
+
+`14` previously hard-coded `flat_train_CV_AUC = c(0.792, 0.966)` — a literal
+carried from a superseded run, written into a results CSV as though computed. It
+is now computed, alongside the apparent (no-resampling) AUC:
+
+| Sex | Apparent | Flat CV | Nested CV | Optimism (apparent − nested) |
+|---|---|---|---|---|
+| Female | 0.869 | 0.801 | 0.816 | **+0.054** |
+| Male | 1.000 | 0.821 | 0.896 | **+0.104** |
+
+Note that flat CV comes out *below* nested CV. That is not negative selection
+bias. Two effects oppose each other: flat CV is inflated by having chosen the
+panel on all the data, while nested CV pools predictions across repeats in which
+every fold picks its own panel — an ensemble, which raises AUC. The two are
+therefore not a clean bias decomposition, and **the honest optimism estimate is
+apparent minus nested**, which is positive in both sexes.
 
 ---
 
@@ -412,9 +505,9 @@ only `PHF19` reaches PP.H4 ≥ 0.8 (at the default prior only).
 
 ## 8. Still outstanding
 
-- **MHC colocalisation needs `coloc.susie`.** `coloc.abf` cannot settle the MHC
-  in either direction (Section 2). This is the largest remaining methodological
-  gap and requires a regional LD reference matrix.
+- **MHC colocalisation with in-sample LD.** `coloc.susie` (`10e`) resolved 3 of
+  14 MHC genes; the remaining 11 fail on the eQTL side under an out-of-sample
+  1000G reference. In-sample LD would settle them and is not available.
 - **Repeating colocalisation against a post-2014 RA GWAS** would resolve the five
   inconclusive genes. Okada 2014's imputation density is the limiting factor,
   not the method.
@@ -426,12 +519,6 @@ only `PHF19` reaches PP.H4 ≥ 0.8 (at the default prior only).
 - `results/README_GOALS.md`, `results/FIGURE_PROVENANCE.md`,
   `scripts/build_figure_provenance.py` and `scripts/AUDIT_independent_checks.R`
   are referenced across the repository but do not exist here.
-- `scripts/goal2_sex_stratified/14_model_training_nested_cv.R:148` hard-codes
-  `flat_train_CV_AUC = c(0.792, 0.966)` from a superseded run, and that value is
-  written into `mr_nested_cv_summary.csv` as though computed.
-- `mr_nested_cv_summary.csv` (0.816 F / 0.896 M) and `mr_final_panel_summary.csv`
-  (0.809 F / 0.952 M) report different nested-CV AUCs from different scripts,
-  with no reconciliation.
 - `data/raw` is a symlink outside the project tree; not self-contained.
 - No medication or disease-activity adjustment. With composition now handled,
   this is arguably the largest unaddressed biological confounder.

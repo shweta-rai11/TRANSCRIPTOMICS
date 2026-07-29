@@ -17,21 +17,27 @@ pg <- fread(file.path(tabN, "mr_roc_pergene_auc.csv"))          # Train/Internal
 v  <- readRDS(file.path(proc, "new", "val_synovium.rds"))
 ml <- readRDS(file.path(proc, "new", "ml_features.rds"))
 gF <- ml$female$consensus; gM <- ml$male$consensus
-gene_panel <- setNames(c(rep("Female", length(gF)), rep("Male", length(gM))), c(gF, gM))
+# The two panels SHARE genes (ESYT1, MED1, SMARCC2), so a gene is not a unique
+# key here - the unit is (gene, panel). A named lookup keyed on c(gF, gM) has
+# duplicate names and silently returns the FIRST match, which would label every
+# shared gene "Female" and collapse its two different per-sex AUCs into one.
+panel_map <- rbind(data.table(gene = gF, panel = "Female"),
+                   data.table(gene = gM, panel = "Male"))
 
-# blood/train/internal
+# blood/train/internal - keep sex; a shared gene has a DIFFERENT AUC in each panel
 bti <- pg[dataset %in% c("Train","Internal test","External blood"),
-          .(gene, dataset, AUC)]
-# synovium (train-fixed orientation)
-syn <- rbind(as.data.table(v$sf), as.data.table(v$sm), fill = TRUE)[
-         , .(gene, dataset = "External synovium",
+          .(gene, panel = sex, dataset, AUC)]
+# synovium (train-fixed orientation), tagged with the panel it was evaluated in
+syn <- rbind(cbind(as.data.table(v$sf), panel = "Female"),
+             cbind(as.data.table(v$sm), panel = "Male"), fill = TRUE)[
+         , .(gene, panel, dataset = "External synovium",
              AUC = ifelse(concordant, auc_all, 1 - auc_all))]
-d <- rbind(bti, syn)
-d <- d[gene %in% names(gene_panel)]
-d[, panel := gene_panel[gene]]
+# inner join keeps only (gene, panel) pairs the gene actually belongs to
+d <- merge(rbind(bti, syn), panel_map, by = c("gene", "panel"))
 d[, dataset := factor(dataset, levels = c("Train","Internal test","External blood","External synovium"))]
-d[, gene := factor(gene, levels = c(gF, gM))]
-fwrite(dcast(d, gene ~ dataset, value.var = "AUC"), file.path(tabN, "pergene_auc_alltissues.csv"))
+d[, gene := factor(gene, levels = unique(c(gF, gM)))]
+fwrite(dcast(d, gene + panel ~ dataset, value.var = "AUC"),
+       file.path(tabN, "pergene_auc_alltissues.csv"))
 
 pal <- c("Train"="#1b6ca8", "Internal test"="#e08214",
          "External blood"="#4d9221", "External synovium"="#7B3294")
@@ -52,4 +58,4 @@ g <- ggplot(d, aes(gene, AUC, fill = dataset)) +
 ggsave(file.path(figN, "fig_pergene_auc_alltissues.png"), g, width = 11, height = 6, dpi = 300, bg = "white")
 ggsave(file.path(figN, "fig_pergene_auc_alltissues.pdf"), g, width = 11, height = 6, bg = "white")
 cat("wrote fig_pergene_auc_alltissues + pergene_auc_alltissues.csv\n")
-print(dcast(d, gene ~ dataset, value.var = "AUC"))
+print(dcast(d, gene + panel ~ dataset, value.var = "AUC"))

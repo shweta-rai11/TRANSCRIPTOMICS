@@ -1,0 +1,34 @@
+gene,MHC_gene,in_panel_female,in_panel_male,abf_PP3,abf_PP4,abf_verdict,susie_n_cs_eqtl,susie_n_cs_gwas,susie_PP4,susie_verdict,final_verdict
+PHF19,FALSE,FALSE,FALSE,0.038,0.962,COLOCALISED at default prior only (not robust to p12),,,,,COLOCALISED at default prior only (not robust to p12)
+LPCAT2,FALSE,FALSE,FALSE,0.028,0.927,COLOCALISED at default prior only (not robust to p12),,,,,COLOCALISED at default prior only (not robust to p12)
+IKZF3,FALSE,TRUE,FALSE,0.226,0.774,SUGGESTIVE colocalisation,,,,,SUGGESTIVE colocalisation
+SH2B1,FALSE,FALSE,FALSE,0.126,0.757,SUGGESTIVE colocalisation,,,,,SUGGESTIVE colocalisation
+RETSAT,FALSE,FALSE,FALSE,0.063,0.614,SUGGESTIVE colocalisation,,,,,SUGGESTIVE colocalisation
+ZNF785,FALSE,FALSE,FALSE,0.359,0.609,SUGGESTIVE colocalisation,,,,,SUGGESTIVE colocalisation
+KLF2,FALSE,FALSE,FALSE,0.462,0.45,INCONCLUSIVE (no strong evidence either way),,,,,INCONCLUSIVE (no strong evidence either way)
+MED1,FALSE,TRUE,TRUE,0.552,0.431,INCONCLUSIVE (no strong evidence either way),,,,,INCONCLUSIVE (no strong evidence either way)
+LAX1,FALSE,FALSE,FALSE,0.234,0.406,INCONCLUSIVE (no strong evidence either way),,,,,INCONCLUSIVE (no strong evidence either way)
+SMARCC2,FALSE,TRUE,TRUE,0.709,0.275,INCONCLUSIVE (no strong evidence either way),,,,,INCONCLUSIVE (no strong evidence either way)
+HLA-DRB1,TRUE,FALSE,FALSE,0.744,0.256,INCONCLUSIVE (no strong evidence either way),0,9,,NOT RESOLVABLE - SuSiE found no credible set in one or both traits,MHC - NOT RESOLVABLE - SuSiE found no credible set in one or both traits
+TAB1,FALSE,FALSE,FALSE,0.84,0.16,DISTINCT VARIANTS (LD-confounded: MR estimate not causal),,,,,DISTINCT VARIANTS (LD-confounded: MR estimate not causal)
+IKZF4,FALSE,FALSE,FALSE,0.846,0.135,DISTINCT VARIANTS (LD-confounded: MR estimate not causal),,,,,DISTINCT VARIANTS (LD-confounded: MR estimate not causal)
+PGAP3,FALSE,FALSE,FALSE,0.923,0.077,DISTINCT VARIANTS (LD-confounded: MR estimate not causal),,,,,DISTINCT VARIANTS (LD-confounded: MR estimate not causal)
+INPP5B,FALSE,FALSE,TRUE,0.929,0.069,DISTINCT VARIANTS (LD-confounded: MR estimate not causal),,,,,DISTINCT VARIANTS (LD-confounded: MR estimate not causal)
+ESYT1,FALSE,TRUE,TRUE,0.912,0.068,DISTINCT VARIANTS (LD-confounded: MR estimate not causal),,,,,DISTINCT VARIANTS (LD-confounded: MR estimate not causal)
+FCGR2B,FALSE,FALSE,FALSE,0.989,0.002,DISTINCT VARIANTS (LD-confounded: MR estimate not causal),,,,,DISTINCT VARIANTS (LD-confounded: MR estimate not causal)
+AIF1,TRUE,FALSE,FALSE,1,0,MHC - UNRELIABLE BOTH WAYS (PP.H3 inflated by assumption violation; no causal claim either direction),0,10,,NOT RESOLVABLE - SuSiE found no credible set in one or both traits,MHC - NOT RESOLVABLE - SuSiE found no credible set in one or both traits
+AP4B1,FALSE,FALSE,FALSE,1,0,DISTINCT VARIANTS (LD-confounded: MR estimate not causal),,,,,DISTINCT VARIANTS (LD-confounded: MR estimate not causal)
+BRD2,TRUE,FALSE,FALSE,1,0,MHC - UNRELIABLE BOTH WAYS (PP.H3 inflated by assumption violation; no causal claim either direction),0,10,,NOT RESOLVABLE - SuSiE found no credible set in one or both traits,MHC - NOT RESOLVABLE - SuSiE found no credible set in one or both traits
+C6orf136,TRUE,TRUE,FALSE,1,0,MHC - UNRELIABLE BOTH WAYS (PP.H3 inflated by assumption violation; no causal claim either direction),1,0,,NOT RESOLVABLE - SuSiE found no credible set in one or both traits,MHC - NOT RESOLVABLE - SuSiE found no credible set in one or both traits
+CDC37,FALSE,FALSE,FALSE,1,0,DISTINCT VARIANTS (LD-confounded: MR estimate not causal),,,,,DISTINCT VARIANTS (LD-confounded: MR estimate not causal)
+CSNK2B,TRUE,FALSE,FALSE,1,0,MHC - UNRELIABLE BOTH WAYS (PP.H3 inflated by assumption violation; no causal claim either direction),0,10,,NOT RESOLVABLE - SuSiE found no credible set in one or both traits,MHC - NOT RESOLVABLE - SuSiE found no credible set in one or both traits
+DAXX,TRUE,FALSE,FALSE,1,0,MHC - UNRELIABLE BOTH WAYS (PP.H3 inflated by assumption violation; no causal claim either direction),0,10,,NOT RESOLVABLE - SuSiE found no credible set in one or both traits,MHC - NOT RESOLVABLE - SuSiE found no credible set in one or both traits
+GNL1,TRUE,TRUE,FALSE,1,0,MHC - UNRELIABLE BOTH WAYS (PP.H3 inflated by assumption violation; no causal claim either direction),1,10,0,DISTINCT VARIANTS (valid: multiple signals modelled),DISTINCT VARIANTS (valid: multiple signals modelled)
+HLA-DMA,TRUE,FALSE,TRUE,1,0,MHC - UNRELIABLE BOTH WAYS (PP.H3 inflated by assumption violation; no causal claim either direction),3,9,0.323,INCONCLUSIVE under the multi-variant model,MHC - INCONCLUSIVE under the multi-variant model
+HLA-DPA1,TRUE,FALSE,FALSE,1,0,MHC - UNRELIABLE BOTH WAYS (PP.H3 inflated by assumption violation; no causal claim either direction),0,10,,NOT RESOLVABLE - SuSiE found no credible set in one or both traits,MHC - NOT RESOLVABLE - SuSiE found no credible set in one or both traits
+LSM2,TRUE,FALSE,FALSE,1,0,MHC - UNRELIABLE BOTH WAYS (PP.H3 inflated by assumption violation; no causal claim either direction),0,10,,NOT RESOLVABLE - SuSiE found no credible set in one or both traits,MHC - NOT RESOLVABLE - SuSiE found no credible set in one or both traits
+NCOA5,FALSE,FALSE,FALSE,1,0,DISTINCT VARIANTS (LD-confounded: MR estimate not causal),,,,,DISTINCT VARIANTS (LD-confounded: MR estimate not causal)
+VARS2,TRUE,FALSE,FALSE,1,0,MHC - UNRELIABLE BOTH WAYS (PP.H3 inflated by assumption violation; no causal claim either direction),0,10,,NOT RESOLVABLE - SuSiE found no credible set in one or both traits,MHC - NOT RESOLVABLE - SuSiE found no credible set in one or both traits
+VPS52,TRUE,FALSE,TRUE,1,0,MHC - UNRELIABLE BOTH WAYS (PP.H3 inflated by assumption violation; no causal claim either direction),1,0,,NOT RESOLVABLE - SuSiE found no credible set in one or both traits,MHC - NOT RESOLVABLE - SuSiE found no credible set in one or both traits
+WDR46,TRUE,FALSE,FALSE,1,0,MHC - UNRELIABLE BOTH WAYS (PP.H3 inflated by assumption violation; no causal claim either direction),1,9,0.918,COLOCALISED with an RA signal (multi-variant model),COLOCALISED with an RA signal (multi-variant model)
+ZBTB9,TRUE,FALSE,FALSE,1,0,MHC - UNRELIABLE BOTH WAYS (PP.H3 inflated by assumption violation; no causal claim either direction),0,0,,NOT RESOLVABLE - SuSiE found no credible set in one or both traits,MHC - NOT RESOLVABLE - SuSiE found no credible set in one or both traits

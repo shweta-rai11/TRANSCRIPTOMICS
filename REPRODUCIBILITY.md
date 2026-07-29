@@ -43,6 +43,7 @@ the same machine reproduces the reported numbers exactly.
 | **Cell deconvolution + adjusted DE** | `05c` — CIBERSORT is seeded; LM22 ships with IOBR |
 | **Panel vs composition benchmark** | `13b` — folds seeded 1234; bootstrap CIs seeded |
 | **Sex-interaction report** | `05d` — limma, closed-form |
+| **Nested-CV reconciliation** | `16d` — one engine, one seed policy; reproduces `14` exactly |
 
 ## 2. NOT guaranteed to reproduce — live database dependencies
 
@@ -51,6 +52,7 @@ the same machine reproduces the reported numbers exactly.
 | **MR instrument extraction** | `10_MR.R` | eQTLGen + Okada via **OpenGWAS API**; LD clumping uses a **server-side reference panel** | **HIGH** |
 | Cross-ancestry MR | `35` | OpenGWAS (Stahl, Biobank Japan) | **HIGH** |
 | **Colocalisation regional stats** | `10d` | OpenGWAS regional queries against eQTLGen + `ieu-a-832` | **MEDIUM** — cached to `coloc_regions.rds` on first run; every later run is offline and exact |
+| **coloc.susie LD matrices** | `10e` | OpenGWAS `ld_matrix` (1000G EUR reference) | **MEDIUM** — out-of-sample LD; results are indicative, not definitive |
 | KEGG enrichment / GSEA | `05`, `06`, `15`, `25` | KEGG REST API (updated monthly) | MEDIUM |
 | STRING PPI network | `06` | string-db.org | LOW |
 | GEO download | `01`, `02` | GEO (static; already cached locally) | LOW |

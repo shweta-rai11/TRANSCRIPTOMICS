@@ -1,0 +1,9 @@
+sex,dataset,n,n_RA,n_HC,AUC,AUC_lo,AUC_hi,missing_genes
+Female,Train (apparent),145,86,59,0.869,0.813,0.925,""
+Female,Train (10-fold CV),145,86,59,0.831,0.764,0.897,""
+Female,Internal test,61,36,25,0.823,0.719,0.928,""
+Female,External blood,24,14,10,0.957,0.886,1,""
+Male,Train (apparent),38,17,21,1,1,1,""
+Male,Train (10-fold CV),38,17,21,0.933,0.847,1,""
+Male,Internal test,13,6,7,1,1,1,""
+Male,External blood,9,4,5,0.75,0.399,1,""

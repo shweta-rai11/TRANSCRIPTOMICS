@@ -132,6 +132,98 @@ cat("Nested CV (feature selection redone inside every fold; a few minutes)...\n"
 F <- run_nested("F", mrF, kfold = 10, repeats = 5)
 M <- run_nested("M", mrM, kfold = 5,  repeats = 10)
 
+# -----------------------------------------------------------------------------
+# THE FLAT ("LEAKY") COMPARISON, NOW COMPUTED RATHER THAN HARD-CODED.
+# -----------------------------------------------------------------------------
+# Earlier versions of this script wrote flat_train_CV_AUC = c(0.792, 0.966) as a
+# LITERAL, carried over from a superseded run of a different script, and that
+# literal was then written into mr_nested_cv_summary.csv as though it had been
+# computed here. It had not been. Any reader comparing the two columns was being
+# shown a number with no code behind it, and the value no longer corresponded to
+# the current candidate sets (the cis filter and the FDR change in 10_MR.R both
+# moved it). It is computed here instead.
+#
+# WHAT "FLAT" MEANS. The selection is done ONCE on the whole training set - the
+# 3-method consensus from ml_features.rds - and only the logistic model is then
+# cross-validated. Every fold therefore scores genes that were chosen using the
+# held-out samples. That is precisely the feature-selection bias Ambroise &
+# McLachlan (PNAS 2002) describe, and reproducing it here is the point: the gap
+# between this column and the nested column IS the bias, measured on this data.
+flat_cv_auc <- function(sex_code, panel_genes) {
+  cols <- meta$sample[meta$sex == sex_code]
+  g <- unique(panel_genes[panel_genes %in% rownames(expr)])
+  if (length(g) < 2) return(NA_real_)
+  X <- t(expr[g, cols, drop = FALSE]); colnames(X) <- make.names(g)
+  y <- factor(meta$group[match(cols, meta$sample)], levels = c("HC", "RA"))
+  k <- if (sex_code == "F") 10 else 5
+  reps <- if (sex_code == "F") 5 else 10
+  probs <- data.table()
+  for (rp in seq_len(reps)) {
+    set.seed(1000 + rp)                       # same seed policy as the nested loop
+    folds <- createFolds(y, k = k, returnTrain = FALSE)
+    for (fi in seq_along(folds)) {
+      te <- folds[[fi]]; tr <- setdiff(seq_along(y), te)
+      if (length(unique(y[tr])) < 2) next
+      mu <- colMeans(X[tr, , drop = FALSE])
+      sg <- apply(X[tr, , drop = FALSE], 2, sd); sg[sg == 0 | is.na(sg)] <- 1
+      Ztr <- scale(X[tr, , drop = FALSE], center = mu, scale = sg)
+      Zte <- scale(X[te, , drop = FALSE], center = mu, scale = sg)
+      fit <- suppressWarnings(glm(y[tr] ~ ., data = data.frame(y = y[tr], Ztr,
+                                                               check.names = FALSE),
+                                  family = binomial))
+      p <- as.numeric(predict(fit, newdata = data.frame(Zte, check.names = FALSE),
+                              type = "response"))
+      probs <- rbind(probs, data.table(sample = rownames(X)[te], prob = p, obs = y[te]))
+    }
+  }
+  agg <- probs[, .(prob = mean(prob), obs = obs[1]), by = sample]
+  as.numeric(auc(roc(agg$obs, agg$prob, levels = c("HC", "RA"),
+                     direction = "<", quiet = TRUE)))
+}
+# The APPARENT AUC - fixed panel, fitted and scored on the same samples, no
+# resampling at all. This is the unambiguously optimistic number and is the
+# correct upper anchor for a selection-bias comparison.
+apparent_auc <- function(sex_code, panel_genes) {
+  cols <- meta$sample[meta$sex == sex_code]
+  g <- unique(panel_genes[panel_genes %in% rownames(expr)])
+  if (length(g) < 2) return(NA_real_)
+  X <- t(expr[g, cols, drop = FALSE]); colnames(X) <- make.names(g)
+  y <- factor(meta$group[match(cols, meta$sample)], levels = c("HC", "RA"))
+  Z <- scale(X)
+  fit <- suppressWarnings(glm(y ~ ., data = data.frame(y, Z, check.names = FALSE),
+                              family = binomial))
+  as.numeric(auc(roc(y, as.numeric(predict(fit, type = "response")),
+                     levels = c("HC", "RA"), direction = "<", quiet = TRUE)))
+}
+ml_for_flat <- readRDS(file.path(procN, "ml_features.rds"))
+flatF <- flat_cv_auc("F", ml_for_flat$female$consensus)
+flatM <- flat_cv_auc("M", ml_for_flat$male$consensus)
+appF  <- apparent_auc("F", ml_for_flat$female$consensus)
+appM  <- apparent_auc("M", ml_for_flat$male$consensus)
+
+cat(sprintf("apparent (no resampling)   : female %.3f | male %.3f\n", appF, appM))
+cat(sprintf("flat CV (selection once)   : female %.3f | male %.3f\n", flatF, flatM))
+cat(sprintf("nested CV (selection in-fold): female %.3f | male %.3f\n", F$auc, M$auc))
+cat(sprintf("optimism (apparent - nested): female %+.3f | male %+.3f\n",
+            appF - F$auc, appM - M$auc))
+
+# ---------------------------------------------------------------------------
+# A NOTE THE READER NEEDS, BECAUSE THE FLAT COLUMN DOES NOT BEHAVE AS EXPECTED.
+# flat CV comes out BELOW nested CV here (female 0.801 vs 0.816; male 0.821 vs
+# 0.896), which looks like negative selection bias and is not. Two effects run in
+# opposite directions:
+#   (+) flat CV IS inflated by having chosen the panel on all the data;
+#   (-) nested CV pools out-of-fold probabilities across 5 (female) or 10 (male)
+#       repeats in which EVERY FOLD SELECTS ITS OWN PANEL. Averaging predictions
+#       over many different small panels is an ensemble, and ensembling raises
+#       AUC. The pooled nested estimate therefore carries an ensemble bonus that
+#       the fixed-panel flat estimate does not.
+# The two are consequently NOT a clean bias decomposition, and the difference
+# between them must not be reported as "the selection bias". The honest
+# optimism estimate is APPARENT minus NESTED, which is positive in both sexes and
+# is what the `optimism` column reports.
+# ---------------------------------------------------------------------------
+
 # ---- stability tables (how often each panel gene re-enters the consensus) ----
 stab <- function(res, panel) {
   fr <- as.integer(res$cons_freq); names(fr) <- names(res$cons_freq)
@@ -145,11 +237,19 @@ fwrite(sfM, file.path(tab, "mr_nested_cv_stability_male.csv"))
 
 summ <- data.table(
   sex = c("Female", "Male"),
-  flat_train_CV_AUC = c(0.792, 0.966),          # optimistic numbers from 18b (for contrast)
+  procedure = "3-selector consensus re-derived in-fold (LASSO n RF n SVM-RFE)",
+  apparent_AUC = c(round(appF, 3), round(appM, 3)),          # no resampling at all
+  flat_CV_AUC  = c(round(flatF, 3), round(flatM, 3)),        # computed above, not literal
   nested_CV_AUC = c(round(F$auc, 3), round(M$auc, 3)),
   nested_CI = c(sprintf("%.3f-%.3f", F$ci[1], F$ci[3]), sprintf("%.3f-%.3f", M$ci[1], M$ci[3])),
+  optimism_apparent_minus_nested = c(round(appF - F$auc, 3), round(appM - M$auc, 3)),
+  flat_minus_nested = c(round(flatF - F$auc, 3), round(flatM - M$auc, 3)),
+  flat_column_caveat = paste("flat CV is NOT a clean bias estimate: nested pooling",
+                             "across repeats with fold-specific panels is an ensemble",
+                             "and raises AUC. Use the optimism column."),
   per_repeat_mean = c(round(mean(F$rep_auc), 3), round(mean(M$rep_auc), 3)),
-  per_repeat_sd   = c(round(sd(F$rep_auc), 3), round(sd(M$rep_auc), 3)))
+  per_repeat_sd   = c(round(sd(F$rep_auc), 3), round(sd(M$rep_auc), 3)),
+  authoritative = "NO - see NESTED_CV_AUTHORITATIVE.csv (16d) for the reconciled figure")
 fwrite(summ, file.path(tab, "mr_nested_cv_summary.csv"))
 
 # ROC coordinates for the figure (labelled "Train (nested CV)")
