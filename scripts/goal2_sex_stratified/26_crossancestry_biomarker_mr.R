@@ -1,7 +1,7 @@
 #!/usr/bin/env Rscript
 # =============================================================================
-# 35_crossancestry_eqtl_mr.R  —  Are the causal eQTL genes the same across
-# ancestral populations?  Comparative MR of the per-sex EUR MR-causal genes
+# 26_crossancestry_biomarker_mr.R  —  Are the causal eQTL genes the same across
+# ancestral populations?  Comparative MR of the per-sex EUR MR-prioritised genes
 # (FS_input: 32 female / 25 male, BH-FDR<0.05, cis-only per 10_MR.R D8)
 # against RA GWAS from THREE cohorts spanning
 # two ancestries:
@@ -21,7 +21,7 @@
 #
 # Reuses European eQTLGen instruments + Okada results from:
 #   data/processed/new/MR_primary_objects.rds  (inst, dat, primary)
-#   results/tables/FS_input_{female,male}.csv       (the EUR-causal gene set)
+#   results/tables/FS_input_{female,male}.csv       (the EUR-prioritised gene set)
 # Outputs (flat, MR35_ prefix; nothing overwritten):
 #   results/tables/MR35_crossancestry_{female,male}.csv
 #   results/tables/MR35_instrument_transferability_{female,male}.csv
@@ -37,16 +37,16 @@ OKADA <- "ieu-a-832"   # EUR discovery
 STAHL <- "ieu-a-834"   # EUR replication
 BBJ   <- "bbj-a-151"   # EAS cross-ancestry
 
-# ---- 1. EUR-causal gene set (per sex) + European eQTLGen instruments ----------
+# ---- 1. EUR-prioritised gene set (per sex) + European eQTLGen instruments ----------
 fsF <- fread(file.path(tab, "FS_input_female.csv"))
 fsM <- fread(file.path(tab, "FS_input_male.csv"))
 causal <- unique(c(fsF$gene, fsM$gene))
-cat(sprintf("EUR-causal genes: %d female + %d male -> %d unique\n",
+cat(sprintf("EUR-prioritised genes: %d female + %d male -> %d unique\n",
             nrow(fsF), nrow(fsM), length(causal)))
 
 o    <- readRDS(file.path(procN, "MR_primary_objects.rds"))
 inst <- as.data.table(o$inst)[gene %in% causal]        # F>10 European eQTLGen SNPs
-cat(sprintf("Instruments for causal genes: %d SNPs / %d genes\n",
+cat(sprintf("Instruments for prioritised genes: %d SNPs / %d genes\n",
             nrow(inst), length(unique(inst$gene))))
 
 # ---- 2. helpers --------------------------------------------------------------
@@ -138,7 +138,7 @@ emit <- function(sx, genes) {
   fwrite(d[, .(gene, nSNP_instrument, nSNP_okada, nSNP_stahl, nSNP_bbj,
                eafgap_bbj = round(eafgap_bbj,3), testable_EAS)],
          file.path(tab, sprintf("MR35_instrument_transferability_%s.csv", sx)))
-  cat(sprintf("\n== %s (%d causal genes) ==\n", toupper(sx), nrow(d)))
+  cat(sprintf("\n== %s (%d prioritised genes) ==\n", toupper(sx), nrow(d)))
   cl <- d[, .N, by = ancestry_class][order(-N)]; print(cl)
   cat(sprintf("  replicated in EUR (Stahl p<0.05, same dir): %d\n", sum(d$replicated_EUR)))
   cat(sprintf("  transferable to EAS (BBJ p<0.05, same dir): %d\n", sum(d$transferable_EAS)))

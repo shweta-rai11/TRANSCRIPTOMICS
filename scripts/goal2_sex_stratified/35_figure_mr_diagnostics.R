@@ -1,22 +1,22 @@
 #!/usr/bin/env Rscript
 # =============================================================================
-# 37_mr_diagnostic_figures.R  —  rebuild the MR diagnostic figures from the
+# 35_figure_mr_diagnostics.R  —  rebuild the MR diagnostic figures from the
 # CURRENT MR objects (data/processed/new/MR_primary_objects.rds, 16 Jul).
 #
 # WHY: the previous MR figures (fig_mr_fig4A/4B/5A/5B/6_*) were built on 15 Jul
 # from the SUPERSEDED MR29_* cache and the old hardcoded green/brown candidate
 # split. They were archived. This script regenerates them from the MR run that
-# actually produced the FS_input causal genes used throughout the thesis.
+# actually produced the FS_input prioritised genes used throughout the thesis.
 #
 # IMPORTANT CONSTRAINT (reported honestly in the figures):
-#   Most causal genes are instrumented by a SINGLE cis-eQTL SNP (median 1).
+#   Most prioritised genes are instrumented by a SINGLE cis-eQTL SNP (median 1).
 #   Funnel plots, leave-one-out and MR-Egger require >= 3 SNPs, so those
 #   sensitivity panels can only be drawn for the subset of genes that have them.
 #   Genes with 1 SNP are Wald-ratio estimates and cannot be interrogated this way.
 #
 # Outputs -> results/figures/current/
-#   FIG_MR_01_forest_{female,male}.png        OR + 95% CI, all causal genes
-#   FIG_MR_02_snp_support_{female,male}.png   instrument count per causal gene
+#   FIG_MR_01_forest_{female,male}.png        OR + 95% CI, all prioritised genes
+#   FIG_MR_02_snp_support_{female,male}.png   instrument count per prioritised gene
 #   FIG_MR_03_funnel_{female,male}.png        funnel, genes with >=3 SNPs
 #   FIG_MR_04_leaveoneout_{female,male}.png   leave-one-out, genes with >=3 SNPs
 #   results/tables/MR_diagnostics_availability.csv
@@ -49,7 +49,7 @@ avail <- rbindlist(lapply(names(fs), function(s){
 avail[, diagnostics_possible := fifelse(n_snp>=3, "funnel/LOO/Egger",
                                 fifelse(n_snp==2, "IVW only", "Wald ratio only"))]
 fwrite(avail, file.path(tab,"MR_diagnostics_availability.csv"))
-cat("=== instrument availability among causal genes ===\n")
+cat("=== instrument availability among prioritised genes ===\n")
 print(avail[, .N, by=.(sex, diagnostics_possible)][order(sex, -N)])
 
 for (s in names(fs)){
@@ -57,14 +57,14 @@ for (s in names(fs)){
   P[, n_snp := lookup_n(gene)]
   P[, dirn := fifelse(OR>1, "risk (OR>1)", "protective (OR<1)")]
 
-  ## ---- FIG 1: forest of all causal genes ---------------------------------
+  ## ---- FIG 1: forest of all prioritised genes ---------------------------------
   Pf <- P[order(OR)]; Pf[, gene := factor(gene, levels=gene)]
   g <- ggplot(Pf, aes(OR, gene, colour=dirn)) +
     geom_vline(xintercept=1, linetype=2, colour="grey40") +
     geom_errorbarh(aes(xmin=OR_lo, xmax=OR_hi), height=0, linewidth=.45) +
     geom_point(size=1.6) + scale_x_log10() +
     scale_colour_manual(values=c("risk (OR>1)"="#B2182B","protective (OR<1)"="#2166AC"), name=NULL) +
-    labs(title=sprintf("MR causal genes, %s (Okada 2014 RA, ieu-a-832)", s),
+    labs(title=sprintf("MR-prioritised genes, %s (Okada 2014 RA, ieu-a-832)", s),
          subtitle=sprintf("%d genes | primary estimate per gene (IVW > Wald > median > Egger)", nrow(Pf)),
          x="Odds ratio for RA (log scale)", y=NULL) +
     th + theme(axis.text.y=element_text(size=5.5), legend.position="top")
@@ -75,7 +75,7 @@ for (s in names(fs)){
   A <- avail[sex==s]
   g2 <- ggplot(A, aes(factor(n_snp))) + geom_bar(fill="#4d9221") +
     geom_text(stat="count", aes(label=after_stat(count)), vjust=-.35, size=3) +
-    labs(title=sprintf("Instrument support per causal gene, %s", s),
+    labs(title=sprintf("Instrument support per prioritised gene, %s", s),
          subtitle="Funnel / leave-one-out / MR-Egger require >= 3 SNPs",
          x="Number of cis-eQTL instruments retained after harmonisation",
          y="Number of genes") + th

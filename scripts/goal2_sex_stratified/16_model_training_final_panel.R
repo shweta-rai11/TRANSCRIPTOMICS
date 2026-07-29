@@ -5,14 +5,14 @@
 # FINAL recommended MR-anchored diagnostic models, evaluated honestly across all
 # three datasets, and saved for the figure (18f_figure.R).
 #
-#   Female : elastic-net over the MR-CAUSAL BH-FDR<0.05 set (32 genes,
+#   Female : elastic-net over the MR-PRIORITISED BH-FDR<0.05 set (32 genes,
 #            FS_input_female). The p<0.10 widening considered in 18e was
 #            REJECTED to preserve stringency.
-#   Male   : elastic-net over the 25 MR-causal FDR<0.05 genes (FS_input_male).
+#   Male   : elastic-net over the 25 MR-prioritised FDR<0.05 genes (FS_input_male).
 # [header corrected 2026-07-28. Prior versions said 14/40 then 74/55, and called
 #  these "MR-screened p<0.05". BOTH the counts and the label are now wrong:
 #    (a) 10_MR.R fix D6 made FS_input the BH-FDR<0.05 SURVIVING set, so these are
-#        FDR-adjusted, not a nominal screen. "MR-causal" is now correct.
+#        FDR-adjusted, not a nominal screen. "MR-prioritised" is now correct.
 #    (b) 10_MR.R fix D8 added the missing CIS filter (996/4,932 instruments were
 #        trans; HNRNPM OR=287 and FOXP3 OR=264 were pleiotropic by construction),
 #        which re-ran the MR and changed the counts again.
@@ -60,8 +60,8 @@ o <- readRDS(file.path(proc, "combined_train.rds")); expr <- o$expr
 meta <- as.data.table(o$meta)
 
 ## candidate sets ------------------------------------------------------------
-genesF <- fread(file.path(tab, "FS_input_female.csv"))$gene   # 32 MR-causal, BH-FDR<0.05
-genesM <- fread(file.path(tab, "FS_input_male.csv"))$gene     # 25 MR-causal, BH-FDR<0.05
+genesF <- fread(file.path(tab, "FS_input_female.csv"))$gene   # 32 MR-prioritised, BH-FDR<0.05
+genesM <- fread(file.path(tab, "FS_input_male.csv"))$gene     # 25 MR-prioritised, BH-FDR<0.05
 CAND <- list(F = genesF, M = genesM)
 
 ## external datasets ---------------------------------------------------------
@@ -152,8 +152,8 @@ tier <- ifelse(n_train < 50 | n_int < SMALL_N | n_ext < SMALL_N,
 summ <- data.table(
   sex=c("Female","Male"),
   evidence_tier=tier,
-  candidate=c(sprintf("MR-causal BH-FDR<0.05 (%d)",nF$n_cand),
-              sprintf("MR-causal BH-FDR<0.05 (%d)",nM$n_cand)),
+  candidate=c(sprintf("MR-prioritised BH-FDR<0.05 (%d)",nF$n_cand),
+              sprintf("MR-prioritised BH-FDR<0.05 (%d)",nM$n_cand)),
   n_train=n_train, n_internal=n_int, n_external=n_ext,
   nested_CV=c(fmt(nF$ci, n_train[1]), fmt(nM$ci, n_train[2])),
   nested_per_repeat=c(sprintf("%.3f +/- %.3f",nF$rep_mean,nF$rep_sd), sprintf("%.3f +/- %.3f",nM$rep_mean,nM$rep_sd)),

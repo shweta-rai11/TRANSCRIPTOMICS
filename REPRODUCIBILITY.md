@@ -60,10 +60,10 @@ the same machine reproduces the reported numbers exactly.
 eQTLGen is updated, if the LD reference panel changes, or if a transient network
 error causes a gene's instruments to be skipped, then:
 
-    different instruments -> different causal genes (FS_input) -> different panels
+    different instruments -> different prioritised genes (FS_input) -> different panels
 
 Because feature selection consumes `FS_input`, a change there propagates all the
-way to the reported 7/4 and 4/3 gene panels. **This is the single point where a
+way to the reported panels (6/6 primary, 4/5 MHC-free). **This is the single point where a
 re-run could legitimately produce different biomarkers.**
 
 ## 3. What pins the reported results
@@ -75,7 +75,8 @@ be regenerated without touching the internet:
 |---|---|
 | `data/processed/new/MR_instruments.rds` (285K) | the exact instrument set (4,932 SNPs / 1,980 genes) |
 | `data/processed/new/MR_primary_objects.rds` (552K) | harmonised SNP data + all MR estimates |
-| `results/tables/FS_input_{female,male}.csv` | the 74 / 55 causal genes |
+| `results/tables/FS_input_{female,male}.csv` | the 32 / 25 MR-prioritised genes |
+| `results/tables/FS_input_{female,male}_noMHC.csv` | the 14 / 14 MHC-free prioritised genes |
 | `data/processed/new/coloc_regions.rds` | the regional eQTL/GWAS extracts behind every coloc posterior |
 | `data/processed/new/cell_fractions.rds` | CIBERSORT/MCP-counter fractions for all three blood datasets |
 | `data/processed/new/MR_mhc_sensitivity_objects.rds` | the MHC-excluded re-run |
@@ -94,7 +95,7 @@ path is fully deterministic and reproduces every reported panel and AUC.
 
 **Full-rebuild route** (re-extracting MR from OpenGWAS) is the honest scientific
 replication test, but should be expected to give *similar*, not identical,
-causal-gene lists.
+prioritised-gene lists.
 
 ## 4. Independent verification
 
@@ -120,15 +121,15 @@ negative that is recorded below rather than softened. See
 
 **Tested, and the result constrains what may be claimed:**
 
-- **The MHC.** 14 of 32 female and 10 of 25 male causal genes are instrumented
+- **The MHC.** 14 of 32 female and 10 of 25 male prioritised genes are instrumented
   from inside the extended MHC. Re-running the entire MR with MHC instruments
-  excluded (`10c_MR_mhc_sensitivity.R`) leaves **14 robust causal genes in each
+  excluded (`10c_MR_mhc_sensitivity.R`) leaves **14 robust prioritised genes in each
   sex**. Three of the six genes in each final panel do not survive: female
   GNL1 and C6orf136 and male VPS52 and HLA-DMA become untestable (no non-MHC
   instrument exists), and ESYT1 loses FDR significance in both sexes through
   Benjamini-Hochberg re-ranking with its point estimate unchanged.
 - **Colocalisation.** `10d_coloc_panel_genes.R` runs coloc.abf on regional
-  eQTLGen and Okada summary statistics for all 33 testable causal genes.
+  eQTLGen and Okada summary statistics for all 33 testable prioritised genes.
   **No panel gene colocalises.** Six of nine show PP.H3 >= 0.8 — positive
   evidence that the eQTL and the RA association are driven by *different* causal
   variants, which invalidates the cis-MR estimate for those genes. All four MHC
@@ -143,7 +144,7 @@ negative that is recorded below rather than softened. See
   Adjusting the DE model for composition PCs cuts DEGs from 5,131 to 2,709 in
   women and 5,820 to 1,450 in men. **10 of 12 panel gene-sex pairs survive**,
   retaining 57-83 % of their logFC; male VPS52 and INPP5B do not.
-- **Panel vs a white-cell count.** `13b_panel_auc_celladjusted.R` benchmarks the
+- **Panel vs a white-cell count.** `17b_testing_blood_celladjusted.R` benchmarks the
   panel against a composition-only model. In females the panel wins on train
   (0.831 vs 0.662) and external blood (1.000 vs 0.429), and the composition-
   residualised panel still reaches AUC 0.779 train / 0.954 external. **On the
@@ -168,7 +169,7 @@ negative that is recorded below rather than softened. See
   flagged `SEPARATION`: at n = 13 there are 42 case-control pairs, so perfect
   separation is unremarkable and the interval is degenerate, not precise.
   **No diagnostic claim rests on the male panel.**
-- 58 % of female causal genes are instrumented by a **single** cis-eQTL SNP, so
+- 58 % of female prioritised genes are instrumented by a **single** cis-eQTL SNP, so
   funnel / leave-one-out / MR-Egger are only possible for 11 genes per sex.
 - Neither medication (GSE93272 patients are largely treated) nor disease
   activity is modelled. A panel trained on treated prevalent cases carries an

@@ -17,7 +17,7 @@
 # correlated-but-informative MR genes that a hard intersection discards.
 #
 # Everything is validated the SAME honest way as 18b/18c:
-#   * Candidate universe = the EXTERNAL MR causal genes (fixed; not chosen from
+#   * Candidate universe = the EXTERNAL MR-prioritised genes (fixed; not chosen from
 #     this expression matrix), so keeping them fixed across folds is not leakage.
 #   * NESTED CV (leakage-free): inside every outer-train fold we tune alpha over
 #     a grid and lambda by inner 5-fold CV, fit, and predict the untouched

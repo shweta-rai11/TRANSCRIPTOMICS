@@ -1,7 +1,7 @@
 #!/usr/bin/env Rscript
 # =============================================================================
 # 36_crossancestry_eqtl_figure.R  —  visual companion to 35. Shows whether the
-# per-sex EUR MR-causal eQTL genes carry the same causal effect across three RA
+# per-sex EUR MR-prioritised eQTL genes carry the same causal effect across three RA
 # cohorts / two ancestries, using the transferability-aware ancestry_class from
 # 35. Two panels per sex, log-log OR grammar (as in 13e):
 #   A  Within-ancestry (EUR):  OR Okada 2014  vs  OR Stahl 2010
@@ -59,7 +59,7 @@ plot_sex <- function(sx) {
     sep = "\n")
   g <- (A + B) + plot_layout(guides = "collect") +
     plot_annotation(
-      subtitle = sprintf("%d EUR-causal genes  |  %d replicate in EUR (Stahl)  |  %d transfer to East Asian (BBJ p<0.05, same direction)  |  %d untestable in EAS",
+      subtitle = sprintf("%d EUR-prioritised genes  |  %d replicate in EUR (Stahl)  |  %d transfer to East Asian (BBJ p<0.05, same direction)  |  %d untestable in EAS",
                          nrow(d), nrep, ntr, nunt),
       caption = CAVEAT,
       theme = theme(plot.subtitle = element_text(size = 9.5, colour = "grey35"),
@@ -85,7 +85,7 @@ gb <- ggplot(cnt, aes(sex, N, fill = ancestry_class)) +
   geom_text(aes(label = ifelse(N > 0, N, "")), position = position_stack(vjust = 0.5),
             size = 3.1, colour = "white", fontface = "bold") +
   scale_fill_manual(values = CLASS, name = NULL, breaks = names(CLASS)) +
-  labs(subtitle = "How many per-sex causal genes replicate in EUR vs transfer to East Asian",
+  labs(subtitle = "How many per-sex prioritised genes replicate in EUR vs transfer to East Asian",
        caption = paste0("Exposure = European eQTL (eQTLGen) for all genes; outcome = RA GWAS ",
                         "(EUR: Okada/Stahl; East Asian: Biobank Japan).\nEast-Asian arm is exploratory ",
                         "(ancestry-mismatched exposure — no East-Asian eQTL available)."),

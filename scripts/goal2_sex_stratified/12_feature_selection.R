@@ -5,7 +5,7 @@
 # MR-ANCHORED, SEX-STRATIFIED machine-learning feature selection.
 #
 # PURPOSE
-#   Starting from the Mendelian-randomisation (MR) causal candidate genes that
+#   Starting from the Mendelian-randomisation (MR) prioritised candidate genes that
 #   were derived SEPARATELY in females (n = 32) and males (n = 25), this script
 #   [header corrected 2026-07-28. Prior versions said 14/40 and then 74/55; BOTH
 #    described superseded runs and are now wrong for two independent reasons:
@@ -28,7 +28,7 @@
 #   of genes for which MR provided evidence of a CAUSAL effect on rheumatoid
 #   arthritis liability in that sex (eQTLGen cis-eQTL exposures vs Okada 2014
 #   European RA GWAS, exposure filter risk != ns). Anchoring feature selection
-#   on causal genes rather than on all differentially expressed genes yields a
+#   on prioritised genes rather than on all differentially expressed genes yields a
 #   panel whose members are supported by genetic evidence of causality, not only
 #   by an observational case-control expression difference.
 #     Female candidates (32): results/tables/FS_input_female.csv
@@ -83,7 +83,7 @@
 #   the Venn diagram of the companion figure script).
 #
 # WHAT WAS DONE vs NOT DONE (for the thesis methods section)
-#   DONE : within-sex LASSO + RF + SVM-RFE on MR causal genes, each with its
+#   DONE : within-sex LASSO + RF + SVM-RFE on MR-prioritised genes, each with its
 #          OWN parameters (see below); 3-method common-gene consensus (the Venn
 #          overlap); full object export so every panel of the figure is
 #          reproducible from the stored fits.
@@ -141,7 +141,7 @@ mr_female <- fread(file.path(tab, "FS_input_female.csv"))
 mr_male   <- fread(file.path(tab, "FS_input_male.csv"))
 
 # NEW symmetric disease-module MR panels (counts differ from the old 14/40)
-cat(sprintf("NEW MR causal candidates: female %d, male %d\n", nrow(mr_female), nrow(mr_male)))
+cat(sprintf("NEW MR-prioritised candidates: female %d, male %d\n", nrow(mr_female), nrow(mr_male)))
 mr_female <- mr_female[mr_female$gene %in% rownames(expr)]
 mr_male   <- mr_male[mr_male$gene   %in% rownames(expr)]
 stopifnot(nrow(mr_female) >= 2L, nrow(mr_male) >= 2L)

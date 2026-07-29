@@ -414,7 +414,7 @@ screened set is therefore noise. Because `FS_input_{female,male}.csv` — the
 input to downstream feature selection — is populated from the *nominal* screen
 rather than the FDR-surviving set, the feature-selection stage inherits a list
 that is predominantly false positives. Only the 33 female and 27 male
-FDR-surviving genes should be described as causal candidates.
+FDR-surviving genes should be described as prioritised candidates.
 
 **(b) The signal is dominated by the MHC, and the genes there are almost
 certainly not independent.** A large fraction of the FDR-surviving set lies in
@@ -425,7 +425,7 @@ single strongest signal (p = 1e-250) is a reassuring positive control. However,
 linkage disequilibrium across the MHC is exceptionally long-range and complex,
 so a *cis*-eQTL for any gene in the region will tag the causal HLA haplotype.
 These twelve genes are best interpreted as **one signal observed twelve times**,
-not twelve independent causal genes. Any claim about a specific MHC gene
+not twelve independent prioritised genes. Any claim about a specific MHC gene
 requires conditional or colocalisation analysis that has not been performed
 here.
 

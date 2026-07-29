@@ -23,7 +23,7 @@
 #
 #   This script therefore re-runs the ENTIRE MR with the MHC instruments removed
 #   and reports the result as a FULL PARALLEL COLUMN against the primary run, so
-#   that every reported causal gene is read together with its MHC-excluded fate.
+#   that every reported prioritised gene is read with its MHC-excluded fate.
 #
 # WHAT IS AND IS NOT RE-DONE
 #   Re-done : instrument set (MHC SNPs dropped), estimator choice (the hierarchy
@@ -243,7 +243,7 @@ compare_stratum <- function(sx, sex_genes) {
   print(cmp[verdict != "ns in both", .N, by = verdict][order(-N)])
   say("  direction agreement where both estimable: %d of %d",
       sum(cmp$direction_consistent, na.rm = TRUE), sum(!is.na(cmp$direction_consistent)))
-  say("  MHC-free causal set (%d): %s", nrow(fs_no),
+  say("  MHC-free prioritised set (%d): %s", nrow(fs_no),
       if (nrow(fs_no)) paste(fs_no$gene, collapse = ", ") else "none")
 
   list(sex = sx, cmp = cmp, fs_no = fs_no,
@@ -292,7 +292,7 @@ fwrite(fate, file.path(tab, "MR_MHC_sensitivity_panel_fate.csv"))
 
 for (sx in c("female", "male")) {
   say("")
-  say("-- %s: fate of the %d FDR-surviving causal genes --", toupper(sx),
+  say("-- %s: fate of the %d FDR-surviving prioritised genes --", toupper(sx),
       sum(fate$sex == sx & fate$in_FS_input_primary))
   print(fate[sex == sx & in_FS_input_primary == TRUE,
              .(gene, chr = instrument_chr, MHC = MHC_gene, panel = in_final_panel,

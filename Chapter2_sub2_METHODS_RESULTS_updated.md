@@ -1178,7 +1178,7 @@ brown**, not green + brown.*
 5. **The causal language throughout the MR and panel sections must change.**
    Colocalisation (`10d`) shows that **no panel gene shares a causal variant with the RA
    association**, and six of nine show positive evidence of *distinct* causal variants
-   (PP.H3 ≥ 0.8). "MR-causal" must become "MR-prioritised" wherever it appears. The MR
+   (PP.H3 ≥ 0.8). "MR-prioritised" must become "MR-prioritised" wherever it appears. The MR
    step remains defensible as a genetically-informed filter on the candidate space; it
    is no longer evidence of causality.
 

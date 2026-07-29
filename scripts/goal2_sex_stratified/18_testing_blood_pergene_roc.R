@@ -3,7 +3,7 @@
 # 18h_pergene_roc_overlay.R
 # -----------------------------------------------------------------------------
 # Individual-gene ROC overlay, one panel per sex (style of the reference figure
-# "ROC Curve (Female/Male Group)"): every MR causal gene plotted as its own
+# "ROC Curve (Female/Male Group)"): every MR-prioritised gene plotted as its own
 # univariate ROC curve on a single axis, legend sorted by AUC (descending),
 # each label "GENE (AUC=0.xxx)". Each gene is oriented to its better direction
 # (AUC >= 0.5), i.e. a standalone discrimination display on the TRAIN cohort.

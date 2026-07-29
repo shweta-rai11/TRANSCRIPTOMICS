@@ -55,7 +55,7 @@
 #     apparent interaction is compositional. A composition-adjusted interaction
 #     is therefore run as a sensitivity analysis.
 #   * These genes are NOT the panel. The panels were built sex-stratified from MR
-#     causal genes and are unchanged by this script. This analysis establishes
+#     prioritised genes and are unchanged by this script. This analysis establishes
 #     that sex-differential RA biology EXISTS in these data; it does not
 #     retrospectively make the panels sex-specific.
 #

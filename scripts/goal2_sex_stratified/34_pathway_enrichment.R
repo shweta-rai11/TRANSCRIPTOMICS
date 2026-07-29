@@ -2,7 +2,7 @@
 # =============================================================================
 # new/19new_pathway_enrichment.R
 # -----------------------------------------------------------------------------
-# GO (biological process) + KEGG over-representation enrichment of the MR-causal
+# GO (biological process) + KEGG over-representation enrichment of the MR-prioritised
 # gene sets, per sex (Female 74, Male 55). Background universe = expressed genes
 # in the training cohort. Dotplot of the top terms per sex.
 # Outputs (new/):
@@ -24,7 +24,7 @@ enrich_sex <- function(sx) {
   sexlab <- if (sx == "female") "Female" else "Male"
   genes <- fread(file.path(tabN, sprintf("FS_input_%s.csv", sx)))$gene
   eg <- suppressWarnings(bitr(genes, "SYMBOL", "ENTREZID", org.Hs.eg.db))$ENTREZID
-  cat(sprintf("%s: %d causal genes -> %d mapped to ENTREZ\n", sexlab, length(genes), length(eg)))
+  cat(sprintf("%s: %d prioritised genes -> %d mapped to ENTREZ\n", sexlab, length(genes), length(eg)))
 
   go <- enrichGO(eg, org.Hs.eg.db, ont = "BP", universe = uni,
                  pvalueCutoff = 0.05, qvalueCutoff = 0.2, readable = TRUE)
@@ -51,7 +51,7 @@ enrich_sex <- function(sx) {
     facet_grid(source ~ ., scales = "free_y", space = "free_y") +
     scale_colour_gradient(low = "#B2182B", high = "#2166AC", name = "p.adjust") +
     scale_size_continuous(name = "Count", range = c(2.5, 7)) +
-    labs(x = "Gene ratio", y = NULL, subtitle = sprintf("%s MR-causal genes (n=%d)", sexlab, length(genes))) +
+    labs(x = "Gene ratio", y = NULL, subtitle = sprintf("%s MR-prioritised genes (n=%d)", sexlab, length(genes))) +
     theme_bw(base_size = 11) +
     theme(axis.text.y = element_text(size = 8), strip.text.y = element_text(angle = 0, face = "bold"))
   ggsave(file.path(figN, sprintf("fig_enrich_%s.png", sx)), g, width = 8, height = 7, dpi = 300)

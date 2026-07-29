@@ -1,6 +1,6 @@
 #!/usr/bin/env Rscript
 # =============================================================================
-# 16b_final_panel_noMHC.R  —  Head-to-head evaluation: primary vs MHC-free panel
+# 16b_model_training_final_panel_noMHC.R  —  Head-to-head evaluation: primary vs MHC-free panel
 #
 # WHY THIS EXISTS
 #   12b rebuilt the panels from the MHC-free candidate set. This script asks the
@@ -126,7 +126,7 @@ fmt <- function(a, n) {
   s
 }
 
-# in-fold three-selector consensus, identical in spirit to 14_nested_cv.R
+# in-fold three-selector consensus, identical in spirit to 14_model_training_nested_cv.R
 svm_rank <- function(X, y, cost = 1) {
   feats <- colnames(X); ranking <- character(0)
   while (length(feats) > 1) {

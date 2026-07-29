@@ -1,6 +1,6 @@
 #!/usr/bin/env Rscript
 # =============================================================================
-# 10d_coloc_panel_genes.R  —  Bayesian colocalisation for every MR causal gene
+# 10d_coloc_panel_genes.R  —  Bayesian colocalisation for every MR-prioritised gene
 #
 # WHY THIS EXISTS — THE HOLE IT CLOSES
 #   A cis-MR estimate answers "is the eQTL for gene G associated with RA?". It
@@ -43,6 +43,33 @@
 #   at the default p12 = 1e-5 AND at the conservative p12 = 1e-6, and both are
 #   reported. A colocalisation that only appears at the permissive prior is not
 #   reported as support.
+#
+# **THE SINGLE-CAUSAL-VARIANT ASSUMPTION, AND WHERE IT BREAKS**
+#   coloc.abf assumes AT MOST ONE causal variant per trait in the region. That
+#   assumption is reasonable for a typical cis-eQTL window. It is FALSE in the
+#   MHC, where rheumatoid arthritis has multiple independent, well-mapped signals
+#   (HLA-DRB1 positions 11/71/74, HLA-B position 9, HLA-DPB1 position 9;
+#   Raychaudhuri 2012), and where the regions queried here contain 1,026-5,193
+#   SNPs in extended LD.
+#
+#   When the assumption is violated, PP.H3 is inflated: two traits each driven by
+#   several variants will look like "different causal variants" even when they
+#   share one. **A high PP.H3 inside the MHC therefore CANNOT be read as clean
+#   evidence of distinct causal variants.** The correct and weaker conclusion is:
+#
+#       In the MHC, cis-MR and coloc.abf are BOTH unreliable, so no causal claim
+#       can be supported there in either direction.
+#
+#   That conclusion is sufficient for this project's purposes - it removes the
+#   causal claim either way - but it must not be overstated into a positive
+#   finding. Outside the MHC the assumption is defensible and PP.H3 there
+#   (INPP5B 0.929, ESYT1 0.912, CDC37 1.000, NCOA5 1.000) does carry its usual
+#   meaning. The MHC and non-MHC verdicts are therefore flagged separately in the
+#   output via the `assumption_valid` column.
+#
+#   The proper fix for the MHC is coloc.susie, which permits multiple causal
+#   variants per region. It requires an LD reference matrix for the region and is
+#   recorded as outstanding work in results/RESULTS_ROBUSTNESS.md.
 #
 # DATA
 #   Exposure : eQTLGen whole-blood cis-eQTL, full regional summary statistics
@@ -109,7 +136,7 @@ say("cis window    : +/- %.0f kb around the gene body (GRCh37)", CFG$window / 1e
 say("priors        : p12 = %g (main) and %g (conservative)", CFG$p12_main, CFG$p12_cons)
 
 # =============================================================================
-# STEP 1 — GENE LIST: every FDR-surviving causal gene, plus the final panels
+# STEP 1 — GENE LIST: every FDR-surviving prioritised gene, plus the panels
 # =============================================================================
 hdr("STEP 1  GENE LIST")
 o       <- readRDS(file.path(proc, "MR_primary_objects.rds"))
@@ -128,7 +155,7 @@ if (file.exists(ml_path)) {
 panel_all <- union(panels$female, panels$male)
 
 genes <- sort(unique(c(fsF$gene, fsM$gene, panel_all)))
-say("FDR-surviving causal genes : female %d, male %d", nrow(fsF), nrow(fsM))
+say("FDR-surviving prioritised genes : female %d, male %d", nrow(fsF), nrow(fsM))
 say("final panel genes          : female %d, male %d (%d unique)",
     length(panels$female), length(panels$male), length(panel_all))
 say("genes to colocalise        : %d unique", length(genes))
@@ -290,6 +317,18 @@ mr_cols <- primary[, .(gene, MHC_gene, instrument_chr, nSNP, method,
                        OR = round(OR, 3), MR_pval = signif(pval, 3))]
 res <- merge(res, mr_cols, by = "gene", all.x = TRUE)
 
+# Flag where coloc.abf's single-causal-variant assumption is tenable. Inside the
+# MHC it is not (multiple independent RA signals + extended LD), so a high PP.H3
+# there is inflated and must be reported as "unreliable in both directions"
+# rather than as positive evidence of distinct causal variants.
+res[, assumption_valid := fifelse(MHC_gene == TRUE,
+      "NO - MHC: multiple independent RA signals violate the single-causal-variant assumption",
+      "yes - single-causal-variant assumption tenable")]
+res[MHC_gene == TRUE & grepl("^DISTINCT", coloc_verdict),
+    coloc_verdict := "MHC - UNRELIABLE BOTH WAYS (PP.H3 inflated by assumption violation; no causal claim either direction)"]
+say("MHC genes reclassified from DISTINCT VARIANTS to UNRELIABLE: %d",
+    sum(res$MHC_gene == TRUE & grepl("^MHC - UNRELIABLE", res$coloc_verdict), na.rm = TRUE))
+
 fate_path <- file.path(tab, "MR_MHC_sensitivity_panel_fate.csv")
 if (file.exists(fate_path)) {
   fate <- fread(fate_path)
@@ -328,11 +367,12 @@ tally <- function(d) data.table(
   coloc_prior_fragile= sum(grepl("default prior only", d$coloc_verdict)),
   suggestive         = sum(grepl("^SUGGESTIVE", d$coloc_verdict)),
   distinct_variants  = sum(grepl("^DISTINCT", d$coloc_verdict)),
+  mhc_unreliable     = sum(grepl("^MHC - UNRELIABLE", d$coloc_verdict)),
   inconclusive       = sum(grepl("^INCONCLUSIVE|^UNDERPOWERED", d$coloc_verdict)),
   not_run            = sum(!is.na(d$coloc_status)))
 
 summ <- rbindlist(list(
-  cbind(set = "All causal genes",       tally(res)),
+  cbind(set = "All prioritised genes",       tally(res)),
   cbind(set = "MHC genes",              tally(res[MHC_gene == TRUE])),
   cbind(set = "non-MHC genes",          tally(res[MHC_gene == FALSE])),
   cbind(set = "Final panels (F union M)", tally(pan))))

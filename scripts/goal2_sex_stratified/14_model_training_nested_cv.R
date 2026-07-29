@@ -13,7 +13,7 @@
 # and the held-out fold is never seen during selection or fitting.
 #
 # DESIGN
-#   Candidate universe (fixed, legitimate): the within-sex MR causal genes
+#   Candidate universe (fixed, legitimate): the within-sex MR-prioritised genes
 #     (14 female / 40 male). These come from an EXTERNAL MR analysis on GWAS
 #     summary data, not from this expression matrix, so keeping them fixed
 #     across folds is not leakage.

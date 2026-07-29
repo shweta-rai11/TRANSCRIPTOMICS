@@ -1,6 +1,6 @@
 #!/usr/bin/env Rscript
 # =============================================================================
-# 28_validate_synovium.R  —  CROSS-TISSUE validation of the blood sex-stratified
+# 20_testing_synovium_external.R  —  CROSS-TISSUE validation of the blood sex-stratified
 # ML signatures in RA SYNOVIUM (GSE89408 RNA-seq, n=218). RA (152) vs Normal
 # (28); sex assigned by position from the GSM pData (146 F / 72 M). Counts are
 # TMM-normalized (edgeR) and log2-CPM transformed. For each signature gene we

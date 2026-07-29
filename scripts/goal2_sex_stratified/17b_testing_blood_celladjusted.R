@@ -1,6 +1,6 @@
 #!/usr/bin/env Rscript
 # =============================================================================
-# 13b_panel_auc_celladjusted.R  —  Does the diagnostic panel survive adjustment
+# 17b_testing_blood_celladjusted.R  —  Does the diagnostic panel survive adjustment
 #                                  for leukocyte composition?
 #
 # WHY THIS EXISTS — THE HOLE IT CLOSES
@@ -88,10 +88,23 @@ hdr <- function(x) cat("\n", strrep("=", 74), "\n", x, "\n", strrep("=", 74), "\
 # STEP 1 — PANELS, EXPRESSION AND CELL FRACTIONS
 # =============================================================================
 hdr("STEP 1  LOAD PANELS, EXPRESSION AND CELL FRACTIONS")
-ml    <- readRDS(file.path(procN, "ml_features.rds"))
-panel <- list(F = ml$female$consensus, M = ml$male$consensus)
-say("panels: female %d genes (%s)", length(panel$F), paste(panel$F, collapse = ", "))
-say("        male   %d genes (%s)", length(panel$M), paste(panel$M, collapse = ", "))
+# Both panels are benchmarked. The MHC-free panel (12b) is the one the thesis
+# carries forward, so it must face the composition-only benchmark too - showing
+# only the primary panel would leave the deliverable untested.
+ml  <- readRDS(file.path(procN, "ml_features.rds"))
+mlN_path <- file.path(procN, "ml_features_noMHC.rds")
+mlN <- if (file.exists(mlN_path)) readRDS(mlN_path) else NULL
+
+PANELS <- list(primary = list(F = ml$female$consensus, M = ml$male$consensus))
+if (!is.null(mlN)) {
+  PANELS$noMHC <- list(F = mlN$female$consensus, M = mlN$male$consensus)
+} else {
+  say("ml_features_noMHC.rds not found - only the primary panel benchmarked (run 12b).")
+}
+
+for (v in names(PANELS)) for (sx in c("F", "M"))
+  say("%-8s %s: %d genes (%s)", v, sx, length(PANELS[[v]][[sx]]),
+      paste(PANELS[[v]][[sx]], collapse = ", "))
 
 tr <- readRDS(file.path(proc, "combined_train.rds"))
 ho <- readRDS(file.path(proc, "internal_val_holdout_processed.rds"))
@@ -247,10 +260,11 @@ safe_roc <- function(y, p) {
 hdr("STEP 4  PANEL vs COMPOSITION")
 rows <- list(); lrt_rows <- list(); rocs <- list()
 
+for (variant in names(PANELS)) {
 for (sx in c("F", "M")) {
   sexlab <- if (sx == "F") "Female" else "Male"
-  genes  <- panel[[sx]]
-  cat(sprintf("\n---------------- %s panel ----------------\n", sexlab))
+  genes  <- PANELS[[variant]][[sx]]
+  cat(sprintf("\n---------------- %s panel [%s] ----------------\n", sexlab, variant))
 
   for (dn in names(datasets)) {
     d <- datasets[[dn]]
@@ -276,14 +290,14 @@ for (sx in c("F", "M")) {
       if (is.null(r)) next
       a <- auc_ci(r)
       rows[[length(rows) + 1]] <- data.table(
-        sex = sexlab, dataset = d$label, model = mn,
+        sex = sexlab, panel = variant, dataset = d$label, model = mn,
         n = length(y), n_RA = sum(y == "RA"), n_HC = sum(y == "HC"),
         n_panel_genes = length(present),
         AUC = round(a["auc"], 3), AUC_lo = round(a["lo"], 3), AUC_hi = round(a["hi"], 3),
         CI_method = ifelse(a["ci_method"] == 1, "bootstrap (n<20)", "DeLong"),
         evidence_tier = ifelse(sx == "M" || length(y) < CFG$small_n,
                                "EXPLORATORY (underpowered)", "primary"))
-      rocs[[paste(sexlab, d$label, mn)]] <- r
+      rocs[[paste(variant, sexlab, d$label, mn)]] <- r
     }
 
     # DeLong comparison: panel vs the composition-only benchmark
@@ -306,7 +320,7 @@ for (sx in c("F", "M")) {
     sep <- any(abs(stats::coef(mC)[-1]) > 10, na.rm = TRUE)   # quasi-separation guard
 
     lrt_rows[[length(lrt_rows) + 1]] <- data.table(
-      sex = sexlab, dataset = d$label, n = length(y),
+      sex = sexlab, panel = variant, dataset = d$label, n = length(y),
       AUC_panel = round(as.numeric(auc(rA)), 3),
       AUC_composition = round(as.numeric(auc(rB)), 3),
       AUC_both = if (is.null(rC)) NA_real_ else round(as.numeric(auc(rC)), 3),
@@ -329,6 +343,7 @@ for (sx in c("F", "M")) {
         ifelse(sep, "  [SEPARATION WARNING]", ""))
   }
 }
+}
 
 auc_tab <- rbindlist(rows)
 lrt_tab <- rbindlist(lrt_rows)
@@ -347,7 +362,7 @@ hdr("STEP 5  VERDICT")
 MIN_DELTA <- 0.02
 
 verdict <- lrt_tab[, .(
-  sex, dataset, n, AUC_panel, AUC_composition, delta = delta_panel_minus_composition,
+  sex, panel, dataset, n, AUC_panel, AUC_composition, delta = delta_panel_minus_composition,
   LRT_p = LRT_p_panel_beyond_composition, evidence_tier,
   perfect_separation = AUC_panel >= 0.999,
   verdict = fifelse(evidence_tier != "primary",
@@ -369,7 +384,7 @@ fwrite(verdict, file.path(tab, "PANEL_auc_celladjusted_summary.csv"))
 print(verdict)
 
 cat("\n---- full AUC table ----\n")
-print(auc_tab[, .(sex, dataset, model, n, AUC, AUC_lo, AUC_hi, CI_method, evidence_tier)])
+print(auc_tab[, .(sex, panel, dataset, model, n, AUC, AUC_lo, AUC_hi, evidence_tier)])
 
 saveRDS(list(auc = auc_tab, lrt = lrt_tab, verdict = verdict, rocs = rocs, config = CFG),
         file.path(procN, "panel_celladjusted_objects.rds"))

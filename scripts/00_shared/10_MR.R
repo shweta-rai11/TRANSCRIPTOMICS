@@ -424,7 +424,7 @@ hdr("SUMMARY")
 # weaker still: shared genes carry IDENTICAL estimates because both GWAS are
 # sex-combined, so these differences reflect only which genes were eligible
 # upstream, plus near-identical FDR denominators (1,477 vs 1,478 tested).
-say("shared causal genes : %d", length(intersect(fs_f$gene, fs_m$gene)))
+say("shared prioritised genes : %d", length(intersect(fs_f$gene, fs_m$gene)))
 say("in female list only : %s", paste(setdiff(fs_f$gene, fs_m$gene), collapse = ", "))
 say("in male list only   : %s", paste(setdiff(fs_m$gene, fs_f$gene), collapse = ", "))
 say("")

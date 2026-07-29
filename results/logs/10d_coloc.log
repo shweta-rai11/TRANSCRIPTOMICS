@@ -19,41 +19,8 @@ gene coordinates resolved  : 33 of 33
 ==========================================================================
 STEP 2  FETCH REGIONAL SUMMARY STATISTICS
 ==========================================================================
-cache: 0 regions already stored
-fetching 33 regions from OpenGWAS ...
-  [  1/ 33] RETSAT     2:85319211-85831743      eQTL  2150 SNPs | GWAS  1118 SNPs
-  [  2/ 33] FCGR2B     1:161301101-161898444    eQTL  2402 SNPs | GWAS  1248 SNPs
-  [  3/ 33] LPCAT2     16:55292910-55870582     eQTL  3213 SNPs | GWAS  1323 SNPs
-  [  4/ 33] TAB1       22:39545746-40083065     eQTL  2316 SNPs | GWAS  1153 SNPs
-  [  5/ 33] CDC37      19:10251810-10780797     eQTL  2146 SNPs | GWAS   991 SNPs
-  [  6/ 33] PHF19      9:123367977-123889606    eQTL  1651 SNPs | GWAS   886 SNPs
-  [  7/ 33] LAX1       1:203484304-203995361    eQTL  2073 SNPs | GWAS   949 SNPs
-  [  8/ 33] IKZF4      12:56151443-56682219     eQTL  1218 SNPs | GWAS   394 SNPs
-  [  9/ 33] NCOA5      20:44439624-44968591     eQTL  2140 SNPs | GWAS   993 SNPs
-  [ 10/ 33] MED1       17:37310538-37857539     eQTL  1694 SNPs | GWAS   861 SNPs
-  [ 11/ 33] KLF2       19:16185628-16688685     eQTL  1805 SNPs | GWAS   891 SNPs
-  [ 12/ 33] AP4B1      1:114187370-114697823    eQTL  1536 SNPs | GWAS   867 SNPs
-  [ 13/ 33] VARS2      6:30626019-31144236      eQTL  4522 SNPs | GWAS  3275 SNPs
-  [ 14/ 33] SMARCC2    12:56306767-56833351     eQTL  1283 SNPs | GWAS   432 SNPs
-  [ 15/ 33] ESYT1      12:56262034-56788455     eQTL  1240 SNPs | GWAS   381 SNPs
-  [ 16/ 33] PGAP3      17:37577375-38103050     eQTL  1700 SNPs | GWAS   761 SNPs
-  [ 17/ 33] IKZF3      17:37671198-38270441     eQTL  2097 SNPs | GWAS   946 SNPs
-  [ 18/ 33] SH2B1      16:28607921-29135526     eQTL  1092 SNPs | GWAS   341 SNPs
-  [ 19/ 33] HLA-DRB1   6:32296546-32807625      eQTL 12250 SNPs | GWAS  6336 SNPs
-  [ 20/ 33] ZNF785     16:30335061-30847092     eQTL  1029 SNPs | GWAS   359 SNPs
-  [ 21/ 33] INPP5B     1:38076369-38662729      eQTL  2037 SNPs | GWAS  1071 SNPs
-  [ 22/ 33] DAXX       6:33036335-33547046      eQTL  3176 SNPs | GWAS  2156 SNPs
-  [ 23/ 33] BRD2       6:32686437-33199282      eQTL  5941 SNPs | GWAS  4531 SNPs
-  [ 24/ 33] HLA-DMA    6:32666390-33186871      eQTL  6493 SNPs | GWAS  5025 SNPs
-  [ 25/ 33] LSM2       6:31515173-32024761      eQTL  1653 SNPs | GWAS  1246 SNPs
-  [ 26/ 33] CSNK2B     6:31383013-31888120      eQTL  3122 SNPs | GWAS  2304 SNPs
-  [ 27/ 33] AIF1       6:31332961-31834798      eQTL  4124 SNPs | GWAS  3116 SNPs
-  [ 28/ 33] C6orf136   6:30364816-30870987      eQTL  3765 SNPs | GWAS  2245 SNPs
-  [ 29/ 33] GNL1       6:30259154-30774951      eQTL  3217 SNPs | GWAS  2245 SNPs
-  [ 30/ 33] ZBTB9      6:33172356-33675325      eQTL  2147 SNPs | GWAS  1344 SNPs
-  [ 31/ 33] VPS52      6:32968049-33489824      eQTL  3664 SNPs | GWAS  2584 SNPs
-  [ 32/ 33] WDR46      6:32996885-33507304      eQTL  3488 SNPs | GWAS  2405 SNPs
-  [ 33/ 33] HLA-DPA1   6:32782346-33298552      eQTL  4334 SNPs | GWAS  3132 SNPs
+cache: 33 regions already stored
+all regions served from cache - no network access required
 
 ==========================================================================
 STEP 3  HARMONISE AND RUN coloc.abf
@@ -294,6 +261,7 @@ There were 50 or more warnings (use warnings() to see the first 50)
 ==========================================================================
 STEP 4  JOIN TO MR AND MHC SENSITIVITY
 ==========================================================================
+MHC genes reclassified from DISTINCT VARIANTS to UNRELIABLE: 13
 
 ---- FINAL PANEL GENES ----
        gene      F      M    MHC nSNP_MR    OR nsnp_coloc   PP3   PP4 PP4_1e6
@@ -307,17 +275,17 @@ STEP 4  JOIN TO MR AND MHC SENSITIVITY
 7: C6orf136   TRUE  FALSE   TRUE       1 0.537       1911 1.000 0.000   0.000
 8:    VPS52  FALSE   TRUE   TRUE       1 0.414       2182 1.000 0.000   0.000
 9:  HLA-DMA  FALSE   TRUE   TRUE       1 0.559       4193 1.000 0.000   0.000
-                                               coloc_verdict
-                                                      <char>
-1:                                 SUGGESTIVE colocalisation
-2:              INCONCLUSIVE (no strong evidence either way)
-3:              INCONCLUSIVE (no strong evidence either way)
-4: DISTINCT VARIANTS (LD-confounded: MR estimate not causal)
-5: DISTINCT VARIANTS (LD-confounded: MR estimate not causal)
-6: DISTINCT VARIANTS (LD-confounded: MR estimate not causal)
-7: DISTINCT VARIANTS (LD-confounded: MR estimate not causal)
-8: DISTINCT VARIANTS (LD-confounded: MR estimate not causal)
-9: DISTINCT VARIANTS (LD-confounded: MR estimate not causal)
+                                                                                           coloc_verdict
+                                                                                                  <char>
+1:                                                                             SUGGESTIVE colocalisation
+2:                                                          INCONCLUSIVE (no strong evidence either way)
+3:                                                          INCONCLUSIVE (no strong evidence either way)
+4:                                             DISTINCT VARIANTS (LD-confounded: MR estimate not causal)
+5:                                             DISTINCT VARIANTS (LD-confounded: MR estimate not causal)
+6: MHC - UNRELIABLE BOTH WAYS (PP.H3 inflated by assumption violation; no causal claim either direction)
+7: MHC - UNRELIABLE BOTH WAYS (PP.H3 inflated by assumption violation; no causal claim either direction)
+8: MHC - UNRELIABLE BOTH WAYS (PP.H3 inflated by assumption violation; no causal claim either direction)
+9: MHC - UNRELIABLE BOTH WAYS (PP.H3 inflated by assumption violation; no causal claim either direction)
 
 ==========================================================================
 STEP 5  SUMMARY
@@ -328,12 +296,12 @@ STEP 5  SUMMARY
 2:                MHC genes      14    14           0                   0
 3:            non-MHC genes      19    19           0                   2
 4: Final panels (F union M)       9     9           0                   0
-   suggestive distinct_variants inconclusive not_run
-        <int>             <int>        <int>   <int>
-1:          4                22            5       0
-2:          0                13            1       0
-3:          4                 9            4       0
-4:          1                 6            2       0
+   suggestive distinct_variants mhc_unreliable inconclusive not_run
+        <int>             <int>          <int>        <int>   <int>
+1:          4                 9             13            5       0
+2:          0                 0             13            1       0
+3:          4                 9              0            4       0
+4:          1                 2              4            2       0
 
 READING RULE FOR THE THESIS
   A causal claim for a gene requires BOTH:
