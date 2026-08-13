@@ -51,3 +51,6 @@ renv/staging/
 # ---- Python bytecode -----------------------------------------------------
 __pycache__/
 *.pyc
+
+# ---- Markdown docs (kept local, not pushed) -------------------------------
+*.md
