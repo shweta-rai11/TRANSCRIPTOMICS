@@ -24,13 +24,22 @@
 #   two analyses.
 #
 # WHY MR GENES ARE THE INPUT (not the differentially-expressed genes)
-#   The candidate universe for the machine-learning step is deliberately the set
-#   of genes for which MR provided evidence of a CAUSAL effect on rheumatoid
-#   arthritis liability in that sex (eQTLGen cis-eQTL exposures vs Okada 2014
-#   European RA GWAS, exposure filter risk != ns). Anchoring feature selection
-#   on prioritised genes rather than on all differentially expressed genes yields a
-#   panel whose members are supported by genetic evidence of causality, not only
-#   by an observational case-control expression difference.
+#   The candidate universe for the machine-learning step is the set of genes
+#   PRIORITISED by MR in that sex (eQTLGen cis-eQTL exposures vs Okada 2014
+#   European RA GWAS), i.e. surviving within-stratum BH-FDR < 0.05.
+#
+#   LANGUAGE: these are MR-PRIORITISED genes, NOT causal genes. Colocalisation
+#   (10d/10e) found NO panel gene sharing a causal variant with the RA signal,
+#   and several show positive evidence of DISTINCT causal variants. The MR step
+#   is defensible as a genetically-informed FILTER on the candidate space; it is
+#   not evidence of causality. Do not reintroduce "causal" here.
+#
+#   PROVENANCE (matters for how the nested CV in 14/16d must be read): the genes
+#   SUBMITTED to MR were disease-module INTERSECT sex-DEG, both computed on the
+#   whole training partition using the labels. Only the FILTER is external. The
+#   universe is therefore an EXTERNALLY FILTERED INTERNAL LIST, not an external
+#   one, and holding it fixed across folds leaves residual optimism in the
+#   training-cohort nested estimate. See thesis 2.8.1 / 2.9.2.
 #     Female candidates (32): results/tables/FS_input_female.csv
 #     Male   candidates (25): results/tables/FS_input_male.csv
 #   Columns: gene, direction (risk OR>1 / protective OR<1), MR_OR, MR_pval.

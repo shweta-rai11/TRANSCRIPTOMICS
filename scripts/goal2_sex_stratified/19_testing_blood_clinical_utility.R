@@ -13,6 +13,7 @@
 suppressMessages({library(rms); library(data.table); library(magick)})
 proc <- "data/processed"; figN <- "results/figures/new"; tabN <- "results/tables"
 dir.create(figN, showWarnings = FALSE, recursive = TRUE)
+GLOBAL_SEED <- 1234  # matches GLOBAL_SEED convention used throughout scripts/goal2_sex_stratified/
 
 o <- readRDS(file.path(proc, "combined_train.rds")); expr <- o$expr
 meta <- as.data.table(o$meta)
@@ -55,6 +56,7 @@ for (sx in names(panels)) {
 
   ## (B) calibration
   png(tmp("B"), width = 1300, height = 1250, res = 200); par(mar = c(4,4,3,1))
+  set.seed(GLOBAL_SEED)  # calibrate() bootstraps internally and was previously unseeded -> non-reproducible MAE/MSE
   cal <- tryCatch(calibrate(fit, B = 200), error = function(e) NULL)
   if (!is.null(cal)) plot(cal, xlab = "Predicted probability", ylab = "Actual probability", subtitles = FALSE, main = "")
   else plot.new()

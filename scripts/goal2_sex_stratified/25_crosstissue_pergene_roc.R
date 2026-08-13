@@ -16,7 +16,13 @@ ml <- readRDS(file.path(proc, "new", "ml_features.rds"))
 D  <- readRDS(file.path(proc, "dge_results.rds"))
 v  <- readRDS(file.path(proc, "new", "val_synovium.rds"))
 gF <- ml$female$consensus; gM <- ml$male$consensus
-gene_sex <- setNames(c(rep("Female", length(gF)), rep("Male", length(gM))), c(gF, gM))
+# The panels SHARE genes (ESYT1, MED1, SMARCC2), so the unit of evaluation is
+# (gene, sex), not gene: the same gene is a different classifier in each stratum
+# and carries a different AUC. A named lookup keyed on c(gF, gM) has duplicate
+# names, returns the FIRST match, and would silently evaluate every shared gene
+# in the female stratum only - and duplicate factor levels abort the plot.
+panel_map <- rbind(data.table(gene = gF, sex = "Female"),
+                   data.table(gene = gM, sex = "Male"))
 
 # ---- Train / Internal / Blood gene ROC coords from saved store --------------
 keys <- grep("^gene ", names(ro), value = TRUE)
@@ -24,24 +30,28 @@ bti <- rbindlist(lapply(keys, function(k) {
   toks <- strsplit(k, " ")[[1]]; sexlab <- toks[2]; gene <- toks[length(toks)]
   ds <- paste(toks[3:(length(toks)-1)], collapse = " ")
   if (!ds %in% c("Train","Internal test","External blood")) return(NULL)
-  d <- as.data.table(ro[[k]]); d[, .(gene, dataset = ds, sens, spec, auc)]
+  d <- as.data.table(ro[[k]]); d[, .(gene, sex = sexlab, dataset = ds, sens, spec, auc)]
 }))
 
 # ---- Synovium per-gene ROC, train-fixed orientation -------------------------
 train_dir <- function(g, s) sign(as.data.table(D$res[[s]])$logFC[match(g, as.data.table(D$res[[s]])$gene)])
-syn <- rbindlist(lapply(names(gene_sex), function(g) {
-  s <- gene_sex[[g]]; if (!g %in% rownames(v$logcpm)) return(NULL)
+syn <- rbindlist(lapply(seq_len(nrow(panel_map)), function(i) {
+  g <- panel_map$gene[i]; s <- panel_map$sex[i]
+  if (!g %in% rownames(v$logcpm)) return(NULL)
   idx <- which(v$sex == ifelse(s=="Female","F","M")); y <- factor(v$grp[idx], levels=c("Normal","RA"))
   dir <- if (train_dir(g, s) > 0) "<" else ">"     # up-in-RA-blood -> higher=RA
   r <- roc(y, as.numeric(v$logcpm[g, idx]), direction = dir, levels = c("Normal","RA"), quiet = TRUE)
-  data.table(gene = g, dataset = "External synovium", sens = r$sensitivities, spec = r$specificities,
-             auc = as.numeric(auc(r)))
+  data.table(gene = g, sex = s, dataset = "External synovium", sens = r$sensitivities,
+             spec = r$specificities, auc = as.numeric(auc(r)))
 }))
-d <- rbind(bti, syn)[gene %in% names(gene_sex)]
+# inner join keeps only the (gene, sex) pairs the gene actually belongs to
+d <- merge(rbind(bti, syn), panel_map, by = c("gene", "sex"))
 ORDER <- c("Train","Internal test","External blood","External synovium")
 pal <- c("Train"="#1b6ca8","Internal test"="#e08214","External blood"="#4d9221","External synovium"="#7B3294")
 d[, dataset := factor(dataset, levels = ORDER)]
-d[, gene := factor(gene, levels = c(gF, gM))]
+# one facet per (gene, sex): shared genes get a facet in EACH panel
+FACETS <- sprintf("%s (%s)", panel_map$gene, panel_map$sex)
+d[, gene := factor(sprintf("%s (%s)", gene, sex), levels = FACETS)]
 
 # AUC labels per gene/dataset (dataset name + value, stacked in each facet)
 short <- c("Train"="Train", "Internal test"="Internal",

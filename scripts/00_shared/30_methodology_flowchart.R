@@ -45,7 +45,10 @@ arr(cx,41,cx,38.8); arr(cx,34.2,cx,31.8); arr(cx,26.2,cx,24.3)
 wx <- 80
 box(wx, 57.5, 30, 4.8, "WGCNA co-expression network", c_wg, cex=0.7, font=2)
 box(wx, 50.5, 30, 5, "Modules (blue = down, yellow = up)\n+ module–trait", c_wg, cex=0.66)
-box(wx, 43.5, 30, 4.5, "Hub genes  →  STRING PPI", c_wg)
+# Hub genes are defined by kME, GS and intramodular connectivity ONLY.
+# No STRING PPI and no betweenness-centrality analysis exists in this
+# pipeline; the previous label advertised an analysis that was never run.
+box(wx, 43.5, 30, 4.5, "Hub genes (kME, GS, connectivity)", c_wg, cex=0.62)
 box(wx, 36.5, 30, 4.5, "DEG ∩ WGCNA candidates", c_wg)
 # DEG -> WGCNA branch
 arr(cx+17, 66, wx-15, 57.5)

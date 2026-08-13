@@ -13,10 +13,24 @@
 # and the held-out fold is never seen during selection or fitting.
 #
 # DESIGN
-#   Candidate universe (fixed, legitimate): the within-sex MR-prioritised genes
-#     (14 female / 40 male). These come from an EXTERNAL MR analysis on GWAS
-#     summary data, not from this expression matrix, so keeping them fixed
-#     across folds is not leakage.
+#   Candidate universe (fixed across folds). The within-sex MR-prioritised genes,
+#     read from FS_input_{female,male}.csv. DO NOT quote a count here - it has
+#     changed three times (14/40, then 74/55, then 32/25) and a header comment
+#     is the wrong place to carry a result. Quote mr_fs_summary.csv.
+#
+#     SCOPE OF THIS DESIGN - stated precisely, because an earlier version of this
+#     comment claimed the fixed universe "is not leakage", which is only half true.
+#     The universe is an EXTERNALLY FILTERED INTERNAL LIST:
+#       - genes SUBMITTED to MR = disease module (06) INTERSECT sex DEG (05),
+#         both computed on the whole training partition USING THE LABELS;
+#       - the FILTER applied to them = MR against external GWAS/eQTL summary
+#         statistics, which used no expression data from this study.
+#     Holding it fixed therefore means an outer-fold test sample helped define
+#     the gene list its own prediction is built from. This loop corrects the
+#     selection bias of the 3-selector stage and the classifier; it does NOT
+#     correct the bias of the upstream DEG/WGCNA/MR stages. Treat the nested
+#     number as an UPPER BOUND, and rest the diagnostic claim on the sealed
+#     holdout and the external cohorts, which are unaffected. See thesis 2.9.2.
 #   Outer loop : repeated stratified k-fold.
 #       Female : 10-fold x 5 repeats   (n = 145)
 #       Male   : 5-fold  x 10 repeats  (n = 38; smaller k, more repeats to

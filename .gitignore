@@ -47,3 +47,7 @@ renv/staging/
 .DS_Store
 *~
 .Rproj.user
+
+# ---- Python bytecode -----------------------------------------------------
+__pycache__/
+*.pyc
