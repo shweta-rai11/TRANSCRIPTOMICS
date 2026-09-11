@@ -48,6 +48,9 @@ renv/staging/
 *~
 .Rproj.user
 
-# ---- language build artefacts -------------------------------------------------
+# ---- Python bytecode -----------------------------------------------------
 __pycache__/
 *.pyc
+
+# ---- Markdown docs (kept local, not pushed) -------------------------------
+*.md
