@@ -47,3 +47,7 @@ renv/staging/
 .DS_Store
 *~
 .Rproj.user
+
+# ---- language build artefacts -------------------------------------------------
+__pycache__/
+*.pyc

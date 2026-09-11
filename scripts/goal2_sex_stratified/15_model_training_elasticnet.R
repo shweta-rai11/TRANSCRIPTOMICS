@@ -17,8 +17,15 @@
 # correlated-but-informative MR genes that a hard intersection discards.
 #
 # Everything is validated the SAME honest way as 18b/18c:
-#   * Candidate universe = the EXTERNAL MR-prioritised genes (fixed; not chosen from
-#     this expression matrix), so keeping them fixed across folds is not leakage.
+#   * Candidate universe = the MR-prioritised genes, held FIXED across folds.
+#     NOT an external list: the genes submitted to MR were disease-module
+#     INTERSECT sex-DEG, both computed on the whole training partition using the
+#     labels; only the MR FILTER is external. So the nested loop below corrects
+#     the selection bias of the model-fitting stage, NOT that of the upstream
+#     DEG/WGCNA/MR stages. Upper bound, not a leakage-free estimate. See 2.9.2.
+#   * NOTE: this script is SUPERSEDED by 16d_nested_cv_reconciliation.R. No
+#     figure or table reported in the thesis comes from it (its seed policy,
+#     2000 + repeat, differs from the authoritative 1000 + repeat).
 #   * NESTED CV (leakage-free): inside every outer-train fold we tune alpha over
 #     a grid and lambda by inner 5-fold CV, fit, and predict the untouched
 #     outer-test fold. Female 10-fold x5, Male 5-fold x10 (as 18c).

@@ -2,8 +2,15 @@
 # =============================================================================
 # new/24new_synovium_roc.R  -- ROC curves in the SYNOVIUM external test
 # (GSE89408, RA vs Normal), per sex, for the consensus panels.
-#   (1) per-gene univariate ROC overlay (each gene oriented to AUC>=0.5)
-#   (2) panel ROC (combined logistic model, apparent + 10-fold CV)
+#   (1) per-gene univariate ROC overlay. ORIENTATION = BEST-DIRECTION
+#       (direction="auto", so AUC>=0.5 by construction). Direction reversal vs
+#       blood is NOT visible here; it is carried by the `concordant` flag from
+#       20_. The train-oriented version is built in 24_. Do not read this
+#       overlay as evidence of cross-tissue transfer.
+#   (2) panel ROC: APPARENT (resubstitution) ONLY. The model is refitted on the
+#       synovial samples and scored on those same samples. There is NO 10-fold
+#       CV in this script (an earlier header claimed one) and no CI. Only the
+#       GENE SET transfers from blood, never the coefficients. See thesis 2.11.
 # x-axis = 1 - Specificity (standard). Uses data/processed/new/val_synovium.rds.
 # Output: results/figures/new/fig_syn_pergene_roc_{female,male}.png/pdf
 #         results/figures/new/fig_syn_panel_roc.png/pdf

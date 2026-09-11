@@ -5,10 +5,14 @@
 # Individual-gene ROC overlay, one panel per sex (style of the reference figure
 # "ROC Curve (Female/Male Group)"): every MR-prioritised gene plotted as its own
 # univariate ROC curve on a single axis, legend sorted by AUC (descending),
-# each label "GENE (AUC=0.xxx)". Each gene is oriented to its better direction
-# (AUC >= 0.5), i.e. a standalone discrimination display on the TRAIN cohort.
-#   Female : 2 consensus genes (BNIP2, NMI)                    n = 145
-#   Male   : 4 consensus genes (CLSTN1, GABBR1, HLA-DMA, SSRP1) n = 38
+# each label "GENE (AUC=0.xxx)". ORIENTATION CONVENTION: each gene is oriented
+# to its BETTER DIRECTION (AUC >= 0.5). This is a within-TRAIN discrimination
+# display only. It is NOT the train-fixed convention used for cross-dataset
+# comparison, and this figure must never be read as a transfer result.
+# See thesis 2.9 "Orientation conventions".
+#   Panel membership is NOT listed here: these names were wrong for three
+#   consecutive runs. Read it from mr_fs_summary.csv / ml_features.rds.
+#   n = 145 female, 38 male (training cohort).
 # Specificity axis reversed (1 -> 0). Outputs:
 #   results/figures/fig_mr_pergene_roc_{female,male}.png/pdf
 #   results/tables/mr_pergene_train_auc.csv

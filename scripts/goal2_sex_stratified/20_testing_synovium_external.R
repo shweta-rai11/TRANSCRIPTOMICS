@@ -43,13 +43,35 @@ tt$gene <- rownames(tt); setDT(tt)
 
 train_dir <- function(s){ d <- D$res[[ifelse(s=="F","Female","Male")]]; setNames(sign(d$logFC), d$gene) }
 
-# per-gene synovium stats + AUC (overall and within-sex)
+# -----------------------------------------------------------------------------
+# PER-GENE SYNOVIUM AUC — TWO ORIENTATION CONVENTIONS, BOTH EMITTED.
+#
+# This function previously returned ONLY the best-direction AUC (it flipped the
+# ROC direction whenever AUC < 0.5), so every stored value was >= 0.5 by
+# construction. That silently contradicted the methods text, which promised that
+# a gene reversing direction out of sample would show as AUC < 0.5. The table is
+# now explicit and carries both, with self-describing column names:
+#
+#   *_bestdir   BEST-DIRECTION. Orientation chosen inside the synovial data.
+#               >= 0.5 by construction. Answers "how much information does this
+#               gene carry in synovium, irrespective of direction?".
+#               NOT a transfer result. Never place beside blood AUCs.
+#
+#   *_trainorient  TRAIN-FIXED. Orientation fixed by the gene's blood training
+#               direction for that sex. AUC < 0.5 means the association REVERSED
+#               between blood and synovium. This is the ONLY convention valid for
+#               cross-dataset comparison, and equals bestdir when concordant,
+#               1 - bestdir when discordant (the transform applied in 24_).
+#
+# See thesis 2.9 "Orientation conventions" and 2.11.
+# -----------------------------------------------------------------------------
 gene_stat <- function(g, samples, y) {
-  if (!g %in% rownames(logcpm)) return(c(auc=NA))
+  if (!g %in% rownames(logcpm)) return(NA_real_)
   vv <- as.numeric(logcpm[g, samples])
   r <- roc(y, vv, direction="<", levels=c("Normal","RA"), quiet=TRUE)
-  if (as.numeric(auc(r))<0.5) r <- roc(y, vv, direction=">", levels=c("Normal","RA"), quiet=TRUE)
-  as.numeric(auc(r))
+  a <- as.numeric(auc(r))
+  if (a < 0.5) a <- 1 - a          # best-direction value
+  a
 }
 val_syn <- function(sig, s) {
   td <- train_dir(s)
@@ -57,11 +79,18 @@ val_syn <- function(sig, s) {
   rbindlist(lapply(sig, function(g) {
     row <- tt[gene==g]
     if (!nrow(row)) return(data.table(gene=g, present=FALSE))
+    conc <- sign(row$logFC) == unname(td[g])
+    a_all <- gene_stat(g, ov,  grp)
+    a_sex <- gene_stat(g, sxi, droplevels(grp[sxi]))
     data.table(gene=g, present=TRUE, syn_log2FC=row$logFC, syn_adjP=row$adj.P.Val,
                syn_dir=sign(row$logFC), train_dir=unname(td[g]),
-               concordant=sign(row$logFC)==unname(td[g]),
-               auc_all=gene_stat(g, ov, grp),
-               auc_sex=gene_stat(g, sxi, droplevels(grp[sxi])))
+               concordant=conc,
+               auc_all_bestdir = a_all,
+               auc_sex_bestdir = a_sex,
+               auc_all_trainorient = ifelse(conc, a_all, 1 - a_all),
+               auc_sex_trainorient = ifelse(conc, a_sex, 1 - a_sex),
+               # legacy aliases so downstream scripts keep working unchanged
+               auc_all = a_all, auc_sex = a_sex)
   }), fill=TRUE)
 }
 sf <- val_syn(fsig, "F"); sm <- val_syn(msig, "M")

@@ -27,11 +27,17 @@ panel_map <- rbind(data.table(gene = gF, panel = "Female"),
 # blood/train/internal - keep sex; a shared gene has a DIFFERENT AUC in each panel
 bti <- pg[dataset %in% c("Train","Internal test","External blood"),
           .(gene, panel = sex, dataset, AUC)]
-# synovium (train-fixed orientation), tagged with the panel it was evaluated in
+# Synovium (train-fixed orientation), tagged with the panel it was evaluated in.
+# auc_sex, NOT auc_all: this is a sex-stratified analysis, so the synovium column
+# must be computed WITHIN the stratum. auc_all pools both sexes, which gave every
+# shared gene an identical synovium AUC in the female and male panels and silently
+# contradicted the per-sex ROC curves in 25_crosstissue_pergene_roc.R.
+# `concordant` is already sex-specific (20_ orients it by each sex's own training
+# direction), so the AUC<0.5 = direction-reversed convention still holds.
 syn <- rbind(cbind(as.data.table(v$sf), panel = "Female"),
              cbind(as.data.table(v$sm), panel = "Male"), fill = TRUE)[
          , .(gene, panel, dataset = "External synovium",
-             AUC = ifelse(concordant, auc_all, 1 - auc_all))]
+             AUC = ifelse(concordant, auc_sex, 1 - auc_sex))]
 # inner join keeps only (gene, panel) pairs the gene actually belongs to
 d <- merge(rbind(bti, syn), panel_map, by = c("gene", "panel"))
 d[, dataset := factor(dataset, levels = c("Train","Internal test","External blood","External synovium"))]
