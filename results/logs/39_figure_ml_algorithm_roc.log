@@ -1,0 +1,9 @@
+Warning messages:
+1: package ‘data.table’ was built under R version 4.4.3 
+2: package ‘ggplot2’ was built under R version 4.4.3 
+wrote fig_ml_logreg_{sametissue,crosstissue}_{female,male}.{png,pdf}
+wrote fig_ml_svm_{sametissue,crosstissue}_{female,male}.{png,pdf}
+wrote fig_ml_knn_{sametissue,crosstissue}_{female,male}.{png,pdf}
+wrote fig_ml_rf_{sametissue,crosstissue}_{female,male}.{png,pdf}
+wrote fig_ml_ann_{sametissue,crosstissue}_{female,male}.{png,pdf}
+wrote fig_ml_algorithm_comparison_auc.{png,pdf}

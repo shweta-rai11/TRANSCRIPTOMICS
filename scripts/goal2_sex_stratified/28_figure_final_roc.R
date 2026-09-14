@@ -19,9 +19,10 @@ pal <- c("Train (nested CV)" = "#1b6ca8", "Internal test" = "#e08214",
 # AUC label per dataset (from the saved summary, so CI matches the tables)
 auc_lab <- function(sexlab) {
   s <- summ[sex == sexlab]
-  setNames(c(paste0("Train (nested CV): AUC ", sub(" \\(", "\n(", s$nested_CV)),
-             paste0("Internal test: AUC ",     sub(" \\(", "\n(", s$internal_test)),
-             paste0("External blood: AUC ",    sub(" \\(", "\n(", s$external_blood))), ord)
+  strip_sep <- function(x) sub(" SEPARATION$", "", x)
+  setNames(c(paste0("Train (nested CV): AUC ", sub(" \\(", "\n(", strip_sep(s$nested_CV))),
+             paste0("Internal test: AUC ",     sub(" \\(", "\n(", strip_sep(s$internal_test))),
+             paste0("External blood: AUC ",    sub(" \\(", "\n(", strip_sep(s$external_blood)))), ord)
 }
 
 plot_sex <- function(sexlab) {
@@ -39,8 +40,11 @@ plot_sex <- function(sexlab) {
     coord_equal() +
     theme_bw(base_size = 12) +
     theme(legend.position = c(0.98, 0.02), legend.justification = c(1, 0),
-          legend.background = element_rect(fill = alpha("white", 0.8), colour = NA),
-          legend.key.height = unit(1.1, "lines"),
+          legend.background = element_rect(fill = alpha("white", 0.85), colour = "grey80"),
+          legend.margin = margin(4, 6, 4, 6),
+          legend.key.height = unit(2, "lines"),
+          legend.key.spacing.y = unit(4, "pt"),
+          legend.text = element_text(size = 9, lineheight = 0.95),
           panel.grid.minor = element_blank())
 }
 

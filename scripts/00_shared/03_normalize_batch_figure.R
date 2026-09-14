@@ -26,10 +26,13 @@ ds_tab   <- table(meta$dataset)
 ds_label <- paste(sprintf("%s (n = %d)", names(ds_tab), as.integer(ds_tab)),
                   collapse = " and ")   # e.g. "GSE110169 (n = 84) and GSE93272 (n = 99)"
 
-# save helper: writes both a 300-dpi PNG and a vector PDF (preferred for print)
+# save helper: writes both a 300-dpi PNG and a vector PDF (preferred for print).
+# bg = "white" matches the other figures in results/figures/ (e.g. the Venn
+# diagram, fig_cohort_composition_bar) so PNGs don't pick up a transparent
+# background when viewed outside a white-background context.
 save2 <- function(g, name, w, h) {
-  ggsave(file.path(fig, paste0(name, ".png")), g, width = w, height = h, dpi = 300)
-  ggsave(file.path(fig, paste0(name, ".pdf")), g, width = w, height = h, device = cairo_pdf)
+  ggsave(file.path(fig, paste0(name, ".png")), g, width = w, height = h, dpi = 300, bg = "white")
+  ggsave(file.path(fig, paste0(name, ".pdf")), g, width = w, height = h, device = cairo_pdf, bg = "white")
 }
 
 # ---- build the long-format table (ALL samples) ------------------------------
@@ -77,15 +80,12 @@ make_ds_plot <- function(ds) {
     )
 }
 
-# ---- stack the two datasets into one figure ("/" = vertical) ----------------
-p_two <- make_ds_plot("GSE93272") / make_ds_plot("GSE110169") +
-  plot_annotation(
-    title    = "Per-sample expression: before vs after normalization",
-    subtitle = paste0(ds_label, ", quantile normalization aligns per-sample scales"),
-    theme    = theme(plot.title    = element_text(face = "bold", size = 13),
-                     plot.subtitle = element_text(size = 9)))
+# ---- stack the two datasets into one figure ("/" = vertical); no overall
+# title/subtitle -- each panel already carries its own dataset name + stage
+# facet labels, so a figure-level title is redundant.
+p_two <- make_ds_plot("GSE93272") / make_ds_plot("GSE110169")
 
-save2(p_two, "fig_combine_two_datasets", 7.2, 10)   # double-column width, tall
+save2(p_two, "fig_combine_two_datasets", 10, 9.5)   # matches fig_cohort_sex_composition_bar sizing (2-row layout)
 
 cat("Wrote: fig_combine_two_datasets (PNG + PDF)\n")
 
@@ -104,8 +104,13 @@ p_density <- ggplot(density_df, aes(value, color = stage, linetype = dataset)) +
   labs(title = "Distribution of expression values before vs after normalization",
        subtitle = "Quantile normalization makes the two datasets more comparable",
        x = "log2 expression", y = "density") +
-  theme(legend.position = "top")
-save2(p_density, "fig_combine_density_norm", 7, 4.5)
+  theme_bw(base_size = 12) +
+  theme(legend.position = "bottom", legend.box = "vertical",
+        legend.title = element_text(size = 10), legend.text = element_text(size = 9),
+        plot.title = element_text(face = "bold", size = 13),
+        plot.subtitle = element_text(size = 10, colour = "grey30"),
+        panel.grid.minor = element_blank())
+save2(p_density, "fig_combine_density_norm", 9.5, 5)   # matches fig_cohort_composition_bar sizing
 
 
 
@@ -186,16 +191,11 @@ pad <- function(r) r + c(-1, 1) * diff(r) * 0.04
 xlim <- pad(range(c(pc_before$df$PC1, pc_after$df$PC1)))
 ylim <- pad(range(c(pc_before$df$PC2, pc_after$df$PC2)))
 
-panel_before <- mk_panel(pc_before, "Before ComBat (normalized)", xlim, ylim)
-panel_after  <- mk_panel(pc_after,  "After ComBat",               xlim, ylim)
+panel_before <- mk_panel(pc_before, "Before ComBat (normalised)", xlim, ylim)
+panel_after  <- mk_panel(pc_after,  "After ComBat (normalised)",  xlim, ylim)
 
 p_pca <- (panel_before | panel_after) +
-  plot_layout(guides = "collect") +
-  plot_annotation(
-    title    = "Batch correction by ComBat: PCA before vs after",
-    subtitle = ds_label,
-    theme    = theme(plot.title    = element_text(face = "bold", size = 9),
-                     plot.subtitle = element_text(size = 7, colour = "grey30"))) &
+  plot_layout(guides = "collect") &
   theme(legend.position = "bottom", legend.margin = margin(t = 0))
 
 # double-column journal width (180 mm ~ 7.1 in); 600-dpi PNG + vector PDF

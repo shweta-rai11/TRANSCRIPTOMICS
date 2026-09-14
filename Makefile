@@ -117,8 +117,11 @@ models: features
 	$(RSCRIPT) $(GOAL2)/16b_model_training_final_panel_noMHC.R
 	$(RSCRIPT) $(GOAL2)/16c_model_training_nested_cv_transcriptomewide.R
 	$(RSCRIPT) $(GOAL2)/16d_nested_cv_reconciliation.R
+	$(RSCRIPT) $(GOAL2)/37_model_training_ml_algorithms.R
 	@test -f results/tables/NESTED_CV_AUTHORITATIVE.csv || \
 		(echo "models phase did not produce NESTED_CV_AUTHORITATIVE.csv" && exit 1)
+	@test -f results/tables/ML_hyperparameter_tuning.csv || \
+		(echo "models phase did not produce ML_hyperparameter_tuning.csv" && exit 1)
 
 # ---- phase 7: blood evaluation (internal/external, per-gene ROC, nomogram) -
 evaluate: models
@@ -137,8 +140,11 @@ crosstissue: evaluate
 	$(RSCRIPT) $(GOAL2)/23_crosstissue_roc_all_datasets.R
 	$(RSCRIPT) $(GOAL2)/24_crosstissue_pergene_auc.R
 	$(RSCRIPT) $(GOAL2)/25_crosstissue_pergene_roc.R
+	$(RSCRIPT) $(GOAL2)/38_testing_ml_algorithms_sametissue_crosstissue.R
 	@test -f results/tables/crosstissue_panel_auc.csv || \
 		(echo "crosstissue phase did not produce crosstissue_panel_auc.csv" && exit 1)
+	@test -f results/tables/ML_performance_crosstissue.csv || \
+		(echo "crosstissue phase did not produce ML_performance_crosstissue.csv" && exit 1)
 
 # ---- phase 9: cross-ancestry evaluation ------------------------------------
 crossancestry: evaluate
@@ -158,6 +164,7 @@ figures: crosstissue crossancestry
 	$(RSCRIPT) $(GOAL2)/34_pathway_enrichment.R
 	$(RSCRIPT) $(GOAL2)/35_figure_mr_diagnostics.R
 	$(RSCRIPT) $(GOAL2)/36_figure_pathways_by_sex.R
+	$(RSCRIPT) $(GOAL2)/39_figure_ml_algorithm_roc.R
 
 # ---- provenance: regenerate the verification report and run the test suite -
 provenance: figures test

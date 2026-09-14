@@ -49,7 +49,7 @@ pv <- ggplot(volc, aes(logFC, y, color = dir)) +
   scale_color_manual(values = dcols, name = NULL) +
   labs(x = "log2 fold-change (RA vs HC)", y = "-log10(p-value)") +
   theme(legend.position = "top")
-save2(pv, "fig_dge_volcano", 13, 5)
+save2(pv, "fig_dge_volcano", 9.5, 5)
 
 # =============================================================================
 # 2. VOLCANO — EnhancedVolcano, FEMALE | MALE side by side, LOCKED axes
@@ -83,6 +83,7 @@ ev_panel <- function(df, sextitle, labs) {
     selectLab = labs, xlim = XLIM, ylim = YLIM,
     pCutoff = PVAL, FCcutoff = FC,
     title = sextitle, subtitle = sub, caption = NULL,
+    titleLabSize = 13, subtitleLabSize = 9,
     pointSize = 1.4, labSize = 3.2, colAlpha = 0.6,
     drawConnectors = TRUE, widthConnectors = 0.4, arrowheads = FALSE,
     max.overlaps = Inf, boxedLabels = FALSE, borderWidth = 0.6,
@@ -114,8 +115,16 @@ make_sex_volcano <- function(by, tag, ranklabel) {
   pM <- ev_panel(resM, "Male",   pick_labs(resM, by))
   g <- ((pF | pM) / wrap_elements(full = LEG)) +
     plot_layout(heights = c(1, 0.07))
-  save2(g, sprintf("fig_dge_volcano_sex_%s", tag), 14, 7.8)
+  save2(g, sprintf("fig_dge_volcano_sex_%s", tag), 9.5, 5)
   cat(sprintf("Wrote fig_dge_volcano_sex_%s.{png,pdf}\n", tag))
+
+  # same panels, saved as two SEPARATE single-sex figures (each with its own
+  # copy of the shared legend attached) so Female/Male can be used on their own
+  gF <- (pF / wrap_elements(full = LEG)) + plot_layout(heights = c(1, 0.09))
+  gM <- (pM / wrap_elements(full = LEG)) + plot_layout(heights = c(1, 0.09))
+  save2(gF, sprintf("fig_dge_volcano_sex_%s_female", tag), 9.5, 5)
+  save2(gM, sprintf("fig_dge_volcano_sex_%s_male",   tag), 9.5, 5)
+  cat(sprintf("Wrote fig_dge_volcano_sex_%s_{female,male}.{png,pdf}\n", tag))
 }
 make_sex_volcano("fc",   "byFC", "log2 fold-change magnitude")
 make_sex_volcano("pval", "byP",  "statistical significance (p-value)")
@@ -138,7 +147,7 @@ pc <- ggplot(cntl, aes(comparison, n, fill = direction)) +
        x = NULL, y = "n significant genes") +
   theme_classic(base_size = 12) +
   theme(legend.position = "top", axis.text = element_text(colour = "black"))
-save2(pc, "fig_dge_counts", 8, 5)
+save2(pc, "fig_dge_counts", 9.5, 5)
 
 # =============================================================================
 # 4. VENN of significant DEGs (All / Female / Male) — publication ggVennDiagram
@@ -175,7 +184,7 @@ pvenn <- ggplot() +
   theme(plot.margin = margin(34, 26, 34, 26), legend.position = "right",
         legend.title = element_text(size = 10, face = "bold"),
         legend.text = element_text(size = 9))
-save2(pvenn, "fig_dge_venn", 8, 6.2)
+save2(pvenn, "fig_dge_venn", 9.5, 5)
 
 # =============================================================================
 # 5. HEATMAPS of significant DEGs — Female, Male, All (combined)
@@ -220,13 +229,13 @@ build_hm <- function(comp, samples, add_sex) {
     heatmap_legend_param = list(at = c(-2, -1, 0, 1, 2), legend_height = grid::unit(3, "cm")))
 }
 
-draw_hm <- function(comp, samples, add_sex, win) {
+draw_hm <- function(comp, samples, add_sex) {
   ht  <- build_hm(comp, samples, add_sex)
   ttl <- sprintf("%s : top differentially expressed genes, RA vs Control", comp)
   out <- file.path(fig, sprintf("fig_dge_heatmap_%s", tolower(comp)))
   for (dev_open in list(
-        function() png(paste0(out, ".png"), width = win, height = 8.5, units = "in", res = 300),
-        function() cairo_pdf(paste0(out, ".pdf"), width = win, height = 8.5))) {
+        function() png(paste0(out, ".png"), width = 9.5, height = 5, units = "in", res = 300),
+        function() cairo_pdf(paste0(out, ".pdf"), width = 9.5, height = 5))) {
     dev_open()
     ComplexHeatmap::draw(ht, heatmap_legend_side = "right", annotation_legend_side = "right",
       merge_legend = TRUE, column_title = ttl,
@@ -236,9 +245,47 @@ draw_hm <- function(comp, samples, add_sex, win) {
   cat(sprintf("  heatmap %s: %d genes, %d samples\n", comp,
               nrow(ht@matrix), length(samples)))
 }
-draw_hm("Female", meta$sample[meta$sex == "F"], add_sex = FALSE, win = 9)
-draw_hm("Male",   meta$sample[meta$sex == "M"], add_sex = FALSE, win = 6.5)
-draw_hm("All",    meta$sample,                  add_sex = TRUE,  win = 10)
+draw_hm("Female", meta$sample[meta$sex == "F"], add_sex = FALSE)
+draw_hm("Male",   meta$sample[meta$sex == "M"], add_sex = FALSE)
+draw_hm("All",    meta$sample,                  add_sex = TRUE)
+
+# =============================================================================
+# 5b. COMPOSITE — single-sex volcano (+shared legend) stacked on its DEG
+#     heatmap, one combined figure per sex (results/DEG_{female,male})
+# =============================================================================
+composite_deg <- function(sex_label, resSex, samples) {
+  pv <- ev_panel(resSex, sex_label, pick_labs(resSex, "fc"))
+  gv <- wrap_elements(full = (pv / wrap_elements(full = LEG)) + plot_layout(heights = c(1, 0.09)))
+  ht  <- build_hm(sex_label, samples, add_sex = FALSE)
+  ttl <- sprintf("%s : top differentially expressed genes, RA vs Control", sex_label)
+  hgrob <- grid.grabExpr(ComplexHeatmap::draw(ht,
+    heatmap_legend_side = "right", annotation_legend_side = "right", merge_legend = TRUE,
+    column_title = ttl, column_title_gp = grid::gpar(fontsize = 13, fontface = "bold")))
+  (gv / wrap_elements(full = hgrob)) + plot_layout(heights = c(1, 1.1))
+}
+gDEGm <- composite_deg("Male", resM, meta$sample[meta$sex == "M"])
+ggsave("results/DEG_male.png", gDEGm, width = 10, height = 9.5, dpi = 300)
+ggsave("results/DEG_male.pdf", gDEGm, width = 10, height = 9.5, device = cairo_pdf)
+cat("Wrote results/DEG_male.{png,pdf}\n")
+
+gDEGf <- composite_deg("Female", resF, meta$sample[meta$sex == "F"])
+ggsave("results/DEG_female.png", gDEGf, width = 10, height = 9.5, dpi = 300)
+ggsave("results/DEG_female.pdf", gDEGf, width = 10, height = 9.5, device = cairo_pdf)
+cat("Wrote results/DEG_female.{png,pdf}\n")
+
+# =============================================================================
+# 5c. COMPOSITE — 3-panel volcano (All/Female/Male) stacked on the "All" DEG
+#     heatmap (Group/Study/Sex annotated), one combined figure (results/DEG_all)
+# =============================================================================
+ht_all    <- build_hm("All", meta$sample, add_sex = TRUE)
+ttl_all   <- "All : top differentially expressed genes, RA vs Control"
+hgrob_all <- grid.grabExpr(ComplexHeatmap::draw(ht_all,
+  heatmap_legend_side = "right", annotation_legend_side = "right", merge_legend = TRUE,
+  column_title = ttl_all, column_title_gp = grid::gpar(fontsize = 13, fontface = "bold")))
+gDEGall <- (wrap_elements(full = pv) / wrap_elements(full = hgrob_all)) + plot_layout(heights = c(1, 1.1))
+ggsave("results/DEG_all.png", gDEGall, width = 10, height = 9.5, dpi = 300)
+ggsave("results/DEG_all.pdf", gDEGall, width = 10, height = 9.5, device = cairo_pdf)
+cat("Wrote results/DEG_all.{png,pdf}\n")
 
 # =============================================================================
 # 6. VENN of enriched GO/KEGG terms (Female / Male / All)   [needs dge_enrich.rds]
@@ -271,7 +318,7 @@ if (file.exists(enrich_path)) {
     theme_void(base_size = 13) +
     theme(plot.margin = margin(34, 26, 34, 26), legend.position = "right",
           legend.title = element_text(size = 10, face = "bold"), legend.text = element_text(size = 9))
-  save2(pev, "fig_dge_enriched_terms_venn", 8, 6.2)
+  save2(pev, "fig_dge_enriched_terms_venn", 9.5, 5)
   cat(sprintf("  enriched-terms venn: Female=%d Male=%d All=%d\n",
               length(es$Female), length(es$Male), length(es$All)))
 } else {
@@ -310,9 +357,9 @@ if (file.exists(enrich_path)) {
   }
 
   dotplot_enrich(etab, 8, "Functional enrichment of DEGs (top GO/KEGG terms per group)",
-                 "fig_dge_enrich_dotplot", 9.5, 9)
+                 "fig_dge_enrich_dotplot", 9.5, 5)
   dotplot_enrich(etab[source == "KEGG"], 10, "KEGG pathway enrichment of DEGs",
-                 "fig_dge_kegg_dotplot", 9.5, 6)
+                 "fig_dge_kegg_dotplot", 9.5, 5)
 } else {
   cat("  [skip] enrichment dotplots — run 03_dge.R (Part 2) first to make dge_enrich.rds\n")
 }
@@ -342,7 +389,7 @@ if (file.exists(gsea_path) && nrow(as.data.table(readRDS(gsea_path)))) {
     theme_bw(base_size = 11) +
     theme(strip.text = element_text(face = "bold"),
           panel.grid.minor = element_blank(), axis.text.y = element_text(size = 8))
-  save2(pg, "fig_dge_kegg_gsea", 10, 9)
+  save2(pg, "fig_dge_kegg_gsea", 9.5, 5)
   cat(sprintf("  fig_dge_kegg_gsea: %d pathways across groups\n", nrow(gtop)))
 } else {
   cat("  [skip] fig_dge_kegg_gsea — run 03_dge.R (Part 3) first to make dge_gsea.rds\n")
@@ -376,8 +423,8 @@ if (file.exists(gobj_path)) {
     prg <- wrap_plots(pr, ncol = 1, heights = c(1.5, 0.4, 0.9)) +
       plot_layout(guides = "collect")
     fn <- sprintf("fig_dge_gsea_running_%s", tolower(comp))
-    ggsave(file.path(fig, paste0(fn, ".png")), prg, width = 11, height = 6.5, dpi = 300)
-    ggsave(file.path(fig, paste0(fn, ".pdf")), prg, width = 11, height = 6.5, device = cairo_pdf)
+    ggsave(file.path(fig, paste0(fn, ".png")), prg, width = 9.5, height = 5, dpi = 300)
+    ggsave(file.path(fig, paste0(fn, ".pdf")), prg, width = 9.5, height = 5, device = cairo_pdf)
     cat(sprintf("  fig_dge_gsea_running_%s: %s\n", tolower(comp),
                 paste(d$Description[match(top, d$ID)], collapse = " | ")))
   }
@@ -386,6 +433,6 @@ if (file.exists(gobj_path)) {
 }
 
 cat("\nWrote: fig_dge_volcano, fig_dge_volcano_sex_{byFC,byP}, fig_dge_counts, fig_dge_venn,\n",
-    "       fig_dge_heatmap_{female,male,all}, fig_dge_enriched_terms_venn,\n",
+    "       fig_dge_heatmap_{female,male,all}, DEG_{female,male,all}, fig_dge_enriched_terms_venn,\n",
     "       fig_dge_enrich_dotplot, fig_dge_kegg_dotplot, fig_dge_kegg_gsea,\n",
     "       fig_dge_gsea_running_{female,male}\nDONE\n")

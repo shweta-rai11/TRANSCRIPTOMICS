@@ -50,26 +50,12 @@ plot_sex <- function(sx) {
   A <- panel("OR_stahl", "OR (Stahl 2010, EUR)",  "A  Within-ancestry (EUR): Okada vs Stahl", "OR_stahl")
   B <- panel("OR_bbj",   "OR (Biobank Japan 2019, East Asian)", "B  Cross-ancestry: European vs East Asian", "OR_bbj")
 
-  nrep <- sum(d$replicated_EUR); ntr <- sum(d$transferable_EAS); nunt <- sum(!d$testable_EAS)
-  CAVEAT <- paste(
-    "MR design — EXPOSURE (all panels): European eQTL (eQTLGen), the SAME instruments everywhere.",
-    "OUTCOME: RA GWAS per cohort — A: Okada & Stahl (European);  B: Biobank Japan (East Asian).",
-    "Panel B is EXPLORATORY cross-ancestry: European eQTL exposure vs East Asian RA outcome (ancestry-mismatched);",
-    "no East-Asian eQTL exists on OpenGWAS — instrument transferability reported separately.",
-    sep = "\n")
-  g <- (A + B) + plot_layout(guides = "collect") +
-    plot_annotation(
-      subtitle = sprintf("%d EUR-prioritised genes  |  %d replicate in EUR (Stahl)  |  %d transfer to East Asian (BBJ p<0.05, same direction)  |  %d untestable in EAS",
-                         nrow(d), nrep, ntr, nunt),
-      caption = CAVEAT,
-      theme = theme(plot.subtitle = element_text(size = 9.5, colour = "grey35"),
-                    plot.caption = element_text(hjust = 0, size = 8.6, colour = "grey20",
-                                                face = "italic", lineheight = 1.15,
-                                                margin = margin(t = 8)),
-                    legend.position = "top")) &
-    theme(legend.position = "top")
+  ntr <- sum(d$transferable_EAS)
+  g <- (A + B) + plot_layout(guides = "collect") &
+    theme(legend.position = "bottom") &
+    guides(colour = guide_legend(nrow = 2, byrow = TRUE, override.aes = list(size = 3)))
   ggsave(file.path(fig, sprintf("fig_mr35_crossancestry_%s.png", sx)), g,
-         width = 11.5, height = 6.8, dpi = 300)
+         width = 11.5, height = 7.2, dpi = 300)
   cat(sprintf("  wrote fig_mr35_crossancestry_%s.png (%d genes; %d transfer to EAS)\n", sx, nrow(d), ntr))
   d[, sex := sx][, .(sex, gene, ancestry_class)]
 }
@@ -85,17 +71,10 @@ gb <- ggplot(cnt, aes(sex, N, fill = ancestry_class)) +
   geom_text(aes(label = ifelse(N > 0, N, "")), position = position_stack(vjust = 0.5),
             size = 3.1, colour = "white", fontface = "bold") +
   scale_fill_manual(values = CLASS, name = NULL, breaks = names(CLASS)) +
-  labs(subtitle = "How many per-sex prioritised genes replicate in EUR vs transfer to East Asian",
-       caption = paste0("Exposure = European eQTL (eQTLGen) for all genes; outcome = RA GWAS ",
-                        "(EUR: Okada/Stahl; East Asian: Biobank Japan).\nEast-Asian arm is exploratory ",
-                        "(ancestry-mismatched exposure — no East-Asian eQTL available)."),
-       x = NULL, y = "Number of genes") +
+  labs(x = NULL, y = "Number of genes") +
   theme_minimal(base_size = 11) +
-  theme(plot.title = element_text(face = "bold"),
-        plot.subtitle = element_text(colour = "grey35", size = 9.5),
-        plot.caption = element_text(hjust = 0, size = 8.4, colour = "grey20",
-                                    face = "italic", lineheight = 1.15, margin = margin(t = 8)),
-        panel.grid.major.x = element_blank(), legend.position = "right")
-ggsave(file.path(fig, "fig_mr35_ancestry_class_summary.png"), gb, width = 8.2, height = 4.6, dpi = 300)
+  theme(panel.grid.major.x = element_blank(), legend.position = "bottom") +
+  guides(fill = guide_legend(nrow = 2, byrow = TRUE))
+ggsave(file.path(fig, "fig_mr35_ancestry_class_summary.png"), gb, width = 8.2, height = 5.2, dpi = 300)
 cat("  wrote fig_mr35_ancestry_class_summary.png\n")
 cat("DONE\n")

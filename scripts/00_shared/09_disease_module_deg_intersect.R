@@ -146,6 +146,25 @@ say("shared by both    : %d", length(shared))
 say("union             : %d", length(union(R$Female$out$gene, R$Male$out$gene)))
 
 # ---- 2-set Venn per sex ------------------------------------------------------
+# ggVennDiagram centres each set-name label on a fixed anchor point, so a long
+# two-line label (e.g. "Disease modules\n(yellow + brown)") extends into the
+# ellipse it names. Right/left-justifying away from the anchor keeps the
+# label from crossing the ellipse boundary.
+fix_label_overlap <- function(p) {
+  is_setname_layer <- vapply(p$layers, function(l)
+    inherits(l$geom, "GeomText") && "name" %in% names(l$data), logical(1))
+  i <- which(is_setname_layer)[1]
+  if (!is.na(i)) {
+    d <- p$layers[[i]]$data
+    d$hjust <- ifelse(d$X <= mean(range(d$X)), 1, 0)
+    d$X <- d$X + ifelse(d$hjust == 1, -0.3, 0.3)
+    p$layers[[i]]$data <- d
+    p$layers[[i]]$mapping <- modifyList(p$layers[[i]]$mapping,
+                                        aes(hjust = .data$hjust))
+  }
+  p
+}
+
 save_venn <- function(sets, file, title, hi) {
   p <- ggVennDiagram(sets, label = "count", label_alpha = 0,
                      edge_size = 0.5, set_size = 3.6) +
@@ -155,6 +174,7 @@ save_venn <- function(sets, file, title, hi) {
     theme(legend.position = "none",
           plot.title = element_text(face = "bold", size = 11),
           plot.margin = margin(10, 26, 10, 26))
+  p <- fix_label_overlap(p)
   ggsave(file.path(fig, file), p, width = 6.5, height = 5.6, dpi = 300)
   say("  wrote %s", file)
 }
@@ -164,7 +184,7 @@ for (sx in c("Female", "Male")) {
   save_venn(setNames(list(disease_genes, R[[sx]]$sig), c(mlab, paste(sx, "DEGs"))),
             sprintf("fig_venn_%s_disease_candidates.png", tolower(sx)),
             sprintf("%s: disease modules n %s DEGs = %d", sx, sx, nrow(R[[sx]]$out)),
-            if (sx == "Female") "#2E7D32" else "#795548")
+            if (sx == "Female") "#9E9E9E" else "#616161")
 }
 
 # =============================================================================
@@ -216,7 +236,7 @@ if (!all(file.exists(mt_files))) {
           plot.title = element_text(size = 8.6, hjust = 0.5))
 
   venn_panel <- function(sx, hi) {
-    ggVennDiagram(setNames(list(R[[sx]]$sig, disease_genes),
+    p <- ggVennDiagram(setNames(list(R[[sx]]$sig, disease_genes),
                            c(paste(sx, "DEGs"), mlab)),
                   label = "count", label_alpha = 0, edge_size = 0.5,
                   set_size = 3.1, label_size = 3.6) +
@@ -229,9 +249,10 @@ if (!all(file.exists(mt_files))) {
       theme(legend.position = "none",
             plot.title = element_text(face = "bold", size = 9.5),
             plot.margin = margin(6, 20, 6, 20))
+    fix_label_overlap(p)
   }
 
-  comp <- (venn_panel("Male", "#795548") / venn_panel("Female", "#2E7D32")) |
+  comp <- (venn_panel("Male", "#A1887F") / venn_panel("Female", "#66BB6A")) |
           p_hm
   comp <- comp + plot_layout(widths = c(1, 1.55))
   ggsave(file.path(fig, "fig_disease_module_selection_composite.png"), comp,

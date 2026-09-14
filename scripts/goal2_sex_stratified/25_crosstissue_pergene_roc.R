@@ -6,7 +6,8 @@
 # External blood | External synovium), one facet per consensus gene, 4 coloured
 # curves, AUC written in each facet. Train orientation kept throughout (a curve
 # below the diagonal = expression direction reversed vs blood training).
-# Output: results/figures/new/fig_pergene_roc_alltissues.png/pdf
+# Female and male are always separate figures (never pooled into one panel grid).
+# Output: results/figures/new/fig_pergene_roc_alltissues_{female,male}.png/pdf
 # =============================================================================
 suppressMessages({library(data.table); library(pROC); library(ggplot2)})
 proc <- "data/processed"; figN <- "results/figures/new"
@@ -58,28 +59,36 @@ short <- c("Train"="Train", "Internal test"="Internal",
            "External blood"="Blood", "External synovium"="Synovium")
 # AUC values go into each panel's STRIP header (outside the plot -> no overlap)
 au <- dcast(unique(d[, .(gene, dataset, auc)]), gene ~ dataset, value.var = "auc")
-f2 <- function(x) sub("^0", "", sprintf("%.2f", x))       # 0.78 -> .78 (saves width)
+f2 <- function(x) sprintf("%.2f", x)                       # keep leading 0, e.g. 0.78
 strip_lab <- setNames(
   sprintf("%s\nTrain %s   Internal %s\nBlood %s   Synovium %s",
           au$gene, f2(au$Train), f2(au$`Internal test`),
           f2(au$`External blood`), f2(au$`External synovium`)),
   au$gene)
 
-g <- ggplot(d, aes(1 - spec, sens, colour = dataset)) +
-  geom_abline(slope = 1, intercept = 0, linetype = 2, colour = "grey80") +
-  geom_path(linewidth = 1) +
-  facet_wrap(~ gene, ncol = 3, labeller = as_labeller(strip_lab)) +
-  scale_colour_manual(values = pal, name = NULL) +
-  scale_x_continuous(limits = c(0,1), breaks = c(0,0.5,1)) +
-  scale_y_continuous(limits = c(0,1), breaks = c(0,0.5,1)) +
-  coord_equal() +
-  labs(x = "1 - Specificity", y = "Sensitivity",
-       caption = "AUC per dataset in each panel header (train orientation; curve below diagonal = direction reversed vs blood training).") +
-  theme_bw(base_size = 13) +
-  theme(legend.position = "top", legend.text = element_text(size = 12),
-        strip.text = element_text(face = "bold", size = 10.5, lineheight = 1.1),
-        panel.grid.minor = element_blank(), plot.caption = element_text(size = 9, hjust = 0))
+plot_sex <- function(sexlab) {
+  ds <- d[sex == sexlab]; ds[, gene := droplevels(gene)]
+  ggplot(ds, aes(1 - spec, sens, colour = dataset)) +
+    geom_abline(slope = 1, intercept = 0, linetype = 2, colour = "grey80") +
+    geom_path(linewidth = 1) +
+    facet_wrap(~ gene, ncol = 3, labeller = as_labeller(strip_lab)) +
+    scale_colour_manual(values = pal, name = NULL) +
+    scale_x_continuous(limits = c(0,1), breaks = c(0,0.5,1)) +
+    scale_y_continuous(limits = c(0,1), breaks = c(0,0.5,1)) +
+    coord_equal() +
+    labs(x = "1 - Specificity", y = "Sensitivity") +
+    theme_bw(base_size = 13) +
+    theme(legend.position = "bottom", legend.text = element_text(size = 12),
+          strip.text = element_text(face = "bold", size = 10.5, lineheight = 1.1),
+          panel.grid.minor = element_blank())
+}
 
-ggsave(file.path(figN, "fig_pergene_roc_alltissues.png"), g, width = 12, height = 15, dpi = 300, bg = "white")
-ggsave(file.path(figN, "fig_pergene_roc_alltissues.pdf"), g, width = 12, height = 15, bg = "white")
-cat("wrote fig_pergene_roc_alltissues\n")
+for (sexlab in c("Female", "Male")) {
+  g <- plot_sex(sexlab); tag <- tolower(sexlab)
+  ggsave(file.path(figN, sprintf("fig_pergene_roc_alltissues_%s.png", tag)), g,
+         width = 10, height = 7, dpi = 300, bg = "white")
+  ggsave(file.path(figN, sprintf("fig_pergene_roc_alltissues_%s.pdf", tag)), g,
+         width = 10, height = 7, bg = "white")
+  cat(sprintf("wrote fig_pergene_roc_alltissues_%s\n", tag))
+}
+unlink(file.path(figN, c("fig_pergene_roc_alltissues.png", "fig_pergene_roc_alltissues.pdf")))

@@ -631,11 +631,12 @@ gg(p8, "fig_wgcna_08_kME_vs_GS", 9, 4.5)
 
 # F09 top hub genes by connectivity
 tops <- hub_list[, head(.SD[order(-connectivity)], 15), by = module]
-p9 <- ggplot(tops, aes(reorder(gene, connectivity), connectivity, fill = kME)) +
-  geom_col() + coord_flip() + facet_wrap(~ module, scales = "free") +
-  scale_fill_gradient2(low = "#2166AC", mid = "white", high = "#B2182B") +
-  labs(title = "Top hub genes by intramodular connectivity",
-       x = NULL, y = "Intramodular connectivity") + theme_bw(base_size = 10)
+tops[, gene_module := interaction(gene, module, drop = TRUE)]
+p9 <- ggplot(tops, aes(reorder(gene_module, connectivity), connectivity, fill = module)) +
+  geom_col(width = 0.6) + coord_flip() + facet_wrap(~ module, scales = "free") +
+  scale_x_discrete(labels = function(x) sub("\\..*$", "", x)) +
+  scale_fill_identity() +
+  labs(x = NULL, y = "Intramodular connectivity") + theme_bw(base_size = 10)
 gg(p9, "fig_wgcna_09_hub_genes", 10, 5)
 
 # F10 disease-module expression heatmap (top 80 by |kME|)
@@ -659,10 +660,8 @@ med <- melt(data.table(sample = rownames(MEs), group = meta$group, sex = meta$se
             variable.name = "module", value.name = "ME")
 p11 <- ggplot(med, aes(group, ME, fill = group)) +
   geom_boxplot(outlier.size = .6, alpha = .85) + facet_grid(module ~ sex) +
-  scale_fill_manual(values = c(HC = "#43A047", RA = "#FB8C00")) +
-  labs(title = "Disease-module eigengenes by diagnosis, within each sex",
-       subtitle = "Sex-STRATIFIED view: RA vs HC read separately within F and M",
-       x = NULL, y = "Module eigengene") +
+  scale_fill_manual(values = c(HC = "#1565C0", RA = "#6A1B9A")) +
+  labs(x = NULL, y = "Module eigengene") +
   theme_bw(base_size = 11) + theme(legend.position = "none")
 gg(p11, "fig_wgcna_11_ME_by_group_sex", 7, 6)
 
@@ -708,10 +707,7 @@ if (nrow(pres_dt)) {
     scale_colour_manual(values = c(`Not preserved` = "#d62728",
                                    Moderate = "#ff7f0e", Strong = "#2ca02c")) +
     scale_x_log10() +
-    labs(title = "Module preservation: female modules tested in male",
-         subtitle = sprintf("Female n=%d (reference) -> Male n=%d (test), %d permutations",
-                            length(fs), length(ms), CFG$pres_permutations),
-         x = "Module size (genes, log scale)", y = "Preservation Zsummary",
+    labs(x = "Module size (genes, log scale)", y = "Preservation Zsummary",
          caption = "Zsummary > 10 strong | 2-10 moderate | < 2 not preserved") +
     theme_minimal(base_size = 11) + theme(legend.position = "bottom")
   gg(p15, "fig_wgcna_15_preservation", 10, 7)

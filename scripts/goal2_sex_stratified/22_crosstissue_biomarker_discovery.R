@@ -58,25 +58,49 @@ mk <- function(sexlab, tab) { g <- panels[[sexlab]]
 cc <- rbindlist(list(mk("Female", v$sf), mk("Male", v$sm)))
 cc[, concordant := sign(blood) == sign(syn)]
 
+sex_cols <- c(Female = "#C0392B", Male = "#1F3B99")
+base_theme <- theme_bw(base_size = 12) +
+  theme(
+    plot.title = element_text(face = "bold", size = 13, hjust = 0),
+    axis.title = element_text(size = 11),
+    axis.text = element_text(colour = "black"),
+    panel.grid.minor = element_blank(),
+    panel.grid.major = element_line(linewidth = 0.25, colour = "grey90"),
+    panel.border = element_rect(colour = "grey40", linewidth = 0.5),
+    legend.title = element_text(size = 10),
+    legend.text = element_text(size = 9),
+    legend.key.size = unit(0.9, "lines")
+  )
+
 gA <- ggplot(cc, aes(blood, syn, colour = sex, shape = concordant)) +
-  geom_hline(yintercept = 0, colour = "grey80") + geom_vline(xintercept = 0, colour = "grey80") +
-  geom_point(size = 3) +
-  ggrepel::geom_text_repel(aes(label = gene), size = 3, show.legend = FALSE, max.overlaps = 20) +
-  scale_colour_manual(values = c(Female = "#C0392B", Male = "#1F3B99")) +
-  scale_shape_manual(values = c(`TRUE` = 16, `FALSE` = 4), name = "Concordant") +
+  geom_hline(yintercept = 0, colour = "grey75", linewidth = 0.4) +
+  geom_vline(xintercept = 0, colour = "grey75", linewidth = 0.4) +
+  geom_point(size = 2.8, stroke = 1) +
+  ggrepel::geom_text_repel(aes(label = gene), size = 3.2, colour = "grey20",
+                            fontface = "italic", show.legend = FALSE,
+                            max.overlaps = Inf, box.padding = 0.4, point.padding = 0.3,
+                            min.segment.length = 0, segment.colour = "grey50",
+                            segment.size = 0.3, seed = GLOBAL_SEED) +
+  scale_colour_manual(values = sex_cols, name = "Sex") +
+  scale_shape_manual(values = c(`TRUE` = 16, `FALSE` = 4), name = "Concordant\ndirection") +
   labs(x = "Blood log2FC (RA vs HC)", y = "Synovium log2FC (RA vs Normal)",
        title = "A  Blood vs synovium concordance") +
-  theme_bw(base_size = 11) + theme(plot.title = element_text(face = "bold"))
+  base_theme
 
-gB <- ggplot(cc, aes(x = reorder(gene, auc), y = auc, fill = sex)) +
-  geom_col() + geom_hline(yintercept = 0.5, linetype = 2, colour = "grey50") +
-  geom_text(aes(label = sprintf("%.2f", auc)), hjust = -0.1, size = 3) +
-  coord_flip(ylim = c(0.4, 1.0)) +
-  scale_fill_manual(values = c(Female = "#C0392B", Male = "#1F3B99")) +
+gB <- ggplot(cc, aes(x = reorder(gene, auc), y = auc, colour = sex)) +
+  geom_hline(yintercept = 0.5, linetype = 2, colour = "grey55", linewidth = 0.4) +
+  geom_segment(aes(xend = gene, y = 0.5, yend = auc), linewidth = 1) +
+  geom_point(size = 3) +
+  geom_text(aes(label = sprintf("%.2f", auc)), hjust = -0.45, size = 3.2, colour = "grey20") +
+  coord_flip(ylim = c(0.4, 1.0), clip = "off") +
+  scale_y_continuous(breaks = seq(0.4, 1.0, 0.2), expand = expansion(mult = c(0.02, 0.12))) +
+  scale_colour_manual(values = sex_cols, name = "Sex", guide = "none") +
   labs(x = NULL, y = "Synovium AUC (RA vs Normal)", title = "B  Per-gene synovium discrimination") +
-  theme_bw(base_size = 11) + theme(plot.title = element_text(face = "bold"))
+  base_theme +
+  theme(panel.grid.major.y = element_blank(), axis.text.y = element_text(face = "italic"))
 
-g <- gA + gB + plot_layout(widths = c(1.1, 1))
-ggsave(file.path(figN, "fig_crosstissue.png"), g, width = 12, height = 5.5, dpi = 300, bg = "white")
-ggsave(file.path(figN, "fig_crosstissue.pdf"), g, width = 12, height = 5.5, bg = "white")
+g <- gA + gB + plot_layout(widths = c(1.1, 1), guides = "collect") &
+  theme(legend.position = "right")
+ggsave(file.path(figN, "fig_crosstissue.png"), g, width = 12.5, height = 5.5, dpi = 300, bg = "white")
+ggsave(file.path(figN, "fig_crosstissue.pdf"), g, width = 12.5, height = 5.5, bg = "white")
 cat("\nwrote fig_crosstissue + crosstissue_panel_auc.csv\n")

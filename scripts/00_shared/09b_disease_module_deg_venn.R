@@ -67,6 +67,25 @@ for (m in dis_mods)
       m, gt[module == m, .N], mt[module == m, cor_RA],
       ifelse(mt[module == m, cor_RA] > 0, "YES", "NO (module is DOWN in RA)"))
 
+# ggVennDiagram centres each set-name label on a fixed anchor point, so a long
+# two-line label (e.g. "yellow module\n(cor=+0.56)") extends into the ellipse
+# it names. Right/left-justifying away from the anchor keeps the label from
+# crossing the ellipse boundary.
+fix_label_overlap <- function(p) {
+  is_setname_layer <- vapply(p$layers, function(l)
+    inherits(l$geom, "GeomText") && "name" %in% names(l$data), logical(1))
+  i <- which(is_setname_layer)[1]
+  if (!is.na(i)) {
+    d <- p$layers[[i]]$data
+    d$hjust <- ifelse(d$X <= mean(range(d$X)), 1, 0)
+    d$X <- d$X + ifelse(d$hjust == 1, -0.3, 0.3)
+    p$layers[[i]]$data <- d
+    p$layers[[i]]$mapping <- modifyList(p$layers[[i]]$mapping,
+                                        aes(hjust = .data$hjust))
+  }
+  p
+}
+
 save_venn <- function(sets, file, title, hi) {
   p <- ggVennDiagram(sets, label = "count", label_alpha = 0,
                      edge_size = 0.5, set_size = 3.8) +
@@ -77,7 +96,22 @@ save_venn <- function(sets, file, title, hi) {
     theme(legend.position = "none",
           plot.title = element_text(face = "bold", size = 10.5),
           plot.margin = margin(8, 22, 8, 22))
+  p <- fix_label_overlap(p)
   ggsave(file.path(fig, file), p, width = 6.6, height = 5.4, dpi = 300)
+}
+
+# fill colour per module: yellow module gets yellow-family shades (matching
+# its WGCNA module colour) instead of the generic up/down red-blue, so the
+# module identity reads directly off the figure; direction is kept legible
+# via a dark (up) / light (down) shade of the same hue.
+venn_hi <- function(m, dirn) {
+  if (m == "yellow") {
+    if (dirn == "up") "#F9A825" else "#FFF59D"
+  } else if (m == "brown") {
+    if (dirn == "up") "#6D4C41" else "#D7CCC8"
+  } else {
+    if (dirn == "up") "#E57373" else "#64B5F6"
+  }
 }
 
 all_rows <- list(); summary_rows <- list()
@@ -102,14 +136,14 @@ for (sx in c("Female", "Male")) {
               sprintf("%s | %s module n DEG_up = %d%s",
                       sx, m, length(int_up),
                       if (consist == "up") "   [direction-consistent]" else ""),
-              "#C62828")
+              venn_hi(m, "up"))
     save_venn(setNames(list(mg, down), c(sprintf("%s module\n(cor=%+.2f)", m, r),
                                          paste0(sx, " DEG_down"))),
               sprintf("fig_diseasemod_venn_%s_%s_down.png", m, tolower(sx)),
               sprintf("%s | %s module n DEG_down = %d%s",
                       sx, m, length(int_down),
                       if (consist == "down") "   [direction-consistent]" else ""),
-              "#1565C0")
+              venn_hi(m, "down"))
 
     kcol <- paste0("kME", m)
     ann <- function(genes, dirlab) if (!length(genes)) NULL else

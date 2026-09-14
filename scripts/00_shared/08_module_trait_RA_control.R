@@ -147,18 +147,11 @@ g <- ggplot(d, aes(x = set, y = module, fill = cor)) +
                        midpoint = 0, limits = c(-1, 1), name = "cor\n(RA)") +
   scale_y_discrete(labels = ylab) +
   scale_x_discrete(position = "top") +
-  labs(x = NULL, y = "WGCNA module (size)",
-       subtitle = sprintf(paste("Boxed = disease modules (|cor_all| >= %.1f & p < %g),",
-                                "selected on ALL samples and applied to BOTH sexes.",
-                                "\n*p<.05 **p<.01 ***p<.001.",
-                                "Female and Male columns are SEX-STRATIFIED contrasts;",
-                                "\nthey must NOT be compared to each other without an interaction test."),
-                          w$config$dm_min_abs_cor, w$config$dm_max_p)) +
+  labs(x = NULL, y = "WGCNA module (size)") +
   theme_minimal(base_size = 11) +
   theme(panel.grid = element_blank(),
         axis.text.x = element_text(face = "bold"),
-        axis.text.y = element_text(face = ifelse(rev(ord) %in% dis_mods, "bold", "plain")),
-        plot.subtitle = element_text(size = 7.6))
+        axis.text.y = element_text(face = ifelse(rev(ord) %in% dis_mods, "bold", "plain")))
 
 ggsave(file.path(fig, "fig_module_trait_disease_selection.png"), g,
        width = 7.2, height = 6.4, dpi = 300)
