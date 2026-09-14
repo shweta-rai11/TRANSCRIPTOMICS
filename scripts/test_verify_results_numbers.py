@@ -1,29 +1,5 @@
 #!/usr/bin/env python3
-"""
-test_verify_results_numbers.py — regression tests for the provenance harness.
-
-WHY THIS EXISTS
-    verify_results_numbers.py is the thing standing between "a number in the
-    thesis" and "a number nobody re-checked." It has already caught two real
-    transcription bugs (an unseeded bootstrap, a mis-computed range) by being
-    re-run and cross-checked by hand. These tests make the cheapest, most
-    mechanical parts of that checking automatic, so they run in under a
-    second instead of requiring a manual audit every time a claim is added.
-
-    This does NOT replace the manual "does this number make scientific
-    sense" review — it only guarantees the harness's own bookkeeping is
-    internally consistent: every claim has a unique id, every claim's source
-    resolves to a script that actually produced it, no claim silently lost
-    its provenance, and the two output files it promises to write actually
-    get written with the right shape.
-
-USAGE
-    python3 scripts/test_verify_results_numbers.py
-    python3 -m unittest scripts.test_verify_results_numbers   (if run as a package)
-
-NO DEPENDENCIES. Standard library only (unittest + importlib). Run from the
-project root, or anywhere — paths are resolved relative to this file.
-"""
+"""Regression tests for the provenance harness (verify_results_numbers.py): checks claim bookkeeping, source-script resolution, and the two output files it writes. Run with `python3 scripts/test_verify_results_numbers.py`."""
 import importlib.util
 import os
 import subprocess
@@ -36,10 +12,7 @@ TARGET = os.path.join(HERE, "verify_results_numbers.py")
 
 
 def _load_module():
-    """Import verify_results_numbers.py by path. Importing it (as opposed to
-    running it as __main__) executes every claim-building block but does NOT
-    call main(), so no files are written and nothing is printed — see the
-    `if __name__ == "__main__":` guard in the target script."""
+    """Import verify_results_numbers.py by path; this runs the claim-building code but not main(), so nothing is written or printed."""
     spec = importlib.util.spec_from_file_location("verify_results_numbers", TARGET)
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
@@ -47,8 +20,7 @@ def _load_module():
 
 
 class TestClaimBookkeeping(unittest.TestCase):
-    """The CLAIMS list itself must be internally consistent, independent of
-    whether any individual number is scientifically correct."""
+    """The CLAIMS list itself must be internally consistent, independent of whether any individual number is scientifically correct."""
 
     @classmethod
     def setUpClass(cls):
@@ -56,7 +28,7 @@ class TestClaimBookkeeping(unittest.TestCase):
 
     def test_claims_were_built(self):
         self.assertGreater(len(self.mod.CLAIMS), 300,
-            "expected 300+ claims — if this drops, a whole results/tables/*.csv "
+            "expected 300+ claims - if this drops, a whole results/tables/*.csv "
             "input probably went missing and its `rows()` calls silently returned [].")
 
     def test_no_missing_source_files(self):
@@ -79,21 +51,14 @@ class TestClaimBookkeeping(unittest.TestCase):
 
 
 class TestSourceProvenance(unittest.TestCase):
-    """Every claim's source string must resolve, via scripts_for(), to at
-    least one real R script in CSV_SCRIPT — this is the exact guarantee the
-    'backed by script' language in the thesis depends on. If a new claim is
-    added with a source file whose producing script isn't in CSV_SCRIPT yet,
-    this test fails loudly instead of silently printing '(script not mapped
-    for ...)' in the generated report."""
+    """Every claim's source string must resolve, via scripts_for(), to at least one real R script in CSV_SCRIPT."""
 
     @classmethod
     def setUpClass(cls):
         cls.mod = _load_module()
 
     def test_every_claim_source_resolves_to_a_script(self):
-        # raw CLAIMS still has literal src == "same" for follow-on claims;
-        # resolve_same() is what the report/TSV writers call before scripts_for(),
-        # so that's the fair thing to test here too.
+        # test via resolve_same(), since that's what the report/TSV writers call before scripts_for()
         unresolved = []
         for cid, desc, val, src, how, sect in self.mod.resolve_same(self.mod.CLAIMS):
             scripts = self.mod.scripts_for(src)
@@ -112,7 +77,7 @@ class TestSourceProvenance(unittest.TestCase):
         resolved = self.mod.resolve_same(self.mod.CLAIMS)
         leaked = [c[0] for c in resolved if c[3] == "same"]
         self.assertEqual(leaked, [],
-            f"claims still have src=='same' after resolve_same() — the claim before "
+            f"claims still have src=='same' after resolve_same() - the claim before "
             f"them in append order was probably also 'same', breaking the lookback: {leaked}")
 
     def test_brace_expansion(self):
@@ -129,8 +94,7 @@ class TestSourceProvenance(unittest.TestCase):
 
 
 class TestEndToEndOutputs(unittest.TestCase):
-    """Runs the script exactly as a human/CI would, via subprocess, and checks
-    the two files it promises to produce actually land with the right shape."""
+    """Runs the script exactly as a human/CI would, via subprocess, and checks the two files it promises to produce."""
 
     def test_check_mode_exits_zero(self):
         r = subprocess.run([sys.executable, TARGET, "--check"], cwd=ROOT,
@@ -155,7 +119,7 @@ class TestEndToEndOutputs(unittest.TestCase):
                                    "derivation", "section", "script"])
         mod = _load_module()
         self.assertEqual(len(lines) - 1, len(mod.CLAIMS),
-            "row count in RESULTS_PROVENANCE.tsv does not match len(CLAIMS) — "
+            "row count in RESULTS_PROVENANCE.tsv does not match len(CLAIMS) - "
             "main() and the module-level CLAIMS build must be out of sync")
 
         with open(md_path, encoding="utf-8") as fh:

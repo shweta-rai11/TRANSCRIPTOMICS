@@ -1,16 +1,5 @@
 #!/usr/bin/env Rscript
-# =============================================================================
-# 03f_train_test_split_barchart.R  —  training vs testing (hold-out) split
-# bar chart for the combined discovery cohort (GSE93272 + GSE110169), showing
-# the stratified 70:30 partition. Same visual language as the other cohort
-# composition bar charts (black = training, grey = hold-out, n + % labelled
-# above each bar, dashed reference line at the 70% target).
-#
-# Inputs : results/tables/combined_cohort_summary.csv   (training, sum of Freq)
-#          results/tables/internal_val_holdout_meta.csv (hold-out, row count)
-# Outputs: results/figures/fig_train_test_split_bar.png
-#          results/figures/fig_train_test_split_bar.pdf
-# =============================================================================
+# Training vs testing (hold-out) split bar chart for the combined discovery cohort, showing the stratified 70:30 partition
 suppressMessages({library(data.table); library(ggplot2)})
 tab <- "results/tables"; fig <- "results/figures"
 

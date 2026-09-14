@@ -1,27 +1,5 @@
 #!/usr/bin/env Rscript
-# =============================================================================
-# 38b_testing_ml_algorithms_externalblood.R
-# -----------------------------------------------------------------------------
-# Completes the five-algorithm diagnostic comparison (37_/38_) with the THIRD
-# test setting that 38_ did not cover: an independent EXTERNAL blood cohort
-# (GSE15573, Illumina, different platform from the GSE93272+GSE110169 training
-# data), evaluated the same way 17_testing_blood_internal_external.R evaluates
-# it for the single elastic-net panel model. Each of the five locked models
-# from 37_ (logistic regression, SVM-RBF, k-NN, random forest, ANN) is applied
-# ONCE, per sex, exactly as in 38_ (own-dataset z-score, missing gene -> 0,
-# DeLong CI when n>=20 else stratified bootstrap).
-#
-# Combined with 38_'s outputs, the three test settings for each algorithm are
-# now: Train (resampled CV) | Internal test (blood) | External test (blood) |
-# Synovium (cross-tissue) -- feeding the composite figure in
-# 41_figure_ml_algorithm_composite.R.
-#
-# Outputs:
-#   results/tables/ML_performance_externalblood.csv
-#   data/processed/new/ml_algo_roc.rds   (rewritten with an added
-#                                          $externalblood element; $sametissue
-#                                          and $crosstissue from 38_ preserved)
-# =============================================================================
+# Testing phase: apply the five locked models from 37_ to an independent external blood cohort (GSE15573), per sex, and merge into ml_algo_roc.rds.
 suppressMessages({ library(caret); library(data.table); library(pROC); library(Biobase) })
 options(stringsAsFactors = FALSE)
 GLOBAL_SEED <- 1234
@@ -29,9 +7,7 @@ proc <- "data/processed"; procN <- "data/processed/new"; tab <- "results/tables"
 
 fit <- readRDS(file.path(procN, "ml_algo_models.rds"))
 
-## ---- external blood test set: GSE15573 (same loader as 16_/17_/37_) -------
-## data/raw is a symlink to a sibling tree not resolvable in this session;
-## fall back to the sibling project's copy of the same raw GEO download.
+# external blood test set: GSE15573; fall back to sibling project's raw copy if data/raw symlink doesn't resolve
 raw_candidates <- c(
   "data/raw/GSE15573_raw.rds",
   "/Users/swetarai/Library/CloudStorage/Dropbox/THESIS_SWETA_28_MAY/Thesis_chapters/Research_Q2_TRANSCRIPTOMICS_sexstratified/data/raw/GSE15573_raw.rds")
@@ -55,7 +31,7 @@ cat(sprintf("External blood test: n=%d (RA=%d/HC=%d) | F=%d M=%d | source=%s\n",
             length(blood_ext$group), sum(blood_ext$group == "RA"), sum(blood_ext$group == "HC"),
             sum(blood_ext$sex == "F"), sum(blood_ext$sex == "M"), raw_path))
 
-## ---- helpers (identical to 38_) --------------------------------------------
+# helpers (identical to 38_)
 zrows <- function(M) t(apply(M, 1, function(v) {
   s <- sd(v, na.rm = TRUE)
   if (is.na(s) || s == 0) rep(0, length(v)) else (v - mean(v, na.rm = TRUE)) / s
@@ -127,7 +103,7 @@ for (sx in c("F", "M")) {
 externalblood <- list(perf = rbindlist(perf_rows), roc = rbindlist(roc_rows))
 fwrite(externalblood$perf, file.path(tab, "ML_performance_externalblood.csv"))
 
-## ---- merge into the existing ml_algo_roc.rds (preserve 38_'s two settings) -
+# merge into the existing ml_algo_roc.rds (preserve 38_'s two settings)
 prior <- readRDS(file.path(procN, "ml_algo_roc.rds"))
 saveRDS(list(sametissue = prior$sametissue, crosstissue = prior$crosstissue,
              externalblood = externalblood, seed = GLOBAL_SEED,

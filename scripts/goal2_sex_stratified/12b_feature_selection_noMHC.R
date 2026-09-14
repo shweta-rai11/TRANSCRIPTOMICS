@@ -1,60 +1,5 @@
 #!/usr/bin/env Rscript
-# =============================================================================
-# 12b_feature_selection_noMHC.R
-# -----------------------------------------------------------------------------
-# REBUILD of the sex-stratified diagnostic panels from the MHC-FREE candidate
-# set, using the identical three-selector consensus design as 12_feature_selection.R.
-#
-# WHY THIS EXISTS
-#   10c_MR_mhc_sensitivity.R and 10d_coloc_panel_genes.R established two things
-#   about the panels produced by 12_feature_selection.R:
-#     * three of the six genes in each panel are MHC-affected (female GNL1 and
-#       C6orf136, male VPS52 and HLA-DMA are untestable once MHC instruments are
-#       removed; ESYT1 loses FDR in both sexes to BH re-ranking);
-#     * six of the nine unique panel genes show PP.H3 >= 0.8 in colocalisation,
-#       i.e. positive evidence that the eQTL and the RA association are driven by
-#       DIFFERENT causal variants.
-#
-#   Diagnosing that and leaving the panel unchanged would be indefensible: it
-#   would mean the sensitivity analysis was run but not acted on. This script
-#   therefore re-derives the panels from the candidate set that survives MHC
-#   exclusion, so the thesis can report a primary panel and an MHC-free panel
-#   side by side and let the reader see exactly what the MHC was contributing.
-#
-#   NOTE ON WHAT THIS DOES AND DOES NOT REPAIR. Removing the MHC removes the
-#   LD-confounding that is attributable to the HLA region. It does NOT make the
-#   surviving genes colocalised - INPP5B (PP.H3 = 0.929) and ESYT1 (0.912) are
-#   non-MHC and still fail colocalisation. The MHC-free panel is therefore a
-#   CLEANER PRIORITISATION, not a causally validated one. No gene in either
-#   panel may carry a causal claim. See 10d and results/RESULTS_ROBUSTNESS.md.
-#
-# DESIGN - IDENTICAL TO 12_feature_selection.R, DELIBERATELY
-#   Same three selectors (LASSO lambda.min, Random Forest above-mean Gini,
-#   SVM-RFE with CV-chosen size), same tuning grids, same 3-method intersection,
-#   same seed (1234), same training matrix. The ONLY change is the input gene
-#   list: FS_input_{sex}_noMHC.csv instead of FS_input_{sex}.csv. Holding the
-#   procedure fixed is what makes the two panels comparable; if the design also
-#   changed, any difference between the panels would be uninterpretable.
-#
-#   Candidate counts: 14 female / 14 male (from 32 / 25 with the MHC retained).
-#   The candidate sets now overlap almost completely (13 of 14 genes shared),
-#   which is expected: the MHC was supplying most of what distinguished them, and
-#   it was supplying it through LD with a single dominant locus rather than
-#   through sex-differential biology.
-#
-#   in : data/processed/combined_train.rds
-#        results/tables/FS_input_{female,male}_noMHC.csv
-#   out: data/processed/new/ml_features_noMHC.rds
-#        results/tables/mr_fs_selected_bymethod_{female,male}_noMHC.csv
-#        results/tables/mr_fs_consensus_{female,male}_noMHC.csv
-#        results/tables/mr_fs_summary_noMHC.csv
-#        results/tables/PANEL_primary_vs_noMHC_membership.csv
-#
-#   Friedman J, et al. J Stat Softw 2010;33:1-22.        (glmnet / LASSO)
-#   Breiman L. Mach Learn 2001;45:5-32.                  (random forest)
-#   Guyon I, et al. Mach Learn 2002;46:389-422.          (SVM-RFE)
-#   Ambroise C, McLachlan GJ. PNAS 2002;99:6562-6566.    (selection bias)
-# =============================================================================
+# Rebuild sex-stratified feature-selection panels from the MHC-free candidate gene set, using the identical LASSO/RF/SVM-RFE consensus design as 12_feature_selection.R.
 suppressMessages({
   library(glmnet); library(randomForest); library(e1071); library(caret)
   library(data.table)
@@ -71,9 +16,7 @@ dir.create(procN, showWarnings = FALSE, recursive = TRUE)
 say <- function(...) cat(sprintf(...), "\n", sep = "")
 hdr <- function(x) cat("\n", strrep("=", 74), "\n", x, "\n", strrep("=", 74), "\n", sep = "")
 
-# =============================================================================
-# STEP 1 — INPUTS
-# =============================================================================
+# Step 1: load MHC-free candidate gene sets
 hdr("STEP 1  MHC-FREE CANDIDATE SETS")
 o    <- readRDS(file.path(proc, "combined_train.rds"))
 expr <- o$expr
@@ -92,9 +35,7 @@ say("  male  : %s", paste(mr_male$gene,   collapse = ", "))
 say("shared between the two candidate sets: %d",
     length(intersect(mr_female$gene, mr_male$gene)))
 
-# =============================================================================
-# STEP 2 — THE THREE SELECTORS (verbatim from 12_feature_selection.R)
-# =============================================================================
+# Step 2: the three selectors (verbatim from 12_feature_selection.R)
 svm_rfe_rank <- function(X, y, cost = 1) {
   feats <- colnames(X); ranking <- character(0)
   while (length(feats) > 1) {
@@ -134,9 +75,7 @@ tune_rf_mtry <- function(X, y, ntree, grid) {
   list(mtry = fit$bestTune$mtry, fit = fit)
 }
 
-# =============================================================================
-# STEP 3 — PER-SEX FEATURE SELECTION
-# =============================================================================
+# Step 3: per-sex feature selection
 hdr("STEP 3  THREE-METHOD CONSENSUS ON THE MHC-FREE SET")
 
 run_fs <- function(sex_code) {
@@ -206,9 +145,7 @@ run_fs <- function(sex_code) {
 F <- run_fs("F")
 M <- run_fs("M")
 
-# =============================================================================
-# STEP 4 — OUTPUT AND HEAD-TO-HEAD WITH THE PRIMARY PANELS
-# =============================================================================
+# Step 4: output and head-to-head comparison with the primary panels
 hdr("STEP 4  PRIMARY vs MHC-FREE PANEL MEMBERSHIP")
 
 for (r in list(F, M)) {

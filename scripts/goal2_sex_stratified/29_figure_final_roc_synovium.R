@@ -1,19 +1,5 @@
 #!/usr/bin/env Rscript
-# =============================================================================
-# 29_figure_final_roc_synovium.R -- ROC curves for the FINAL recommended
-# MR-anchored elastic-net panels (16_model_training_final_panel.R), per sex,
-# with the External-blood test swapped for a synovium test (GSE89408, RA vs
-# Normal): Train (nested CV, honest) | Internal test | Test synovium.
-#
-# The LOCKED coefficients saved in mr_final_objects.rds are applied, UNREFIT,
-# to per-dataset z-scored synovium expression -- the same transfer rule used
-# for internal/external blood in 16_ (missing gene -> z=0, fixed direction
-# "<"). Only the coefficients transfer; the model is never refit on synovium.
-#
-# Outputs:
-#   results/tables/mr_final_panel_synovium_auc.csv
-#   results/figures/new/fig_mr_final_roc_{female,male}.png
-# =============================================================================
+# ROC curves for the final MR-anchored elastic-net panels, per sex, with external blood swapped for a synovium test: the locked blood-trained coefficients are applied unrefit to synovium expression.
 suppressMessages({library(data.table); library(pROC); library(ggplot2)})
 proc <- "data/processed"; tab <- "results/tables"; fig <- "results/figures/new"
 

@@ -1,13 +1,5 @@
 #!/usr/bin/env Rscript
-# =============================================================================
-# 20_testing_synovium_external.R  —  CROSS-TISSUE validation of the blood sex-stratified
-# ML signatures in RA SYNOVIUM (GSE89408 RNA-seq, n=218). RA (152) vs Normal
-# (28); sex assigned by position from the GSM pData (146 F / 72 M). Counts are
-# TMM-normalized (edgeR) and log2-CPM transformed. For each signature gene we
-# compute synovium RA-vs-Normal log2FC (limma-voom, sex-adjusted), significance,
-# and AUC — overall and sex-stratified — plus direction concordance vs the blood
-# training DE. Output: results/tables/val_synovium_*.csv + val_synovium.rds
-# =============================================================================
+# Cross-tissue validation of the blood sex-stratified ML signatures in RA synovium (GSE89408): sex-adjusted RA-vs-Normal log2FC, significance, AUC, and direction concordance vs blood training DE.
 suppressMessages({library(edgeR); library(limma); library(Biobase); library(pROC); library(data.table)})
 options(stringsAsFactors = FALSE)
 proc <- "data/processed"; tab <- "results/tables"; dir.create(tab,showWarnings=FALSE,recursive=TRUE)
@@ -43,28 +35,7 @@ tt$gene <- rownames(tt); setDT(tt)
 
 train_dir <- function(s){ d <- D$res[[ifelse(s=="F","Female","Male")]]; setNames(sign(d$logFC), d$gene) }
 
-# -----------------------------------------------------------------------------
-# PER-GENE SYNOVIUM AUC — TWO ORIENTATION CONVENTIONS, BOTH EMITTED.
-#
-# This function previously returned ONLY the best-direction AUC (it flipped the
-# ROC direction whenever AUC < 0.5), so every stored value was >= 0.5 by
-# construction. That silently contradicted the methods text, which promised that
-# a gene reversing direction out of sample would show as AUC < 0.5. The table is
-# now explicit and carries both, with self-describing column names:
-#
-#   *_bestdir   BEST-DIRECTION. Orientation chosen inside the synovial data.
-#               >= 0.5 by construction. Answers "how much information does this
-#               gene carry in synovium, irrespective of direction?".
-#               NOT a transfer result. Never place beside blood AUCs.
-#
-#   *_trainorient  TRAIN-FIXED. Orientation fixed by the gene's blood training
-#               direction for that sex. AUC < 0.5 means the association REVERSED
-#               between blood and synovium. This is the ONLY convention valid for
-#               cross-dataset comparison, and equals bestdir when concordant,
-#               1 - bestdir when discordant (the transform applied in 24_).
-#
-# See thesis 2.9 "Orientation conventions" and 2.11.
-# -----------------------------------------------------------------------------
+# Per-gene synovium AUC, emitted under both orientation conventions: best-direction (bestdir, >=0.5 by construction) and train-fixed (trainorient, the only one valid for cross-dataset comparison).
 gene_stat <- function(g, samples, y) {
   if (!g %in% rownames(logcpm)) return(NA_real_)
   vv <- as.numeric(logcpm[g, samples])

@@ -1,64 +1,5 @@
 #!/usr/bin/env Rscript
-# =============================================================================
-# 10c_MR_mhc_sensitivity.R  —  MHC-EXCLUDED sensitivity analysis for 10_MR.R
-#
-# WHY THIS EXISTS
-#   10_MR.R runs with CFG$exclude_mhc = FALSE: instruments inside the extended
-#   MHC (chr6:25-34 Mb, GRCh37) are FLAGGED but RETAINED. That is the correct
-#   default for a primary analysis, but it leaves the strongest objection to the
-#   causal claim untested, because:
-#
-#     (a) HLA-DRB1 is by a wide margin the dominant RA susceptibility locus, and
-#     (b) the extended MHC carries the most extensive long-range LD in the human
-#         genome, so a cis-eQTL for ANY gene in the region is correlated with the
-#         HLA-DRB1 risk haplotype whether or not that gene is causal.
-#
-#   The consequence is that a cis-MR estimate for an MHC gene cannot be
-#   distinguished from the HLA-DRB1 signal read through a proxy. In the primary
-#   run this is not a marginal issue: 14 of 32 female (44%) and 10 of 25 male
-#   (40%) FDR-surviving "causal" genes are MHC-flagged, and 2 of 6 female
-#   (C6orf136, GNL1) and 3 of 6 male (HLA-DMA, VPS52, plus MHC-adjacent) final
-#   panel genes sit in the region - most on a SINGLE-SNP Wald ratio, for which
-#   no pleiotropy test is even possible.
-#
-#   This script therefore re-runs the ENTIRE MR with the MHC instruments removed
-#   and reports the result as a FULL PARALLEL COLUMN against the primary run, so
-#   that every reported prioritised gene is read with its MHC-excluded fate.
-#
-# WHAT IS AND IS NOT RE-DONE
-#   Re-done : instrument set (MHC SNPs dropped), estimator choice (the hierarchy
-#             is re-applied because dropping SNPs can demote a gene from IVW to
-#             Wald ratio), heterogeneity/pleiotropy tests, per-stratum BH FDR
-#             (the denominator legitimately shrinks - genes with no non-MHC
-#             instrument are not "tested and null", they are UNTESTABLE).
-#   NOT re-done : instrument extraction, LD clumping, cis filtering and outcome
-#             harmonisation. All of that is read from the cached objects written
-#             by 10_MR.R, so this script is FULLY OFFLINE and deterministic. It
-#             cannot drift from the primary run, because it starts from the
-#             primary run's own harmonised data.
-#
-# INTERPRETATION RULE ADOPTED FOR THE THESIS
-#   A gene is reported as ROBUST only if it survives FDR < 0.05 in BOTH the
-#   primary and the MHC-excluded analysis. A gene that survives only in the
-#   primary analysis is reported as MHC-DEPENDENT and is NOT eligible to carry a
-#   causal claim. Genes are not silently dropped: the fate of every one of them
-#   is tabulated.
-#
-#   in : data/processed/new/MR_primary_objects.rds   (from 10_MR.R)
-#        results/tables/candidates_{female,male}_disease.csv
-#        results/tables/FS_input_{female,male}.csv
-#        data/processed/new/ml_features.rds          (final panels, if present)
-#   out: results/tables/MR_MHC_sensitivity_{female,male}.csv   parallel columns
-#        results/tables/MR_MHC_sensitivity_summary.csv
-#        results/tables/MR_MHC_sensitivity_panel_fate.csv
-#        results/tables/FS_input_{female,male}_noMHC.csv
-#        data/processed/new/MR_mhc_sensitivity_objects.rds
-#
-#   Vosa U, et al. Nat Genet 2021;53:1300-1310.        (eQTLGen)
-#   Okada Y, et al. Nature 2014;506:376-381.           (RA GWAS; HLA-DRB1)
-#   Raychaudhuri S, et al. Nat Genet 2012;44:291-296.  (MHC fine-mapping in RA)
-#   Trynka G, et al. Nat Genet 2011;43:1193-1201.      (long-range MHC LD)
-# =============================================================================
+# MHC-excluded sensitivity analysis for 10_MR.R: re-runs MR offline from cached harmonised data with MHC instruments dropped, and reports a parallel column against the primary run so causal claims can be checked for HLA-DRB1 confounding.
 suppressMessages({
   library(TwoSampleMR); library(dplyr); library(data.table)
 })
@@ -72,9 +13,7 @@ FDR_CUT <- 0.05
 say <- function(...) cat(sprintf(...), "\n", sep = "")
 hdr <- function(x) cat("\n", strrep("=", 74), "\n", x, "\n", strrep("=", 74), "\n", sep = "")
 
-# =============================================================================
-# STEP 0 — LOAD THE CACHED PRIMARY RUN
-# =============================================================================
+# Step 0: load the cached primary MR run
 hdr("STEP 0  LOAD CACHED PRIMARY MR OBJECTS")
 obj_path <- file.path(proc, "MR_primary_objects.rds")
 if (!file.exists(obj_path))
@@ -93,13 +32,7 @@ say("cached cis instruments : %d SNPs (%d MHC-flagged in %d genes)",
     nrow(inst), sum(inst$MHC), uniqueN(inst[MHC == TRUE]$gene))
 say("candidate genes        : female %d | male %d", length(fem), length(mal))
 
-# =============================================================================
-# STEP 1 — DROP MHC INSTRUMENTS FROM THE HARMONISED DATA
-# -----------------------------------------------------------------------------
-# The MHC flag lives on `inst`, keyed by the (SNP, id.exposure) PAIR - the same
-# key 10_MR.R uses to attach gene labels, and for the same reason: a SNP can
-# instrument more than one gene, so matching on SNP alone would mislabel rows.
-# =============================================================================
+# Step 1: drop MHC instruments from the harmonised data, keyed on (SNP, id.exposure)
 hdr("STEP 1  REMOVE MHC INSTRUMENTS")
 key_dat  <- paste(dat$SNP, dat$id.exposure)
 key_inst <- paste(inst$SNP, inst$id.exposure)
@@ -117,14 +50,7 @@ say("harmonised rows removed        : %d of %d", n_mhc_rows, nrow(dat))
 say("genes with >=1 usable instrument: %d -> %d", length(genes_before), length(genes_after))
 say("genes left with NO instrument   : %d  (untestable after MHC exclusion)", length(lost_genes))
 
-# =============================================================================
-# STEP 2 — RE-RUN MR ON THE MHC-FREE INSTRUMENT SET
-# -----------------------------------------------------------------------------
-# The estimator hierarchy is re-applied rather than reused. Dropping a SNP can
-# take a gene from 3 instruments (IVW + Egger + weighted median) to 2 (IVW only)
-# or to 1 (Wald ratio), and the primary estimate must follow the instrument
-# count that actually remains.
-# =============================================================================
+# Step 2: re-run MR on the MHC-free instrument set (estimator hierarchy re-applied since instrument count can change)
 hdr("STEP 2  RE-ESTIMATE MR WITHOUT MHC INSTRUMENTS")
 res <- list(); het <- list(); pleio <- list()
 gs <- unique(dat_no$gene)
@@ -162,15 +88,7 @@ het <- bind_rows(het); pleio <- bind_rows(pleio)
 say("estimator mix after MHC exclusion:")
 print(prim_no[, .N, by = method][order(-N)])
 
-# =============================================================================
-# STEP 3 — PER-STRATUM FDR AND THE PARALLEL COMPARISON TABLE
-# -----------------------------------------------------------------------------
-# NOTE ON THE FDR DENOMINATOR. It shrinks, and that is correct. A gene whose only
-# instrument was an MHC SNP has not been "tested and found null"; it has become
-# UNTESTABLE without the MHC. Keeping it in the BH denominator would penalise the
-# genes that ARE testable for the absence of evidence about genes that are not.
-# The shrinkage is reported explicitly so the change is never silent.
-# =============================================================================
+# Step 3: per-stratum FDR (denominator shrinks - genes untestable without MHC are excluded) and the parallel comparison table
 hdr("STEP 3  PER-STRATUM FDR AND PARALLEL COLUMNS")
 
 compare_stratum <- function(sx, sex_genes) {
@@ -196,21 +114,10 @@ compare_stratum <- function(sx, sex_genes) {
   sig_n <- !is.na(cmp$FDR_noMHC)   & cmp$FDR_noMHC   < FDR_CUT
   testable_n <- !is.na(cmp$FDR_noMHC)
 
-  # A gene can lose FDR significance for TWO completely different reasons, and
-  # conflating them would overstate the damage:
-  #   (i)  its own instrument set changed - MHC SNPs were dropped from it, so the
-  #        estimate itself is different. This is genuine MHC dependence.
-  #   (ii) its instruments were all non-MHC and its estimate is bit-identical,
-  #        but Benjamini-Hochberg is a RANK procedure: removing the very strong
-  #        MHC genes above it shifts its rank i, and FDR = p * n / i rises even
-  #        though nothing about the gene's own evidence changed.
-  # Case (ii) is a multiplicity-bookkeeping effect, not evidence of confounding,
-  # and is labelled separately.
+  # distinguish genuine MHC-dependence (instrument set changed) from pure BH rank shift (estimate unchanged)
   cmp[, estimate_unchanged := !is.na(p_noMHC) &
         abs(p_primary - p_noMHC) < 1e-12 & nSNP_primary == nSNP_noMHC]
 
-  # Verdict vocabulary is deliberately blunt: an examiner should be able to read
-  # a single column and know whether a causal claim is defensible.
   cmp[, verdict := fifelse(
         sig_p & sig_n,                "ROBUST (significant with and without MHC)",
    fifelse(sig_p & !testable_n,       "UNTESTABLE without MHC (no non-MHC instrument)",
@@ -254,13 +161,7 @@ compare_stratum <- function(sx, sex_genes) {
 F <- compare_stratum("female", fem)
 M <- compare_stratum("male",   mal)
 
-# =============================================================================
-# STEP 4 — FATE OF THE FDR-SURVIVING SET AND OF THE FINAL PANELS
-# -----------------------------------------------------------------------------
-# This is the table the thesis actually needs: for every gene that carries a
-# causal claim in the primary analysis, and for every gene in the final
-# diagnostic panels, what happens when the MHC is removed.
-# =============================================================================
+# Step 4: fate of the FDR-surviving set and of the final panels when MHC is removed
 hdr("STEP 4  FATE OF CAUSAL GENES AND FINAL PANELS")
 
 panels <- list(female = character(0), male = character(0))
@@ -300,9 +201,7 @@ for (sx in c("female", "male")) {
                OR_no = OR_noMHC, FDR_no = FDR_noMHC, verdict)])
 }
 
-# =============================================================================
-# STEP 5 — HEADLINE SUMMARY
-# =============================================================================
+# Step 5: headline summary
 hdr("STEP 5  SUMMARY")
 panel_fate_counts <- function(sx) {
   x <- fate[sex == sx & in_final_panel == TRUE]

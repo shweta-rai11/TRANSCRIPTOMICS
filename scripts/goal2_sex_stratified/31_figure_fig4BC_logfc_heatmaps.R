@@ -1,32 +1,16 @@
 #!/usr/bin/env Rscript
-# =============================================================================
-# 18k_panelBC_logfc_heatmaps.R  -- reference Fig 4B/4C analogs for RA data.
-#   Panel B: logFC (RA - HC, log2) of the 6 MR consensus genes in each DISCOVERY
-#            dataset (GSE93272, GSE110169), split by sex. (= their per-GEO 4B)
-#   Panel C: the same logFC in the INDEPENDENT VALIDATION cohorts (internal
-#            holdout, external blood GSE15573), split by sex. This is the honest
-#            RA analog of their ADEx external-database panel 4C -- RA has no ADEx
-#            equivalent, so we use the independent cohorts and label it as such.
-# Genes annotated female-specific (red) / male-specific (blue) as in the paper.
-# Outputs: fig_mr_panelB_logfc_discovery.{png,pdf}, fig_mr_panelC_logfc_validation.{png,pdf}
-#          results/tables/mr_panelBC_logfc.csv
-# =============================================================================
+# Fig 4B/4C: logFC (RA - HC) of MR consensus genes by sex, in discovery datasets (B) and validation cohorts (C).
 suppressMessages({library(Biobase); library(data.table); library(ggplot2)})
 proc <- "data/processed"; tab <- "results/tables"; fig <- "results/figures/new"
 
 ml <- readRDS("data/processed/new/ml_features.rds")
 genesF <- ml$female$consensus; genesM <- ml$male$consensus
 genes  <- c(genesF, genesM)
-# Labels corrected 2026-07-27: were "Female-specific" / "Male-specific", which is
-# a sex-SPECIFICITY claim this chapter explicitly does not make (see
-# results/README_GOALS.md, "Terminology"). A gene appears in only one panel
-# because it passed selection in that stratum, not because it is specific to it.
-# The formal interaction test (Q4 04_parent_panel_sexspecificity.R) finds 0 of 11
-# panel genes sex-specific, minimum FDR 0.238.
+# Panel labels: "Female panel" / "Male panel" (sex-stratified, not a sex-specificity claim)
 gene_type <- setNames(c(rep("Female panel", length(genesF)),
                         rep("Male panel", length(genesM))), genes)
 
-# logFC (RA - HC) per gene, within a given expr matrix + meta subset -----------
+# logFC (RA - HC) per gene, within a given expr matrix + meta subset
 logfc <- function(expr, samples, grp, sx, cohort) {
   rbindlist(lapply(c("F", "M"), function(s) {
     idx <- which(sx == s); if (!length(idx)) return(NULL)
@@ -41,7 +25,7 @@ logfc <- function(expr, samples, grp, sx, cohort) {
   }))
 }
 
-## discovery: split combined_train by dataset --------------------------------
+# discovery: split combined_train by dataset
 o <- readRDS(file.path(proc, "combined_train.rds")); me <- as.data.table(o$meta)
 disc <- rbindlist(lapply(unique(me$dataset), function(ds) {
   ii <- me$dataset == ds
@@ -49,7 +33,7 @@ disc <- rbindlist(lapply(unique(me$dataset), function(ds) {
 }))
 disc[, panel := "B: Discovery datasets"]
 
-## validation: internal holdout + external blood -----------------------------
+# validation: internal holdout + external blood
 h <- readRDS(file.path(proc, "internal_val_holdout_processed.rds")); mh <- as.data.table(h$meta)
 val_int <- logfc(h$expr, mh$sample, mh$group, mh$sex, "Internal test")
 

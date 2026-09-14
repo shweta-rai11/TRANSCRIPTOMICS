@@ -1,10 +1,5 @@
 #!/usr/bin/env Rscript
-# =============================================================================
-# eda_figure.R  —  EDA FIGURES (plotting only) for GSE93272 + GSE110169.
-# Reads data/processed/eda_results.rds (from eda.R) and writes PNG + PDF to
-# results/figures/. Focus: sex x disease per dataset, metadata distributions,
-# and missing-value audit (all as bar plots), plus expression QC.
-# =============================================================================
+# EDA figures (plotting only) for GSE93272 + GSE110169: reads eda_results.rds, writes PNG/PDF to results/figures/.
 suppressMessages({library(ggplot2); library(data.table)})
 theme_set(theme_bw(base_size = 12))
 proc <- "data/processed"; fig <- "results/figures"
@@ -81,7 +76,7 @@ plot_cats <- function(nm) {
     geom_text(aes(label = Freq), vjust = -0.2, size = 2.6) +
     facet_wrap(~field, scales = "free", ncol = 3) +
     scale_y_continuous(expand = expansion(mult = c(0, .18))) +
-    labs(title = sprintf("%s — categorical metadata distributions", nm), x = NULL, y = "n samples") +
+    labs(title = sprintf("%s - categorical metadata distributions", nm), x = NULL, y = "n samples") +
     theme(axis.text.x = element_text(angle = 35, hjust = 1, size = 8),
           strip.text = element_text(face = "bold", size = 9))
   n_fields <- length(unique(cats$field))
@@ -95,19 +90,19 @@ p5 <- ggplot(ps, aes(reorder(sample, median), median)) +
   geom_linerange(aes(ymin = q25, ymax = q75), color = "#90A4AE", linewidth = .3) +
   geom_point(size = .5, color = "#1565C0") +
   facet_wrap(~dataset, scales = "free", ncol = 1) +
-  labs(title = "Expression QC — per-sample median with IQR (aligned = normalized)",
+  labs(title = "Expression QC - per-sample median with IQR (aligned = normalized)",
        x = "Sample (ranked)", y = "expression (median, IQR)") +
   theme(axis.text.x = element_blank(), axis.ticks.x = element_blank())
 save2(p5, "eda_expression_distribution", 11, 6)
 
-# RA vs HC only — PCA RECOMPUTED with SLE removed (all-groups version dropped as redundant)
+# RA vs HC only - PCA recomputed with SLE removed (all-groups version dropped as redundant)
 pca_rh <- rbindlist(lapply(res, function(r) r$qc$pca_rh$scores))
 pca_rh <- pca_rh[group %in% c("RA","HC")]
 p6b <- ggplot(pca_rh, aes(PC1, PC2, color = group)) +
   geom_point(size = 1.8, alpha = .85) + facet_wrap(~dataset, scales = "free") +
   scale_color_manual(values = c(HC = "#43A047", RA = "#FB8C00"),
                      labels = c("Healthy control","RA")) +
-  labs(title = "Expression QC — PCA per dataset, RA vs healthy control (SLE removed)",
+  labs(title = "Expression QC - PCA per dataset, RA vs healthy control (SLE removed)",
        subtitle = "PCA recomputed on RA + HC samples only (top-2000 variable probes)",
        x = "PC1", y = "PC2", color = NULL) + theme(legend.position = "top")
 save2(p6b, "eda_pca_ra_vs_hc", 10, 5)

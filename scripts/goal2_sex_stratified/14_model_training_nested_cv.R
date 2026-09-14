@@ -1,60 +1,5 @@
 #!/usr/bin/env Rscript
-# =============================================================================
-# 18c_mr_nested_cv.R
-# -----------------------------------------------------------------------------
-# LEAKAGE-FREE nested cross-validation of the MR-anchored diagnostic pipeline,
-# per sex. This is the HONEST replacement for the plain ("flat") training AUC in
-# 18b: because the 3-method consensus panel in 18b was chosen using the whole
-# training set and then scored by ordinary CV on that same set, its training and
-# internal AUCs are inflated by feature-selection bias (Ambroise & McLachlan,
-# PNAS 2002; Simon et al., JNCI 2003). Here EVERY step that looks at the outcome
-# labels - the LASSO, Random Forest and SVM-RFE selection AND the 3-method
-# consensus AND the logistic model - is redone INSIDE each outer training fold,
-# and the held-out fold is never seen during selection or fitting.
-#
-# DESIGN
-#   Candidate universe (fixed across folds). The within-sex MR-prioritised genes,
-#     read from FS_input_{female,male}.csv. DO NOT quote a count here - it has
-#     changed three times (14/40, then 74/55, then 32/25) and a header comment
-#     is the wrong place to carry a result. Quote mr_fs_summary.csv.
-#
-#     SCOPE OF THIS DESIGN - stated precisely, because an earlier version of this
-#     comment claimed the fixed universe "is not leakage", which is only half true.
-#     The universe is an EXTERNALLY FILTERED INTERNAL LIST:
-#       - genes SUBMITTED to MR = disease module (06) INTERSECT sex DEG (05),
-#         both computed on the whole training partition USING THE LABELS;
-#       - the FILTER applied to them = MR against external GWAS/eQTL summary
-#         statistics, which used no expression data from this study.
-#     Holding it fixed therefore means an outer-fold test sample helped define
-#     the gene list its own prediction is built from. This loop corrects the
-#     selection bias of the 3-selector stage and the classifier; it does NOT
-#     correct the bias of the upstream DEG/WGCNA/MR stages. Treat the nested
-#     number as an UPPER BOUND, and rest the diagnostic claim on the sealed
-#     holdout and the external cohorts, which are unaffected. See thesis 2.9.2.
-#   Outer loop : repeated stratified k-fold.
-#       Female : 10-fold x 5 repeats   (n = 145)
-#       Male   : 5-fold  x 10 repeats  (n = 38; smaller k, more repeats to
-#                                       stabilise the estimate at low n)
-#   Inside each outer-TRAIN fold (never touching the outer-test fold):
-#       (1) LASSO logistic (cv.glmnet, inner 5-fold CV tunes lambda) -> nonzero genes
-#       (2) Random Forest (ntree = 500) -> genes with above-mean Gini importance
-#       (3) SVM-RFE (linear, cost = 1) -> size by inner 5-fold CV error
-#       consensus = LASSO n RF n SVM-RFE  (fallback: union, then LASSO, then the
-#           full MR set, so the fold always yields a usable panel)
-#       classifier = logistic regression on the consensus genes, standardised
-#           with the FOLD-TRAIN mean/sd (frozen, applied to the test fold).
-#   Predict the untouched outer-test fold -> pool out-of-fold probabilities.
-#
-# REPORTS
-#   pooled out-of-fold AUC (+95% DeLong CI) and the per-repeat AUC distribution;
-#   the in-fold consensus-gene re-selection frequency (stability of the panel).
-# Females and males are handled completely separately throughout.
-#
-# Seeds: outer folds seeded 1000+repeat (reproducible). Outputs:
-#   results/tables/mr_nested_cv_summary.csv
-#   results/tables/mr_nested_cv_stability_{female,male}.csv
-#   data/processed/mr_nested_objects.rds   (nested ROC coords for the figure)
-# =============================================================================
+# Leakage-free nested cross-validation of the MR-anchored diagnostic pipeline, per sex: feature selection (LASSO/RF/SVM-RFE consensus) and the classifier are redone inside every outer fold.
 suppressMessages({library(glmnet); library(randomForest); library(e1071)
                   library(pROC); library(caret); library(data.table)})
 options(stringsAsFactors = FALSE)
@@ -146,23 +91,7 @@ cat("Nested CV (feature selection redone inside every fold; a few minutes)...\n"
 F <- run_nested("F", mrF, kfold = 10, repeats = 5)
 M <- run_nested("M", mrM, kfold = 5,  repeats = 10)
 
-# -----------------------------------------------------------------------------
-# THE FLAT ("LEAKY") COMPARISON, NOW COMPUTED RATHER THAN HARD-CODED.
-# -----------------------------------------------------------------------------
-# Earlier versions of this script wrote flat_train_CV_AUC = c(0.792, 0.966) as a
-# LITERAL, carried over from a superseded run of a different script, and that
-# literal was then written into mr_nested_cv_summary.csv as though it had been
-# computed here. It had not been. Any reader comparing the two columns was being
-# shown a number with no code behind it, and the value no longer corresponded to
-# the current candidate sets (the cis filter and the FDR change in 10_MR.R both
-# moved it). It is computed here instead.
-#
-# WHAT "FLAT" MEANS. The selection is done ONCE on the whole training set - the
-# 3-method consensus from ml_features.rds - and only the logistic model is then
-# cross-validated. Every fold therefore scores genes that were chosen using the
-# held-out samples. That is precisely the feature-selection bias Ambroise &
-# McLachlan (PNAS 2002) describe, and reproducing it here is the point: the gap
-# between this column and the nested column IS the bias, measured on this data.
+# The flat ("leaky") comparison: panel selected once on the whole training set, then only the classifier is cross-validated.
 flat_cv_auc <- function(sex_code, panel_genes) {
   cols <- meta$sample[meta$sex == sex_code]
   g <- unique(panel_genes[panel_genes %in% rownames(expr)])
@@ -194,9 +123,7 @@ flat_cv_auc <- function(sex_code, panel_genes) {
   as.numeric(auc(roc(agg$obs, agg$prob, levels = c("HC", "RA"),
                      direction = "<", quiet = TRUE)))
 }
-# The APPARENT AUC - fixed panel, fitted and scored on the same samples, no
-# resampling at all. This is the unambiguously optimistic number and is the
-# correct upper anchor for a selection-bias comparison.
+# The apparent AUC: fixed panel fitted and scored on the same samples, no resampling (upper anchor for the bias comparison)
 apparent_auc <- function(sex_code, panel_genes) {
   cols <- meta$sample[meta$sex == sex_code]
   g <- unique(panel_genes[panel_genes %in% rownames(expr)])
@@ -221,22 +148,7 @@ cat(sprintf("nested CV (selection in-fold): female %.3f | male %.3f\n", F$auc, M
 cat(sprintf("optimism (apparent - nested): female %+.3f | male %+.3f\n",
             appF - F$auc, appM - M$auc))
 
-# ---------------------------------------------------------------------------
-# A NOTE THE READER NEEDS, BECAUSE THE FLAT COLUMN DOES NOT BEHAVE AS EXPECTED.
-# flat CV comes out BELOW nested CV here (female 0.801 vs 0.816; male 0.821 vs
-# 0.896), which looks like negative selection bias and is not. Two effects run in
-# opposite directions:
-#   (+) flat CV IS inflated by having chosen the panel on all the data;
-#   (-) nested CV pools out-of-fold probabilities across 5 (female) or 10 (male)
-#       repeats in which EVERY FOLD SELECTS ITS OWN PANEL. Averaging predictions
-#       over many different small panels is an ensemble, and ensembling raises
-#       AUC. The pooled nested estimate therefore carries an ensemble bonus that
-#       the fixed-panel flat estimate does not.
-# The two are consequently NOT a clean bias decomposition, and the difference
-# between them must not be reported as "the selection bias". The honest
-# optimism estimate is APPARENT minus NESTED, which is positive in both sexes and
-# is what the `optimism` column reports.
-# ---------------------------------------------------------------------------
+# flat vs nested CV is not a clean bias decomposition (nested pooling across fold-specific panels is itself an ensemble); use the optimism (apparent - nested) column instead.
 
 # ---- stability tables (how often each panel gene re-enters the consensus) ----
 stab <- function(res, panel) {

@@ -1,15 +1,5 @@
 #!/usr/bin/env Rscript
-# =============================================================================
-# 03c_cohort_composition_barchart.R  —  two-panel RA/Control composition bar
-# chart for the training data: (a) combined training set pooled across both
-# platforms, (b) each platform individually, ordered by RA proportion.
-# Styled after standard cohort-composition figures (black = Control,
-# grey = RA, dashed line at 50%, n + % labelled above each bar).
-#
-# Input  : results/tables/combined_cohort_summary.csv
-# Outputs: results/figures/fig_cohort_composition_bar.png
-#          results/figures/fig_cohort_composition_bar.pdf
-# =============================================================================
+# Two-panel RA/Control composition bar chart: (a) combined training set, (b) each platform, ordered by RA proportion
 suppressMessages({library(data.table); library(ggplot2); library(patchwork)})
 tab <- "results/tables"; fig <- "results/figures"
 

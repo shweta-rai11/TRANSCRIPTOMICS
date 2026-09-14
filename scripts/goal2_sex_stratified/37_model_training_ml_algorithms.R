@@ -1,73 +1,5 @@
 #!/usr/bin/env Rscript
-# =============================================================================
-# 37_model_training_ml_algorithms.R
-# -----------------------------------------------------------------------------
-# TRAINING PHASE for a five-algorithm diagnostic-model comparison, requested in
-# addition to the elastic-net panel model already reported in section 2.10.
-# Where section 2.10 fits ONE classifier (logistic regression, optionally
-# elastic-net-penalised) on the sex-stratified consensus panel, this script
-# fits FIVE standard classifier families on that SAME locked panel so the
-# algorithms can be compared head-to-head under identical features:
-#
-#     Logistic regression (glm)      Support vector machine (RBF kernel)
-#     k-nearest neighbours            Artificial neural network (single
-#     Random forest                   hidden layer, nnet)
-#
-# FEATURES: the sex-specific consensus panel already selected and locked by
-#   the LASSO n RF n SVM-RFE pipeline (12_feature_selection.R), read from
-#   data/processed/new/ml_features.rds:
-#       Female (6): C6orf136, ESYT1, GNL1, IKZF3, MED1, SMARCC2
-#       Male   (6): ESYT1, HLA-DMA, INPP5B, MED1, SMARCC2, VPS52
-#   No new feature selection is performed here -- reusing the locked panel
-#   keeps this comparison about ALGORITHM choice, not panel choice, and avoids
-#   re-introducing the feature-selection leakage that 14_/16_ already went to
-#   considerable lengths to eliminate.
-#
-# TRAINING DATA: data/processed/combined_train.rds (blood, GSE93272+GSE110169,
-#   the same 70% discovery cohort used throughout this chapter). Each sex is
-#   modelled separately throughout (never pooled).
-#
-# PREPROCESSING: each panel gene is z-scored WITHIN the training set (own
-#   mean/sd), matching the convention already justified in 18b/20_ ("each gene
-#   is standardised within each dataset ... unsupervised, removes platform-
-#   specific location/scale offsets"). The same within-dataset standardisation
-#   is re-applied independently to each test set in 38_ rather than reusing the
-#   training mean/sd, because one test set (synovium, RNA-seq log2-CPM) is on a
-#   different platform and tissue from training (blood microarray) and a
-#   frozen microarray scale would not transfer.
-#
-# HYPERPARAMETER TUNING: caret::train(), 5-fold cross-validation repeated 5
-#   times (identical scheme for both sexes; unlike the outer resampling of
-#   section 2.10's nested CV, this is tuning only, not the reported
-#   performance estimate -- see 38_ for that), metric = ROC, seed 1234 fixed
-#   before every model. Grids:
-#       Logistic regression : none (glm has no hyperparameter; included as
-#                              the common baseline against which the other
-#                              four are compared)
-#       SVM (svmRadial)     : C in {0.1,0.25,0.5,1,2,4,8,16}, sigma in
-#                              {0.01,0.05,0.1,0.5,1}
-#       KNN                 : k in {3,5,7,9,11,13,15}
-#       Random forest       : mtry in {1,...,6} (all possible values at p=6),
-#                              ntree fixed at 500
-#       ANN (nnet)          : size in {1,3,5,7,9}, decay in
-#                              {0,0.001,0.01,0.1,1}
-#   The male stratum (n=38) is tuned with the same 5x5 scheme as the female
-#   stratum (n=145) for comparability; this is smaller-sample than ideal for
-#   a 5-fold split with 17 RA cases, and results are read with that in mind
-#   (see evidence-tier flags in 38_).
-#
-# HONEST "TRAIN" ESTIMATE: for every algorithm, the pooled out-of-fold
-#   predicted probabilities at the best tuning parameters (across all 5x5=25
-#   resamples, averaged per sample) are kept and turned into an honest,
-#   non-resubstitution "Train (resampled CV)" ROC in 38_/39_, exactly as
-#   section 2.10 already does for the elastic-net panel. Resubstitution
-#   (apparent) accuracy is not reported anywhere in this comparison.
-#
-# Outputs:
-#   data/processed/new/ml_algo_models.rds  (fitted caret models, OOF preds,
-#                                            best hyperparameters, panel, seed)
-#   results/tables/ML_hyperparameter_tuning.csv
-# =============================================================================
+# Training phase: tune five classifiers (logreg, SVM, KNN, RF, ANN) on the locked sex-specific consensus panel via repeated CV.
 suppressMessages({
   library(caret); library(data.table); library(pROC)
 })
@@ -87,13 +19,13 @@ expr <- o$expr; meta <- as.data.table(o$meta)
 cat(sprintf("Female panel (%d): %s\n", length(PANEL$F), paste(PANEL$F, collapse = ", ")))
 cat(sprintf("Male panel   (%d): %s\n", length(PANEL$M), paste(PANEL$M, collapse = ", ")))
 
-## ---- within-dataset z-score (rows = genes) --------------------------------
+# within-dataset z-score (rows = genes)
 zrows <- function(M) t(apply(M, 1, function(v) {
   s <- sd(v, na.rm = TRUE)
   if (is.na(s) || s == 0) rep(0, length(v)) else (v - mean(v, na.rm = TRUE)) / s
 }))
 
-## ---- algorithm grids (fixed, pre-specified; no post hoc adjustment) -------
+# algorithm grids (fixed, pre-specified; no post hoc adjustment)
 ALGOS <- list(
   logreg = list(method = "glm",       grid = NULL, extra = list(family = "binomial"), label = "Logistic regression"),
   svm    = list(method = "svmRadial", grid = expand.grid(C = c(0.1,0.25,0.5,1,2,4,8,16), sigma = c(0.01,0.05,0.1,0.5,1)), extra = list(), label = "SVM (RBF)"),
@@ -112,7 +44,7 @@ fit_tuned <- function(X, y, spec, seed = GLOBAL_SEED) {
   suppressWarnings(do.call(caret::train, args))
 }
 
-## pooled out-of-fold ROC at the best tuning parameters (honest "train" curve)
+# pooled out-of-fold ROC at the best tuning parameters (honest "train" curve)
 oof_roc <- function(m, y_full) {
   p <- as.data.table(m$pred)
   agg <- p[, .(prob = mean(RA)), by = rowIndex]

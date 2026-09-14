@@ -1,11 +1,5 @@
 #!/usr/bin/env Rscript
-# =============================================================================
-# 18f_figure.R  -- ROC curves for the FINAL recommended MR-anchored elastic-net
-# panels (18f_final_panel.R), per sex, across the three datasets:
-#   Train (nested CV, honest)  |  Internal test  |  External blood.
-# One figure per sex. No titles (captions written separately). Specificity axis
-# reversed (1 -> 0) in the ROC convention. AUC (95% CI) shown in the legend.
-# =============================================================================
+# ROC curves for the final recommended MR-anchored elastic-net panels, per sex, across train (nested CV), internal test, and external blood.
 suppressMessages({library(data.table); library(ggplot2)})
 proc <- "data/processed"; fig <- "results/figures/new"
 obj <- readRDS("data/processed/new/mr_final_objects.rds")

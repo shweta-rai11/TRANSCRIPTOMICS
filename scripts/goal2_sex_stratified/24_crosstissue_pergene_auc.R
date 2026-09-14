@@ -1,15 +1,5 @@
 #!/usr/bin/env Rscript
-# =============================================================================
-# new/26new_pergene_auc_alltissues.R
-# -----------------------------------------------------------------------------
-# Per-gene AUC of every consensus panel gene across all four datasets:
-#   Train | Internal test | External blood | External synovium.
-# Train/Internal/Blood come from mr_roc_pergene_auc.csv (18b, train-fixed
-# orientation). Synovium AUC put on the SAME train orientation (concordant ->
-# auc_all; discordant -> 1-auc_all) so a direction reversal reads as AUC<0.5.
-# Output: results/figures/new/fig_pergene_auc_alltissues.png/pdf
-#         results/tables/pergene_auc_alltissues.csv
-# =============================================================================
+# Per-gene AUC of every consensus panel gene across all four datasets (train, internal test, external blood, external synovium), all on train-fixed orientation so reversal reads as AUC<0.5.
 suppressMessages({library(data.table); library(ggplot2)})
 proc <- "data/processed"; tabN <- "results/tables"; figN <- "results/figures/new"
 
@@ -17,23 +7,14 @@ pg <- fread(file.path(tabN, "mr_roc_pergene_auc.csv"))          # Train/Internal
 v  <- readRDS(file.path(proc, "new", "val_synovium.rds"))
 ml <- readRDS(file.path(proc, "new", "ml_features.rds"))
 gF <- ml$female$consensus; gM <- ml$male$consensus
-# The two panels SHARE genes (ESYT1, MED1, SMARCC2), so a gene is not a unique
-# key here - the unit is (gene, panel). A named lookup keyed on c(gF, gM) has
-# duplicate names and silently returns the FIRST match, which would label every
-# shared gene "Female" and collapse its two different per-sex AUCs into one.
+# Panels share genes (ESYT1, MED1, SMARCC2), so the key is (gene, panel), not gene alone
 panel_map <- rbind(data.table(gene = gF, panel = "Female"),
                    data.table(gene = gM, panel = "Male"))
 
 # blood/train/internal - keep sex; a shared gene has a DIFFERENT AUC in each panel
 bti <- pg[dataset %in% c("Train","Internal test","External blood"),
           .(gene, panel = sex, dataset, AUC)]
-# Synovium (train-fixed orientation), tagged with the panel it was evaluated in.
-# auc_sex, NOT auc_all: this is a sex-stratified analysis, so the synovium column
-# must be computed WITHIN the stratum. auc_all pools both sexes, which gave every
-# shared gene an identical synovium AUC in the female and male panels and silently
-# contradicted the per-sex ROC curves in 25_crosstissue_pergene_roc.R.
-# `concordant` is already sex-specific (20_ orients it by each sex's own training
-# direction), so the AUC<0.5 = direction-reversed convention still holds.
+# Synovium (train-fixed orientation, per-sex): uses auc_sex not auc_all since this is sex-stratified
 syn <- rbind(cbind(as.data.table(v$sf), panel = "Female"),
              cbind(as.data.table(v$sm), panel = "Male"), fill = TRUE)[
          , .(gene, panel, dataset = "External synovium",

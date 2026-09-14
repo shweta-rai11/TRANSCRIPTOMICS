@@ -1,14 +1,5 @@
 #!/usr/bin/env Rscript
-# =============================================================================
-# new/27new_pergene_roc_alltissues.R
-# -----------------------------------------------------------------------------
-# Per-gene ROC curves across all four datasets (Train | Internal test |
-# External blood | External synovium), one facet per consensus gene, 4 coloured
-# curves, AUC written in each facet. Train orientation kept throughout (a curve
-# below the diagonal = expression direction reversed vs blood training).
-# Female and male are always separate figures (never pooled into one panel grid).
-# Output: results/figures/new/fig_pergene_roc_alltissues_{female,male}.png/pdf
-# =============================================================================
+# Per-gene ROC curves across all four datasets, one facet per consensus gene with AUC per facet, train orientation kept throughout; female and male plotted as separate figures.
 suppressMessages({library(data.table); library(pROC); library(ggplot2)})
 proc <- "data/processed"; figN <- "results/figures/new"
 
@@ -17,11 +8,7 @@ ml <- readRDS(file.path(proc, "new", "ml_features.rds"))
 D  <- readRDS(file.path(proc, "dge_results.rds"))
 v  <- readRDS(file.path(proc, "new", "val_synovium.rds"))
 gF <- ml$female$consensus; gM <- ml$male$consensus
-# The panels SHARE genes (ESYT1, MED1, SMARCC2), so the unit of evaluation is
-# (gene, sex), not gene: the same gene is a different classifier in each stratum
-# and carries a different AUC. A named lookup keyed on c(gF, gM) has duplicate
-# names, returns the FIRST match, and would silently evaluate every shared gene
-# in the female stratum only - and duplicate factor levels abort the plot.
+# Panels share genes (ESYT1, MED1, SMARCC2), so the evaluation key is (gene, sex), not gene alone
 panel_map <- rbind(data.table(gene = gF, sex = "Female"),
                    data.table(gene = gM, sex = "Male"))
 

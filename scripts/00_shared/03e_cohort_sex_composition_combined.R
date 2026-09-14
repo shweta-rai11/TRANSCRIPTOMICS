@@ -1,18 +1,5 @@
 #!/usr/bin/env Rscript
-# =============================================================================
-# 03e_cohort_sex_composition_combined.R  —  single 4-panel figure merging the
-# dataset-composition bar chart (03c) and the sex-composition bar chart (03d):
-#   a) Combined training set, by group (Control/RA)
-#   b) Per-dataset composition, ordered by RA proportion
-#   c) Combined training set, by sex (Female/Male)
-#   d) RA/Control composition within each sex, ordered by RA proportion
-# One shared Control/RA legend at the bottom (panels a/c need no legend --
-# their bars are already labelled on the x-axis).
-#
-# Input  : results/tables/combined_cohort_summary.csv
-# Outputs: results/figures/fig_cohort_sex_composition_bar.png
-#          results/figures/fig_cohort_sex_composition_bar.pdf
-# =============================================================================
+# Single 4-panel figure merging the cohort-composition (03c) and sex-composition (03d) bar charts
 suppressMessages({library(data.table); library(ggplot2); library(patchwork)})
 tab <- "results/tables"; fig <- "results/figures"
 

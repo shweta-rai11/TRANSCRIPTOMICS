@@ -1,20 +1,5 @@
 #!/usr/bin/env Rscript
-# =============================================================================
-# 05c_deconvolution_figure.R  —  Gene expression and immune deconvolution of
-#                                 the potential diagnostic gene panel, by sex
-#
-# 05c_deconvolution.R deliberately produces tables only (see its header). This
-# script turns those tables + data/processed/new/cell_fractions.rds into the
-# two-panel figure §3.14 was missing:
-#   A. expression of the sex-specific consensus panel genes, HC vs RA
-#   B. LM22 (CIBERSORT) immune-cell fractions that differ HC vs RA (FDR<0.05)
-# built separately within each sex.
-#
-# in : data/processed/combined_train.rds
-#      data/processed/new/cell_fractions.rds
-#      data/processed/new/ml_features.rds
-# out: results/figures/fig_immune_deconvolution_panel_{female,male}.{png,pdf}
-# =============================================================================
+# Figure: diagnostic panel gene expression + LM22 immune-cell fraction differences (HC vs RA), by sex
 suppressMessages({
   library(ggplot2); library(patchwork); library(data.table)
 })

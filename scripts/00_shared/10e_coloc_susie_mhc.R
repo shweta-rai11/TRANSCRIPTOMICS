@@ -1,70 +1,5 @@
 #!/usr/bin/env Rscript
-# =============================================================================
-# 10e_coloc_susie_mhc.R  —  Multiple-causal-variant colocalisation for the MHC
-#
-# WHY THIS EXISTS
-#   10d runs coloc.abf, which assumes AT MOST ONE causal variant per trait per
-#   region. That assumption is defensible for a typical cis-eQTL window and is
-#   FALSE in the MHC, where rheumatoid arthritis has several independent,
-#   well-mapped signals (HLA-DRB1 positions 11/71/74, HLA-B position 9, HLA-DPB1
-#   position 9; Raychaudhuri 2012) and where the regions queried carry 1,026-5,193
-#   SNPs in extended LD.
-#
-#   The consequence was recorded honestly in 10d: inside the MHC a high PP.H3 is
-#   INFLATED by the assumption violation, so it cannot be read as evidence of
-#   distinct causal variants, and those genes were labelled "UNRELIABLE BOTH
-#   WAYS". That is an accurate statement of ignorance, but it is still ignorance.
-#   This script removes it.
-#
-# WHAT coloc.susie DOES DIFFERENTLY
-#   SuSiE (Sum of Single Effects; Wang et al. 2020) decomposes each trait's
-#   regional association into MULTIPLE credible sets, each representing one
-#   independent causal signal. coloc.susie then tests colocalisation between
-#   every pair of credible sets - eQTL signal i against GWAS signal j - and
-#   returns a posterior per pair. A gene can therefore colocalise with ONE of
-#   several RA signals while being independent of the others, which is exactly
-#   the situation coloc.abf cannot represent and exactly the situation the MHC
-#   presents.
-#
-# WHAT THIS NEEDS THAT coloc.abf DID NOT
-#   An LD matrix for the region, in the SAME allele orientation as the summary
-#   statistics. This is fetched from the OpenGWAS 1000G EUR reference panel via
-#   ieugwasr::ld_matrix(). Two consequences must be stated rather than buried:
-#
-#     * REFERENCE-PANEL MISMATCH. The LD matrix comes from 1000G EUR (n ~ 500),
-#       not from the eQTLGen or Okada samples. In the MHC, where haplotype
-#       structure is extreme, an out-of-sample LD reference is a genuine source
-#       of error and can make SuSiE report spurious or missing credible sets.
-#       This is a real limitation of doing susie from summary statistics without
-#       in-sample LD, and it is why the result below is reported as INDICATIVE.
-#     * SNP CAP. ld_matrix is capped server-side, so each region is reduced to
-#       the CFG$max_snps most significant shared SNPs (by the smaller of the two
-#       traits' p-values). Truncating a region can drop a causal variant.
-#
-#   Both mean this analysis IMPROVES on coloc.abf in the MHC without settling it
-#   definitively. In-sample LD would be required for that, and neither eQTLGen
-#   nor Okada release it.
-#
-# HOW TO READ THE OUTPUT
-#   Per gene, the best-supported eQTL-signal x GWAS-signal pair is reported with
-#   its PP.H4. The verdict vocabulary matches 10d so the two can sit in one table:
-#     PP.H4 >= 0.80 for some pair    COLOCALISED (with that RA signal)
-#     PP.H3 >= 0.80 for every pair   DISTINCT VARIANTS (now a valid reading,
-#                                    because multiple signals were modelled)
-#     SuSiE found < 1 credible set   NOT RESOLVABLE (region underpowered or LD
-#                                    reference inadequate) - NOT a negative result
-#
-#   in : data/processed/new/coloc_regions.rds   (cached by 10d; no re-download)
-#        results/tables/COLOC_results.csv
-#   out: results/tables/COLOC_SUSIE_mhc.csv
-#        results/tables/COLOC_combined_abf_susie.csv
-#        data/processed/new/coloc_susie_objects.rds
-#
-#   Wang G, et al. J R Stat Soc B 2020;82:1273-1300.        (SuSiE)
-#   Wallace C. PLoS Genet 2021;17:e1009440.                 (coloc.susie)
-#   Zou Y, et al. PLoS Genet 2022;18:e1010299.              (LD mismatch in susie)
-#   Raychaudhuri S, et al. Nat Genet 2012;44:291-296.       (MHC fine-mapping, RA)
-# =============================================================================
+# Multiple-causal-variant colocalisation (coloc.susie) for MHC genes, where coloc.abf's single-causal-variant assumption fails. Uses SuSiE credible sets per trait + an out-of-sample 1000G EUR LD reference; results are indicative, not definitive, and supersede 10d's coloc.abf verdict for MHC genes only.
 suppressMessages({
   library(coloc); library(susieR); library(ieugwasr); library(data.table)
 })
@@ -88,9 +23,7 @@ CFG$s <- CFG$n_cases / (CFG$n_cases + CFG$n_controls)
 say <- function(...) cat(sprintf(...), "\n", sep = "")
 hdr <- function(x) cat("\n", strrep("=", 74), "\n", x, "\n", strrep("=", 74), "\n", sep = "")
 
-# =============================================================================
-# STEP 1 — TARGET GENES: everything 10d could not resolve
-# =============================================================================
+# Step 1: target genes - everything 10d could not resolve
 hdr("STEP 1  TARGETS")
 regions <- readRDS(file.path(proc, "coloc_regions.rds"))
 abf <- fread(file.path(tab, "COLOC_results.csv"))
@@ -102,9 +35,7 @@ panel_genes <- abf[in_panel_female == TRUE | in_panel_male == TRUE]$gene
 say("of which in a final panel          : %s",
     paste(intersect(targets, panel_genes), collapse = ", "))
 
-# =============================================================================
-# STEP 2 — HARMONISE, FETCH LD, RUN SuSiE ON EACH TRAIT
-# =============================================================================
+# Step 2: harmonise, fetch LD, run SuSiE on each trait, then coloc.susie
 hdr("STEP 2  SuSiE PER TRAIT, THEN coloc.susie")
 
 AMBIG <- c("AT", "TA", "CG", "GC")
@@ -144,7 +75,7 @@ run_gene <- function(g) {
   if (is.null(ld) || !nrow(ld))
     return(data.table(gene = g, n_snps = nrow(m), status = "LD matrix unavailable"))
 
-  # ld_matrix returns rownames "rsid_A1_A2"; align orientation to our effect allele
+  # align LD-matrix orientation to our effect allele (rownames "rsid_A1_A2")
   parts <- do.call(rbind, strsplit(rownames(ld), "_", fixed = TRUE))
   ldsnp <- parts[, 1]; ld_a1 <- toupper(parts[, 2]); ld_a2 <- toupper(parts[, 3])
   keep <- match(ldsnp, m$rsid)
@@ -229,9 +160,7 @@ hdr("SuSiE RESULTS")
 print(res[, .(gene, in_panel, n_snps, n_cs_eqtl, n_cs_gwas,
               best_PP_H4 = max_PP_H4_any_pair, susie_verdict)])
 
-# =============================================================================
-# STEP 3 — COMBINED abf + susie VIEW
-# =============================================================================
+# Step 3: combined abf + susie view
 hdr("STEP 3  COMBINED VIEW")
 comb <- merge(abf[, .(gene, MHC_gene, in_panel_female, in_panel_male,
                       abf_PP3 = round(PP3, 3), abf_PP4 = round(PP4, 3),

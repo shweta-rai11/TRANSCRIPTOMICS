@@ -1,89 +1,5 @@
 #!/usr/bin/env Rscript
-# =============================================================================
-# 05c_deconvolution.R  —  Cell-composition estimation and composition-adjusted
-#                         differential expression
-#
-# WHY THIS EXISTS — THE HOLE IT CLOSES
-#   Every sample in this study is WHOLE BLOOD (or PBMC). A whole-blood
-#   transcriptome is a weighted average over circulating leukocyte populations,
-#   so a gene can appear "differentially expressed in RA" for two entirely
-#   different reasons:
-#
-#     (A) CELL-INTRINSIC   the gene is regulated differently inside a given cell
-#                          type in RA, or
-#     (B) COMPOSITIONAL    the gene's expression is cell-type restricted and the
-#                          PROPORTION of that cell type differs between RA and
-#                          control - neutrophilia and lymphopenia being the
-#                          classic RA/inflammation pattern.
-#
-#   Bulk differential expression cannot tell (A) from (B), and the leading DEGs
-#   in this study are exactly the transcripts that would be produced by (B):
-#   ARG1, DEFA4, S100A8, CLEC4D, BCL2A1 are canonical neutrophil-granule and
-#   myeloid-activation genes. Until composition is measured, the honest null
-#   hypothesis for the entire signature - and for the diagnostic panel built on
-#   top of it - is "this is a differential white-cell count with extra steps",
-#   and that null cannot be refuted by anything currently in the pipeline. A
-#   CIBERSORT step existed and was REMOVED on 2026-07-24; this restores it and
-#   goes further, by feeding the estimates back into the DE model.
-#
-# HOW COMPOSITION IS ESTIMATED
-#   Primary : CIBERSORT with the LM22 signature matrix (22 leukocyte subsets),
-#             run through IOBR. LM22 was built from microarray data and is the
-#             appropriate reference for these Affymetrix cohorts. CIBERSORT
-#             expects LINEAR-scale expression, so the log2 matrices are
-#             exponentiated first, and array mode is used.
-#   Check   : MCP-counter, an independent marker-gene-based estimator. It is
-#             included because CIBERSORT's constrained regression can trade
-#             correlated subsets off against one another; agreement between two
-#             methods that fail in different ways is worth more than either
-#             alone. MCP-counter gives relative abundance scores, not fractions,
-#             so it is used only to corroborate direction, never as the adjuster.
-#
-# HOW THE ADJUSTMENT IS DONE, AND WHAT IT DOES AND DOES NOT MEAN
-#   The 22 LM22 fractions cannot all enter the male model (n = 38). Composition
-#   is therefore summarised by PRINCIPAL COMPONENTS of the centred log-ratio
-#   (CLR) transformed fraction matrix - CLR because fractions are compositional
-#   and sum to 1, so they live on a simplex and are not independent (Aitchison
-#   1982). The first COMP_PCS components enter the limma design as covariates:
-#
-#       ~ group + cPC1 + ... + cPCk        fitted separately within each sex
-#
-#   INTERPRETATION - THIS MATTERS AND IS EASY TO GET WRONG. Cell composition in
-#   RA is plausibly a CONSEQUENCE of the disease, i.e. it sits ON the causal
-#   pathway from RA to the blood transcriptome. Adjusting for a mediator does
-#   NOT give a less-confounded estimate of the total disease effect; it removes
-#   part of the real effect. So:
-#
-#     * the UNADJUSTED model estimates the TOTAL RA-associated signal, which is
-#       the right quantity for a DIAGNOSTIC biomarker (a clinician does not care
-#       whether the signal is intrinsic or compositional, only that it
-#       discriminates);
-#     * the ADJUSTED model estimates the signal NOT EXPLAINED by composition,
-#       which is the right quantity for a MECHANISTIC claim about gene
-#       regulation.
-#
-#   Both are reported. The thesis may keep the unadjusted model as primary for
-#   the diagnostic argument, but it may no longer make cell-intrinsic or
-#   mechanistic claims about any gene that does not survive adjustment.
-#
-#   in : data/processed/combined_train.rds
-#        data/processed/internal_val_holdout_processed.rds
-#        data/raw/GSE15573_raw.rds
-#        data/processed/new/ml_features.rds        (panel genes, if present)
-#   out: results/tables/CELL_fractions_{train,holdout,external}.csv
-#        results/tables/CELL_fraction_group_tests.csv
-#        results/tables/CELL_composition_pca.csv
-#        results/tables/DEG_celladjusted_summary.csv
-#        results/tables/DEG_celladjusted_{female,male}.csv
-#        results/tables/CELL_panel_gene_adjustment.csv
-#        data/processed/new/cell_fractions.rds
-#
-#   Newman AM, et al. Nat Methods 2015;12:453-457.        (CIBERSORT, LM22)
-#   Becht E, et al. Genome Biol 2016;17:218.              (MCP-counter)
-#   Aitchison J. J R Stat Soc B 1982;44:139-177.          (CLR for compositions)
-#   Shen-Orr SS, Gaujoux R. Curr Opin Immunol 2013;25:571-578. (deconvolution)
-#   Zeng H, et al. Arthritis Res Ther 2021;23:1-12.       (leukocyte shifts in RA)
-# =============================================================================
+# Estimates blood cell composition (CIBERSORT/LM22, checked against MCP-counter) and re-fits DE with composition PCs (CLR) as covariates, to separate cell-intrinsic from compositional signal, within sex
 suppressMessages({
   library(IOBR); library(limma); library(data.table)
 })
@@ -105,9 +21,7 @@ CFG <- list(
 say <- function(...) cat(sprintf(...), "\n", sep = "")
 hdr <- function(x) cat("\n", strrep("=", 74), "\n", x, "\n", strrep("=", 74), "\n", sep = "")
 
-# =============================================================================
-# STEP 1 — LOAD THE THREE BLOOD DATASETS
-# =============================================================================
+# STEP 1: load the three blood datasets
 hdr("STEP 1  LOAD DATASETS")
 tr <- readRDS(file.path(proc, "combined_train.rds"))
 ho <- readRDS(file.path(proc, "internal_val_holdout_processed.rds"))
@@ -152,13 +66,7 @@ if (file.exists(ext_path)) {
   say("external GSE15573 not found at %s - skipped", ext_path)
 }
 
-# =============================================================================
-# STEP 2 — DECONVOLUTION
-# -----------------------------------------------------------------------------
-# CIBERSORT is fitted INDEPENDENTLY per dataset. It must not be fitted jointly:
-# the holdout is a sealed test set, and joint fitting would let its samples
-# influence a quantity later used to adjust the training model.
-# =============================================================================
+# STEP 2: deconvolution (CIBERSORT LM22 + MCP-counter), fitted independently per dataset (holdout stays sealed)
 hdr("STEP 2  CIBERSORT (LM22) AND MCP-COUNTER")
 
 run_cibersort <- function(expr, label) {
@@ -211,15 +119,7 @@ if ("P.value_CIBERSORT" %in% names(cib$train)) {
       sum(pv < 0.05, na.rm = TRUE), length(pv), 100 * mean(pv < 0.05, na.rm = TRUE))
 }
 
-# =============================================================================
-# STEP 3 — DOES COMPOSITION DIFFER BETWEEN RA AND CONTROL, WITHIN SEX?
-# -----------------------------------------------------------------------------
-# This is the test that decides whether the confounder is real. If fractions do
-# not differ, composition cannot be driving the DE signal and the adjustment is
-# a formality. If they do differ - which is the expectation in RA - then the
-# unadjusted DE result is confounded with (or mediated by) composition and must
-# be reported as such.
-# =============================================================================
+# STEP 3: does cell composition differ between RA and control, within sex
 hdr("STEP 3  COMPOSITION VS DISEASE STATUS, WITHIN SEX")
 ct <- merge(train_meta[, .(sample, group, sex)], cib$train[, c("sample", fc), with = FALSE],
             by = "sample")
@@ -251,9 +151,7 @@ for (sx in c("Female", "Male")) {
                                 FDR = signif(FDR, 3))], 8))
 }
 
-# =============================================================================
-# STEP 4 — COMPOSITION PRINCIPAL COMPONENTS (CLR SPACE)
-# =============================================================================
+# STEP 4: composition principal components (CLR space)
 hdr("STEP 4  COMPOSITION PCs (CLR)")
 Fm <- as.matrix(ct[, fc, with = FALSE]); rownames(Fm) <- ct$sample
 keep <- colMeans(Fm, na.rm = TRUE) >= CFG$min_frac
@@ -276,9 +174,7 @@ fwrite(cbind(data.table(sample = rownames(pca$x)),
              data.table(var_expl_PC1 = ve[1])),
        file.path(tab, "CELL_composition_pca.csv"))
 
-# =============================================================================
-# STEP 5 — COMPOSITION-ADJUSTED DIFFERENTIAL EXPRESSION, WITHIN SEX
-# =============================================================================
+# STEP 5: composition-adjusted differential expression, within sex
 hdr("STEP 5  COMPOSITION-ADJUSTED DIFFERENTIAL EXPRESSION")
 md_all <- merge(train_meta[, .(sample, group, sex)], cpc, by = "sample")
 setkey(md_all, sample)
@@ -336,9 +232,7 @@ summ <- rbindlist(lapply(res, function(r) data.table(
 fwrite(summ, file.path(tab, "DEG_celladjusted_summary.csv"))
 print(summ)
 
-# =============================================================================
-# STEP 6 — WHAT HAPPENS TO THE PANEL GENES
-# =============================================================================
+# STEP 6: what happens to the panel genes under composition adjustment
 hdr("STEP 6  PANEL GENES UNDER COMPOSITION ADJUSTMENT")
 panels <- list(Female = character(0), Male = character(0))
 ml_path <- file.path(procN, "ml_features.rds")

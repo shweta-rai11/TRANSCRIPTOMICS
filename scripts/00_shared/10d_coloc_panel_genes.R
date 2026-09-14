@@ -1,107 +1,5 @@
 #!/usr/bin/env Rscript
-# =============================================================================
-# 10d_coloc_panel_genes.R  —  Bayesian colocalisation for every MR-prioritised gene
-#
-# WHY THIS EXISTS — THE HOLE IT CLOSES
-#   A cis-MR estimate answers "is the eQTL for gene G associated with RA?". It
-#   does NOT answer "is the eQTL for gene G and the RA risk signal the SAME
-#   underlying causal variant?". Those two questions come apart whenever the
-#   eQTL variant is merely in LD with a distinct disease-causing variant, and in
-#   that situation cis-MR returns a confident, highly significant, and entirely
-#   spurious causal estimate. This is the single most-cited weakness of cis-eQTL
-#   MR (Zhu 2016; Wallace 2020), and it is precisely why the MHC results in
-#   10_MR.R cannot be taken at face value: the extended MHC has the longest-range
-#   LD in the genome and contains the dominant RA locus, HLA-DRB1.
-#
-#   10c_MR_mhc_sensitivity.R answers the question by BLUNT EXCISION (drop the
-#   MHC and see what survives). This script answers it DIRECTLY, for every gene
-#   including the non-MHC ones, by testing the two competing hypotheses formally.
-#
-# WHAT coloc.abf TESTS
-#   Over a cis window it evaluates five mutually exclusive hypotheses:
-#     H0  no causal variant for either trait
-#     H1  causal variant for expression only
-#     H2  causal variant for RA only
-#     H3  BOTH traits have a causal variant, but they are DIFFERENT variants
-#     H4  BOTH traits share ONE causal variant  (true colocalisation)
-#   H3 is the failure mode that invalidates a cis-MR estimate. H4 is the state of
-#   the world the MR estimate silently assumes. Reporting PP.H4 alongside every
-#   MR estimate therefore converts an untested assumption into a measured one.
-#
-# INTERPRETATION THRESHOLDS ADOPTED (conventional; Giambartolomei 2014)
-#   PP.H4 >= 0.80                     strong support for a shared causal variant
-#   0.50 <= PP.H4 < 0.80              suggestive
-#   PP.H3 >= 0.80                     evidence AGAINST colocalisation: distinct
-#                                     causal variants, MR estimate LD-confounded
-#   PP.H4/(PP.H3+PP.H4) >= 0.80       conditional support given both traits are
-#                                     associated (robust when power is low, i.e.
-#                                     when PP.H0/H1/H2 absorb most of the mass)
-#
-# PRIOR SENSITIVITY
-#   The p12 prior (probability a variant is causal for BOTH traits) is the main
-#   subjective input and the usual point of attack. Every gene is therefore run
-#   at the default p12 = 1e-5 AND at the conservative p12 = 1e-6, and both are
-#   reported. A colocalisation that only appears at the permissive prior is not
-#   reported as support.
-#
-# **THE SINGLE-CAUSAL-VARIANT ASSUMPTION, AND WHERE IT BREAKS**
-#   coloc.abf assumes AT MOST ONE causal variant per trait in the region. That
-#   assumption is reasonable for a typical cis-eQTL window. It is FALSE in the
-#   MHC, where rheumatoid arthritis has multiple independent, well-mapped signals
-#   (HLA-DRB1 positions 11/71/74, HLA-B position 9, HLA-DPB1 position 9;
-#   Raychaudhuri 2012), and where the regions queried here contain 1,026-5,193
-#   SNPs in extended LD.
-#
-#   When the assumption is violated, PP.H3 is inflated: two traits each driven by
-#   several variants will look like "different causal variants" even when they
-#   share one. **A high PP.H3 inside the MHC therefore CANNOT be read as clean
-#   evidence of distinct causal variants.** The correct and weaker conclusion is:
-#
-#       In the MHC, cis-MR and coloc.abf are BOTH unreliable, so no causal claim
-#       can be supported there in either direction.
-#
-#   That conclusion is sufficient for this project's purposes - it removes the
-#   causal claim either way - but it must not be overstated into a positive
-#   finding. Outside the MHC the assumption is defensible and PP.H3 there
-#   (INPP5B 0.929, ESYT1 0.912, CDC37 1.000, NCOA5 1.000) does carry its usual
-#   meaning. The MHC and non-MHC verdicts are therefore flagged separately in the
-#   output via the `assumption_valid` column.
-#
-#   The proper fix for the MHC is coloc.susie, which permits multiple causal
-#   variants per region. It requires an LD reference matrix for the region and is
-#   recorded as outstanding work in results/RESULTS_ROBUSTNESS.md.
-#
-# DATA
-#   Exposure : eQTLGen whole-blood cis-eQTL, full regional summary statistics
-#              (NOT the clumped instruments - coloc requires all SNPs in the
-#              window, which is why this cannot be done from the cached
-#              instrument file and must query OpenGWAS).
-#   Outcome  : Okada 2014 European RA GWAS, ieu-a-832
-#              (14,361 cases / 43,923 controls; case proportion s = 0.246).
-#   Window   : gene body +/- 250 kb, GRCh37 coordinates from EnsDb.Hsapiens.v75
-#              (the same coordinate source 10_MR.R uses for its cis filter, so
-#              the two analyses cannot disagree about where a gene is).
-#
-#   NETWORK. This script queries OpenGWAS and is therefore the one step here that
-#   is not offline. Every regional extract is CACHED to
-#   data/processed/new/coloc_regions.rds, so re-runs are deterministic and the
-#   reported numbers can be regenerated without network access.
-#
-#   in : data/processed/new/MR_primary_objects.rds
-#        results/tables/FS_input_{female,male}.csv
-#        data/processed/new/ml_features.rds
-#   out: results/tables/COLOC_results.csv          per gene, both priors
-#        results/tables/COLOC_panel_genes.csv      panel genes, MR + MHC + coloc
-#        results/tables/COLOC_summary.csv
-#        data/processed/new/coloc_regions.rds      cached regional stats
-#        data/processed/new/coloc_objects.rds
-#
-#   Giambartolomei C, et al. PLoS Genet 2014;10:e1004383.   (coloc.abf)
-#   Wallace C. PLoS Genet 2020;16:e1008720.                 (priors, p12)
-#   Zhu Z, et al. Nat Genet 2016;48:481-487.                (SMR/HEIDI rationale)
-#   Vosa U, et al. Nat Genet 2021;53:1300-1310.             (eQTLGen)
-#   Okada Y, et al. Nature 2014;506:376-381.                (RA GWAS)
-# =============================================================================
+# Bayesian colocalisation (coloc.abf, main + conservative p12 priors) for every MR-prioritised gene: tests whether the eQTL and RA GWAS signals share one causal variant (H4) vs distinct variants (H3, LD-confounded MR). MHC genes flagged separately since the single-causal-variant assumption is violated there.
 suppressMessages({
   library(coloc); library(ieugwasr); library(data.table)
   library(EnsDb.Hsapiens.v75); library(ensembldb)
@@ -135,9 +33,7 @@ say("outcome GWAS  : %s (%d cases / %d controls, s = %.3f)",
 say("cis window    : +/- %.0f kb around the gene body (GRCh37)", CFG$window / 1e3)
 say("priors        : p12 = %g (main) and %g (conservative)", CFG$p12_main, CFG$p12_cons)
 
-# =============================================================================
-# STEP 1 — GENE LIST: every FDR-surviving prioritised gene, plus the panels
-# =============================================================================
+# Step 1: gene list - every FDR-surviving prioritised gene, plus the panels
 hdr("STEP 1  GENE LIST")
 o       <- readRDS(file.path(proc, "MR_primary_objects.rds"))
 primary <- as.data.table(o$primary)
@@ -160,8 +56,7 @@ say("final panel genes          : female %d, male %d (%d unique)",
     length(panels$female), length(panels$male), length(panel_all))
 say("genes to colocalise        : %d unique", length(genes))
 
-# ENSG id per gene, taken from the exposure id the MR actually used, so the
-# coloc window and the MR estimate always refer to the same eQTLGen dataset.
+# ENSG id per gene, taken from the exposure id the MR used
 ens_map <- primary[gene %in% genes, .(gene, ensg = sub("^eqtl-a-", "", id.exposure))]
 ens_map <- unique(ens_map, by = "gene")
 
@@ -181,9 +76,7 @@ if (any(is.na(gl$g_chr)))
       paste(gl$gene[is.na(gl$g_chr)], collapse = ", "))
 gl <- gl[!is.na(g_chr)]
 
-# =============================================================================
-# STEP 2 — REGIONAL SUMMARY STATISTICS (cached)
-# =============================================================================
+# Step 2: fetch regional summary statistics (cached)
 hdr("STEP 2  FETCH REGIONAL SUMMARY STATISTICS")
 CACHE <- file.path(proc, "coloc_regions.rds")
 regions <- if (file.exists(CACHE) && !CFG$refresh) readRDS(CACHE) else list()
@@ -217,20 +110,7 @@ if (nrow(todo)) {
   say("all regions served from cache - no network access required")
 }
 
-# =============================================================================
-# STEP 3 — HARMONISE AND COLOCALISE
-# -----------------------------------------------------------------------------
-# Harmonisation rules, all conservative:
-#   * merge on rsid; keep only SNPs present in BOTH datasets
-#   * align the GWAS effect allele to the eQTL effect allele, flipping the sign
-#     of beta where the alleles are swapped
-#   * DROP strand-ambiguous SNPs (A/T, C/G). The Okada extract carries no allele
-#     frequency, so strand cannot be resolved by MAF and a wrong flip would be
-#     silent. Dropping them costs power and buys correctness.
-#   * DROP SNPs whose allele pairs do not match after flipping (multi-allelic or
-#     annotation mismatch)
-#   * MAF is taken from the eQTL dataset (both studies are European)
-# =============================================================================
+# Step 3: harmonise (merge on rsid, align/flip alleles, drop strand-ambiguous and mismatched SNPs) and run coloc.abf
 hdr("STEP 3  HARMONISE AND RUN coloc.abf")
 
 AMBIG <- c("AT", "TA", "CG", "GC")
@@ -295,8 +175,7 @@ for (g in gl$gene) {
 }
 res <- rbindlist(out)
 
-# conditional support: PP4 given that both traits are associated in the region.
-# Robust when the region is underpowered and PP0/PP1/PP2 hold most of the mass.
+# conditional support: PP4 given both traits are associated in the region
 res[, PP4_conditional := PP4 / (PP3 + PP4)]
 
 res[, coloc_verdict := fifelse(
@@ -309,18 +188,13 @@ res[, coloc_verdict := fifelse(
  fifelse(PP4_conditional >= 0.8,  "UNDERPOWERED but conditionally consistent",
                                   "INCONCLUSIVE (no strong evidence either way)"))))))]
 
-# =============================================================================
-# STEP 4 — JOIN TO THE MR AND MHC RESULTS
-# =============================================================================
+# Step 4: join to the MR and MHC sensitivity results
 hdr("STEP 4  JOIN TO MR AND MHC SENSITIVITY")
 mr_cols <- primary[, .(gene, MHC_gene, instrument_chr, nSNP, method,
                        OR = round(OR, 3), MR_pval = signif(pval, 3))]
 res <- merge(res, mr_cols, by = "gene", all.x = TRUE)
 
-# Flag where coloc.abf's single-causal-variant assumption is tenable. Inside the
-# MHC it is not (multiple independent RA signals + extended LD), so a high PP.H3
-# there is inflated and must be reported as "unreliable in both directions"
-# rather than as positive evidence of distinct causal variants.
+# single-causal-variant assumption is untenable inside the MHC (multiple independent RA signals + extended LD)
 res[, assumption_valid := fifelse(MHC_gene == TRUE,
       "NO - MHC: multiple independent RA signals violate the single-causal-variant assumption",
       "yes - single-causal-variant assumption tenable")]
@@ -356,9 +230,7 @@ print(pan[, .(gene, F = in_panel_female, M = in_panel_male, MHC = MHC_gene,
               nSNP_MR = nSNP, OR, nsnp_coloc, PP3 = round(PP3, 3),
               PP4 = round(PP4, 3), PP4_1e6 = round(PP4_cons, 3), coloc_verdict)])
 
-# =============================================================================
-# STEP 5 — SUMMARY
-# =============================================================================
+# Step 5: summary
 hdr("STEP 5  SUMMARY")
 tally <- function(d) data.table(
   n_genes            = nrow(d),

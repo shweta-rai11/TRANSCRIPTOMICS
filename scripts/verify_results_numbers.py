@@ -1,27 +1,5 @@
 #!/usr/bin/env python3
-"""
-verify_results_numbers.py — provenance harness for the Results chapter.
-
-WHY THIS EXISTS
-    Every number quoted about this thesis chapter carries a tag like [R-023].
-    This script re-derives each of those numbers directly from the source files in
-    results/tables/ and results/logs/ and writes two things:
-        results/RESULTS_PROVENANCE.tsv  — one row per claim: id, value, source csv, derivation
-        results/RESULTS.md              — the same claims, grouped by canonical §2.x section
-                                           (per results/METHODS_00_INDEX.md), each claim tagged
-                                           with the exact source file AND the R script that wrote it
-
-    You can therefore check either output without trusting anyone: run this script,
-    open the file, and compare claim by claim against results/tables/*.csv. If a source
-    file changes, re-run it and any number that moved will be visible immediately.
-
-USAGE
-    python3 scripts/verify_results_numbers.py            # writes both output files, prints all
-    python3 scripts/verify_results_numbers.py R-023      # print one claim
-    python3 scripts/verify_results_numbers.py --check    # non-zero exit if a source is missing
-
-NO DEPENDENCIES. Standard library only. Run from the project root.
-"""
+"""Provenance harness for the Results chapter: re-derives each [R-xxx] claim from results/tables/*.csv and results/logs/*, and writes results/RESULTS_PROVENANCE.tsv and results/RESULTS.md. Run with `python3 scripts/verify_results_numbers.py` (optionally a claim id, or --check)."""
 import csv, os, re, sys, datetime, statistics as st
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -360,7 +338,7 @@ if su:
         "COLOC_SUSIE_mhc.csv", "count rows; status=='ok'")
     for x in ok:
         add(f"R-191.{x['gene']}", f"SuSiE result, {x['gene']}",
-            f"{x['n_cs_eqtl']} eQTL sets, {x['n_cs_gwas']} RA sets, best PP.H4 {f(x['best_PP_H4']):.3f} — {x['susie_verdict']}",
+            f"{x['n_cs_eqtl']} eQTL sets, {x['n_cs_gwas']} RA sets, best PP.H4 {f(x['best_PP_H4']):.3f} - {x['susie_verdict']}",
             "COLOC_SUSIE_mhc.csv", "cols n_cs_eqtl, n_cs_gwas, best_PP_H4, susie_verdict")
     rng = sorted(set(int(x["n_cs_gwas"]) for x in su if x["n_cs_gwas"] not in ("", "0")))
     if rng:
@@ -399,7 +377,7 @@ section("2.9 Diagnostic model development and evaluation")
 nc = rows("NESTED_CV_AUTHORITATIVE.csv")
 for x in nc:
     add(f"R-210.{x['sex']}.{x['candidate_set']}.{x['selector']}",
-        f"Nested CV AUC — {x['sex']}, {x['candidate_set']}, {x['selector']}",
+        f"Nested CV AUC - {x['sex']}, {x['candidate_set']}, {x['selector']}",
         f"{x['nested_AUC']} ({x['CI_lo']}-{x['CI_hi']}), per-repeat SD {x['per_repeat_sd']}, "
         f"median genes {x['median_genes_used']}, n={x['n']}, recommended={x['recommended']}",
         "NESTED_CV_AUTHORITATIVE.csv", "one row of the 8-row grid")
@@ -407,7 +385,7 @@ for x in nc:
 perf = rows("PANEL_primary_vs_noMHC_performance.csv")
 for x in perf:
     add(f"R-220.{x['sex']}.{x['panel']}.{x['dataset'].replace(' ','_')}",
-        f"LOCKED-TRANSFER AUC — {x['sex']}, {x['panel']} panel, {x['dataset']}",
+        f"LOCKED-TRANSFER AUC - {x['sex']}, {x['panel']} panel, {x['dataset']}",
         f"{x['reported']}", "PANEL_primary_vs_noMHC_performance.csv", "col reported")
 
 dl = rows("PANEL_primary_vs_noMHC_delong.csv")
@@ -426,7 +404,7 @@ for x in opt:
 lrt = rows("PANEL_incremental_value_LRT.csv")
 for x in lrt:
     add(f"R-240.{x['sex']}.{x['panel']}.{x['dataset'].replace(' ','_')}",
-        f"WITHIN-DATASET RESAMPLED panel vs composition — {x['sex']}, {x['panel']}, {x['dataset']}",
+        f"WITHIN-DATASET RESAMPLED panel vs composition - {x['sex']}, {x['panel']}, {x['dataset']}",
         f"panel {x['AUC_panel']} vs composition {x['AUC_composition']} (delta {x['delta_panel_minus_composition']}), "
         f"LRT p={x['LRT_p_panel_beyond_composition']}, n={x['n']}, separation={x['separation_warning']}",
         "PANEL_incremental_value_LRT.csv", "cols AUC_panel, AUC_composition, delta_*, LRT_p_*")
@@ -434,7 +412,7 @@ for x in lrt:
 pg = rows("mr_roc_pergene_auc.csv")
 for x in pg:
     add(f"R-250.{x['sex']}.{x['dataset'].replace(' ','_')}.{x['gene']}",
-        f"Per-gene AUC (train-fixed orientation) — {x['gene']}, {x['sex']}, {x['dataset']}",
+        f"Per-gene AUC (train-fixed orientation) - {x['gene']}, {x['sex']}, {x['dataset']}",
         f"{x['AUC']} ({x['AUC_lo']}-{x['AUC_hi']}), concordant={x['concordant']}",
         "mr_roc_pergene_auc.csv", "cols AUC, AUC_lo, AUC_hi, concordant")
 
@@ -603,10 +581,7 @@ if pa:
 
 # =================================================================== §2.15 nomogram / clinical utility
 section("2.15 Nomogram construction and clinical evaluation")
-# NOTE: as of this run, this section had never been executed in the repository —
-# results/tables/diag_dca_{female,male}.csv and the fig_diag_validation_* figures did
-# not exist. It was run once (Rscript scripts/goal2_sex_stratified/19_testing_blood_
-# clinical_utility.R) to produce the source files these claims are derived from.
+# NOTE: this section's source files did not exist previously; 19_testing_blood_clinical_utility.R was run once to produce them.
 diagtxt = logtext("19_testing_blood_clinical_utility.log")
 
 def _clinical_block(sx):
@@ -837,9 +812,9 @@ def write_markdown_report():
         by_section[sect].append((cid, desc, val, src, how))
 
     lines = []
-    lines.append("# Results — verification report")
+    lines.append("# Results - verification report")
     lines.append("")
-    lines.append(f"_Generated {STAMP} by `scripts/verify_results_numbers.py`. Do not hand-edit — re-run the "
+    lines.append(f"_Generated {STAMP} by `scripts/verify_results_numbers.py`. Do not hand-edit - re-run the "
                   "script to regenerate. Every number below is read directly out of a CSV in `results/tables/` "
                   "(or a run log in `results/logs/`); none is retyped by hand._")
     lines.append("")
@@ -867,7 +842,7 @@ def write_markdown_report():
             lines.append("")
         if sect.startswith("2.15"):
             lines.append("> **Provenance note.** This section had no executed outputs anywhere in the repository "
-                          "before this report was built — `results/tables/diag_dca_{female,male}.csv` and "
+                          "before this report was built - `results/tables/diag_dca_{female,male}.csv` and "
                           "`results/figures/new/fig_diag_validation_{female,male}.png/pdf` did not exist. "
                           "`scripts/goal2_sex_stratified/19_testing_blood_clinical_utility.R` was run once "
                           "(inputs: `data/processed/combined_train.rds`, `data/processed/new/ml_features.rds`, "
@@ -877,7 +852,7 @@ def write_markdown_report():
         for cid, desc, val, src, how in by_section[sect]:
             scr = ", ".join(f"`{s}`" for s in scripts_for(src))
             lines.append(f"- **{desc}:** {val}")
-            lines.append(f"  <br>*[{cid}]* — source: `{display_source(src)}` ({how}) · script: {scr}")
+            lines.append(f"  <br>*[{cid}]* - source: `{display_source(src)}` ({how}) · script: {scr}")
         lines.append("")
 
     lines.append("---")
@@ -887,7 +862,7 @@ def write_markdown_report():
     lines.append("1. Find the claim's `[R-xxx]` tag.")
     lines.append("2. Open `results/RESULTS_PROVENANCE.tsv` (same tag, one row) or the `results/tables/*.csv` "
                   "file named in the source line directly above.")
-    lines.append("3. Apply the stated derivation (a column read, a filter, a set operation) by eye — every "
+    lines.append("3. Apply the stated derivation (a column read, a filter, a set operation) by eye - every "
                   "derivation here is a single filter/aggregation, not a multi-step calculation.")
     lines.append("4. To re-derive from scratch, re-run the script named after `script:` and then "
                   "`python3 scripts/verify_results_numbers.py`.")
@@ -905,7 +880,7 @@ def main():
     if "--check" in args:
         if MISSING:
             print("MISSING SOURCE FILES:", ", ".join(sorted(set(MISSING)))); sys.exit(1)
-        print(f"OK — {len(CLAIMS)} claims derived, no missing sources."); sys.exit(0)
+        print(f"OK - {len(CLAIMS)} claims derived, no missing sources."); sys.exit(0)
 
     resolved = resolve_same(CLAIMS)
     with open(OUT, "w", newline="", encoding="utf-8") as fh:
@@ -924,7 +899,7 @@ def main():
     print(f"\n{len(CLAIMS)} claims written to {os.path.relpath(OUT, ROOT)}")
     print(f"Markdown report written to {os.path.relpath(MD, ROOT)}")
     if MISSING:
-        print("WARNING — missing source files:", ", ".join(sorted(set(MISSING))))
+        print("WARNING - missing source files:", ", ".join(sorted(set(MISSING))))
 
 if __name__ == "__main__":
     main()

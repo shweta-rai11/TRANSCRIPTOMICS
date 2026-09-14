@@ -1,19 +1,5 @@
 #!/usr/bin/env Rscript
-# =============================================================================
-# 36_crossancestry_eqtl_figure.R  —  visual companion to 35. Shows whether the
-# per-sex EUR MR-prioritised eQTL genes carry the same causal effect across three RA
-# cohorts / two ancestries, using the transferability-aware ancestry_class from
-# 35. Two panels per sex, log-log OR grammar (as in 13e):
-#   A  Within-ancestry (EUR):  OR Okada 2014  vs  OR Stahl 2010
-#   B  Cross-ancestry (EAS):   OR Okada 2014  vs  OR BBJ 2019 (East Asian)
-# Colour = ancestry_class (shared EUR+EAS / EUR-replicated / EUR-only /
-# untestable in EAS). Genes that transfer to East Asian are labelled.
-# Plus a stacked-bar summary of the ancestry_class mix per sex.
-#
-# Inputs : results/tables/MR35_crossancestry_{female,male}.csv (from 35)
-# Outputs: results/figures/fig_mr35_crossancestry_{female,male}.png
-#          results/figures/fig_mr35_ancestry_class_summary.png
-# =============================================================================
+# Visual companion to the cross-ancestry MR: per-sex log-log OR plots (Okada vs Stahl, Okada vs BBJ) coloured by ancestry_class, plus a stacked-bar class summary.
 suppressMessages({library(data.table); library(ggplot2); library(ggrepel); library(patchwork)})
 tab <- "results/tables"; fig <- "results/figures"
 

@@ -1,74 +1,5 @@
 #!/usr/bin/env Rscript
-# =============================================================================
-# 17b_testing_blood_celladjusted.R  —  Does the diagnostic panel survive adjustment
-#                                  for leukocyte composition?
-#
-# WHY THIS EXISTS — THE HOLE IT CLOSES
-#   05c_deconvolution.R establishes that leukocyte composition differs sharply
-#   between RA and control in this cohort (female CD8 T-cell fraction 0.162 ->
-#   0.093, p = 8e-10; gamma-delta T cells, eosinophils and B cells also shift).
-#   That is enough to make the following objection unanswerable from the
-#   existing results:
-#
-#       "Your panel does not detect rheumatoid arthritis. It detects the
-#        differential white-cell count that accompanies rheumatoid arthritis.
-#        A haematology analyser would do the same job for a fraction of the
-#        cost, and your seven genes add nothing to it."
-#
-#   The only way to answer that objection is to give composition its own seat at
-#   the table and ask whether the panel still earns its place. That is what this
-#   script does. It is deliberately built so the panel can FAIL.
-#
-# THE FOUR MODELS COMPARED, WITHIN EACH SEX AND EACH DATASET
-#   A  PANEL ONLY          logistic regression on the z-scored panel genes.
-#                          This is the number the thesis currently reports.
-#   B  COMPOSITION ONLY    logistic regression on the composition principal
-#                          components alone - no gene expression whatsoever.
-#                          This is the "haematology analyser" benchmark and it
-#                          is the model the panel must beat.
-#   C  PANEL + COMPOSITION both together. Compared against B by likelihood-ratio
-#                          test, this asks the decisive question: does the panel
-#                          add ANY information once composition is known?
-#   D  PANEL RESIDUALISED  each panel gene is first regressed on the composition
-#                          PCs and replaced by its residual, then the panel model
-#                          is fitted on the residuals. This is the strictest test:
-#                          it asks whether the part of the panel's expression that
-#                          is ORTHOGONAL to composition still discriminates.
-#
-#   The headline quantity is the LRT of C against B (does the panel add signal
-#   beyond composition) and the AUC of D (does composition-independent panel
-#   signal exist at all). Model A alone can no longer be reported without them.
-#
-# LEAKAGE CONTROL
-#   Within-dataset estimates use 10-fold stratified cross-validation in which
-#   EVERYTHING supervised is re-estimated inside each training fold: the
-#   z-scoring centre/scale, the residualisation coefficients, and the logistic
-#   fit. The composition PCA is unsupervised (it never sees the labels) and is
-#   fitted once per dataset, which cannot leak outcome information.
-#   Held-out datasets are additionally scored with the model LOCKED on training.
-#
-# SMALL-n HONESTY
-#   The male stratum is n = 38 train, 13 internal, 9 external. DeLong intervals
-#   are not trustworthy there and produce the fake-precise "1.000 (1.000-1.000)"
-#   that appears in the current results. Following 13_roc_validation, any ROC
-#   with fewer than 20 samples gets a stratified BOOTSTRAP interval instead, and
-#   every male row is explicitly flagged EXPLORATORY in the output.
-#
-#   in : data/processed/combined_train.rds
-#        data/processed/internal_val_holdout_processed.rds
-#        data/raw/GSE15573_raw.rds
-#        data/processed/new/ml_features.rds
-#        data/processed/new/cell_fractions.rds        (from 05c)
-#   out: results/tables/PANEL_auc_celladjusted.csv
-#        results/tables/PANEL_incremental_value_LRT.csv
-#        results/tables/PANEL_auc_celladjusted_summary.csv
-#        data/processed/new/panel_celladjusted_objects.rds
-#
-#   Newman AM, et al. Nat Methods 2015;12:453-457.       (CIBERSORT / LM22)
-#   DeLong ER, et al. Biometrics 1988;44:837-845.        (correlated ROC test)
-#   Carpenter J, Bithell J. Stat Med 2000;19:1141-1164.  (bootstrap CIs)
-#   Aitchison J. J R Stat Soc B 1982;44:139-177.         (CLR)
-# =============================================================================
+# Tests whether the diagnostic panel adds signal beyond leukocyte composition (panel-only vs composition-only vs both vs residualised panel), by sex and dataset, with small-n exploratory flagging.
 suppressMessages({
   library(pROC); library(data.table); library(Biobase)
 })
@@ -84,13 +15,9 @@ CFG <- list(comp_pcs = 3, kfold = 10, boot_n = 2000, small_n = 20, min_frac = 0.
 say <- function(...) cat(sprintf(...), "\n", sep = "")
 hdr <- function(x) cat("\n", strrep("=", 74), "\n", x, "\n", strrep("=", 74), "\n", sep = "")
 
-# =============================================================================
-# STEP 1 — PANELS, EXPRESSION AND CELL FRACTIONS
-# =============================================================================
+# STEP 1: load panels, expression and cell fractions
 hdr("STEP 1  LOAD PANELS, EXPRESSION AND CELL FRACTIONS")
-# Both panels are benchmarked. The MHC-free panel (12b) is the one the thesis
-# carries forward, so it must face the composition-only benchmark too - showing
-# only the primary panel would leave the deliverable untested.
+# Both panels (primary and MHC-free) are benchmarked
 ml  <- readRDS(file.path(procN, "ml_features.rds"))
 mlN_path <- file.path(procN, "ml_features_noMHC.rds")
 mlN <- if (file.exists(mlN_path)) readRDS(mlN_path) else NULL
@@ -152,9 +79,7 @@ for (dn in names(datasets)) {
 say("datasets: %s", paste(sapply(datasets, function(d)
   sprintf("%s n=%d", d$label, nrow(d$meta))), collapse = " | "))
 
-# =============================================================================
-# STEP 2 — COMPOSITION PCs PER DATASET (CLR, unsupervised)
-# =============================================================================
+# STEP 2: composition PCs per dataset (CLR, unsupervised)
 hdr("STEP 2  COMPOSITION PCs PER DATASET")
 comp_pcs <- function(fr, samples, k) {
   cols <- grep("_CIBERSORT$", names(fr), value = TRUE)
@@ -179,9 +104,7 @@ for (dn in names(datasets)) {
       d$label, cp$n_subsets, ncol(cp$Z), 100 * cp$var_expl)
 }
 
-# =============================================================================
-# STEP 3 — HELPERS
-# =============================================================================
+# STEP 3: helpers
 auc_ci <- function(r) {
   n <- length(r$cases) + length(r$controls)
   ci <- if (n < CFG$small_n) {
@@ -254,9 +177,7 @@ safe_roc <- function(y, p) {
   suppressWarnings(roc(y[ok], p[ok], levels = c("HC", "RA"), direction = "<", quiet = TRUE))
 }
 
-# =============================================================================
-# STEP 4 — EVALUATE THE FOUR MODELS
-# =============================================================================
+# STEP 4: evaluate the four models
 hdr("STEP 4  PANEL vs COMPOSITION")
 rows <- list(); lrt_rows <- list(); rocs <- list()
 
@@ -307,8 +228,7 @@ for (sx in c("F", "M")) {
       tryCatch(suppressWarnings(roc.test(r1, r2, method = "delong",
                                          paired = TRUE)$p.value), error = function(e) NA_real_)
 
-    # likelihood-ratio test: does the panel add signal beyond composition?
-    # Fitted in-sample (LRT requires nested full-data fits, not CV predictions).
+    # likelihood-ratio test: does the panel add signal beyond composition? (fitted in-sample)
     Zg <- scale(G); Zg[!is.finite(Zg)] <- 0
     Zc <- scale(C); Zc[!is.finite(Zc)] <- 0
     dfB <- data.frame(y = y, Zc, check.names = FALSE)
@@ -350,15 +270,8 @@ lrt_tab <- rbindlist(lrt_rows)
 fwrite(auc_tab, file.path(tab, "PANEL_auc_celladjusted.csv"))
 fwrite(lrt_tab, file.path(tab, "PANEL_incremental_value_LRT.csv"))
 
-# =============================================================================
-# STEP 5 — VERDICT
-# =============================================================================
+# STEP 5: verdict (a significant LRT and a materially better AUC are different claims; MIN_DELTA separates them)
 hdr("STEP 5  VERDICT")
-# A statistically significant LRT and a materially better AUC are different
-# claims. On the female internal test the panel beats composition by 0.007 AUC:
-# the LRT says the panel carries information composition does not, but no
-# clinician would prefer it on that margin. MIN_DELTA separates the two so the
-# table cannot be read as claiming more than it shows.
 MIN_DELTA <- 0.02
 
 verdict <- lrt_tab[, .(

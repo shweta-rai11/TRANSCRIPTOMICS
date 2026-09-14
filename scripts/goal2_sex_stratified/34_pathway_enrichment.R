@@ -1,15 +1,5 @@
 #!/usr/bin/env Rscript
-# =============================================================================
-# new/19new_pathway_enrichment.R
-# -----------------------------------------------------------------------------
-# GO (biological process) + KEGG over-representation enrichment of the MR-prioritised
-# gene sets, per sex (Female 74, Male 55). Background universe = expressed genes
-# in the training cohort. Dotplot of the top terms per sex.
-# Outputs (new/):
-#   results/tables/enrich_GO_BP_{female,male}.csv
-#   results/tables/enrich_KEGG_{female,male}.csv
-#   results/figures/new/fig_enrich_{female,male}.png/pdf
-# =============================================================================
+# GO BP + KEGG over-representation enrichment of the MR-prioritised gene sets, per sex, with a dotplot of top terms.
 suppressMessages({library(clusterProfiler); library(org.Hs.eg.db)
                   library(ggplot2); library(data.table)})
 proc <- "data/processed"; tabN <- "results/tables"; figN <- "results/figures/new"

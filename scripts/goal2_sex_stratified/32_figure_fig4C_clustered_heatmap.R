@@ -1,13 +1,5 @@
 #!/usr/bin/env Rscript
-# =============================================================================
-# 18m_panelC_clustered_heatmap.R  -- reference Fig 4C analog (clustered heatmap).
-# Per-sample z-scored expression of the 6 MR consensus genes across the combined
-# cohort, columns clustered (like the ADEx heatmap in the paper), annotated by
-# Group (HC/RA) and Sex. Rows split Female-specific (red) / Male-specific (blue).
-# This is the honest RA analog of their ADEx panel: RA has no ADEx database, so
-# we show the study cohort's own per-sample expression, clustered.
-# Output: results/figures/fig_mr_panelC_clustered_heatmap.png/pdf
-# =============================================================================
+# Fig 4C: clustered heatmap of per-sample z-scored expression of MR consensus genes, annotated by Group and Sex.
 suppressMessages({library(ComplexHeatmap); library(circlize); library(data.table)})
 proc <- "data/processed"; fig <- "results/figures/new"
 
@@ -21,9 +13,7 @@ M  <- t(scale(t(expr[genes, ])))                       # z-score each gene (row)
 M[is.na(M)] <- 0
 lim <- 2.5; M[M >  lim] <-  lim; M[M < -lim] <- -lim    # cap for display
 
-# Labels corrected 2026-07-27: were "Female-specific" / "Male-specific" (see
-# 20_fig4BC_logfc_heatmaps.R for the full rationale). This chapter makes no
-# sex-specificity claim; these are sex-STRATIFIED panels.
+# Row split labels: sex-stratified panels, not a sex-specificity claim
 row_split <- factor(ifelse(genes %in% genesF, "Female panel", "Male panel"),
                     levels = c("Female panel", "Male panel"))
 col_ha <- HeatmapAnnotation(

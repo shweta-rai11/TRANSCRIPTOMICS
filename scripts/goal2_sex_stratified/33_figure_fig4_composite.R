@@ -1,20 +1,5 @@
 #!/usr/bin/env Rscript
-# =============================================================================
-# 23_fig4_composite.R  -- assemble the RA Fig 4 composite from the saved panels
-# (A expression, B discovery logFC, C clustered heatmap) into one labelled
-# figure. Panels are read as images (C is a ComplexHeatmap grid graphic, so
-# image-compositing is the robust route).
-#
-# NOTE: former panels D and E (CIBERSORT stacked bar + boxplot) were REMOVED.
-# They contrasted FEMALE RA vs MALE RA -- a between-sex (sex-SPECIFIC) test.
-# This chapter reports SEX-STRATIFIED results only, so Fig 4 is now A-C.
-#
-# Inputs  (results/figures/new/):
-#   fig_mr_gene_expression_groups.png     <- 19_fig4A_expression_groups.R
-#   fig_mr_panelB_logfc_discovery.png     <- 20_fig4BC_logfc_heatmaps.R
-#   fig_mr_panelC_clustered_heatmap.png   <- 22_fig4C_clustered_heatmap.R
-# Output: results/figures/new/fig_mr_NEW_FIG4_composite.{png,pdf}
-# =============================================================================
+# Assemble the Fig 4 composite (panels A-C) from the saved panel images.
 suppressMessages({library(cowplot); library(magick)})
 fig <- "results/figures/new"
 P <- function(f) {

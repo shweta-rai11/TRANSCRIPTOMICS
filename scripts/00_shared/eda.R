@@ -1,15 +1,5 @@
 #!/usr/bin/env Rscript
-# =============================================================================
-# eda.R  —  TWO-DATASET EXPLORATORY DATA ANALYSIS (computation only)
-#           GSE93272 (GPL570) + GSE110169 (GPL13667), whole blood.
-# Goal: sex-stratified biomarkers in RHEUMATOID ARTHRITIS (SLE is NOT a target;
-#       SLE samples are flagged but excluded from the RA-vs-control counts).
-#
-# Produces results/tables/eda_*.csv and data/processed/eda_results.rds
-# (bundle consumed by eda_figure.R). No plotting here.
-# Covers: sex x disease per dataset, disease/sex/other-metadata distributions,
-#         MISSING-VALUE audit, and expression-level QC (scale + PCA).
-# =============================================================================
+# Two-dataset exploratory data analysis (computation only), GSE93272 + GSE110169, whole blood: sex x disease, metadata distributions, missing-value audit, expression QC (scale + PCA). SLE flagged but excluded from RA-vs-control counts. No plotting here (see eda_figure.R).
 suppressMessages({library(Biobase); library(data.table)})
 options(stringsAsFactors = FALSE); set.seed(1234)
 raw <- "data/raw"; proc <- "data/processed"; tab <- "results/tables"
@@ -89,7 +79,7 @@ for (nm in names(datasets)) {
   eset <- readRDS(file.path(raw, datasets[[nm]]))
   h <- harmonize(eset, nm)
   meta <- h$meta
-  # subject-level (dedup by id — collapses GSE93272 longitudinal repeats)
+  # subject-level (dedup by id - collapses GSE93272 longitudinal repeats)
   meta_subj <- meta[!duplicated(meta$id), ]
   sxdis <- as.data.frame(table(group = meta_subj$group, sex = meta_subj$sex, useNA = "ifany"))
   sxdis$dataset <- nm

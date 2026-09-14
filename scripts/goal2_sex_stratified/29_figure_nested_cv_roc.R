@@ -1,11 +1,5 @@
 #!/usr/bin/env Rscript
-# =============================================================================
-# 10c_nested_cv_figure.R  —  nested-CV figures.
-#   A: leaky flat-CV vs leakage-free nested AUC (per sex, nested 95% CI)
-#   B: nested-CV pooled ROC curves (female, male)
-#   C: male signature-gene re-selection frequency across nested folds (stability)
-# Reads data/processed/nested_cv.rds.
-# =============================================================================
+# Nested-CV figures: (A) leaky flat-CV vs leakage-free nested AUC, (B) nested-CV pooled ROC, (C) male signature-gene re-selection stability across folds.
 suppressMessages({library(ggplot2); library(data.table); library(pROC)})
 theme_set(theme_bw(base_size = 12))
 proc <- "data/processed"; fig <- "results/figures"

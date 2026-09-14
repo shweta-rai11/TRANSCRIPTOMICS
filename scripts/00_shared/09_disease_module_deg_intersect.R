@@ -1,52 +1,5 @@
 #!/usr/bin/env Rscript
-# =============================================================================
-# 09_disease_module_deg_intersect.R      *** THE CANDIDATE STEP ***
-# -----------------------------------------------------------------------------
-#        candidates  =  disease-module genes   n   sex-stratified DEGs
-#
-# LOGIC (symmetric, data-driven, no sex-arbitrary module assignment)
-#   1. Take the DISEASE modules selected in 06_WGCNA.R from the OVERALL
-#      RA-vs-Control module-trait correlation on ALL samples:
-#           |cor(ME, RA)| >= dm_min_abs_cor  AND  p < dm_max_p
-#      The SAME module set is used for BOTH sexes, so the candidate pool is not
-#      biased by which module a sex happens to be assigned to.
-#   2. Intersect that disease-gene background with each sex's limma DEGs
-#      SEPARATELY:
-#           Female candidates = disease modules  n  Female DEGs
-#           Male   candidates = disease modules  n  Male   DEGs
-#      Sex-stratification therefore enters ONLY through the DEG contrast, on a
-#      common, disease-relevant gene background.
-#
-# WHAT CHANGED (2026-07-27)
-#   - Reads data/processed/wgcna_results.rds (06_WGCNA.R). The old input
-#     wgcna_new_results.rds came from the deleted 06_WGCNA_NEW.R.
-#   - Disease modules are read from the analysis object, never re-derived here
-#     and never hardcoded. The previous version printed per-module counts using
-#     literal "green"/"brown" tests, which silently returned 0 whenever the
-#     network produced different colour names (colours track module SIZE RANK).
-#   - Reports how many sex-DEGs were LOST to the WGCNA variance filter before
-#     the network was built. Those genes could never become candidates, so the
-#     loss is stated rather than hidden.
-#
-# INTERPRETATION LIMIT (sex-stratified, not sex-specific)
-#   A gene in the Female list but not the Male list is NOT shown to behave
-#   differently in women. With ~4x fewer males, absence from the male list is
-#   expected from power alone. No interaction test is performed anywhere here.
-#     # Gelman A, Stern H. Am Stat 2006;60(4):328-331.
-#
-# Inputs : data/processed/wgcna_results.rds   (gene_tab, disease_modules, kME)
-#          data/processed/dge_results.rds     (res$Female / res$Male; sig, dir)
-# Outputs: results/tables/candidates_female_disease.csv
-#          results/tables/candidates_male_disease.csv
-#          results/tables/disease_module_selection.csv
-#          results/tables/candidate_summary.csv
-#          results/figures/fig_venn_{female,male}_disease_candidates.png
-#
-# ---- References -------------------------------------------------------------
-#   Langfelder P, Horvath S. WGCNA. BMC Bioinformatics 2008;9:559.
-#   Ritchie ME, et al. limma. Nucleic Acids Res 2015;43(7):e47.
-#   Gelman A, Stern H. Am Stat 2006;60(4):328-331.
-# =============================================================================
+# The candidate step: candidates = disease-module genes (06_WGCNA.R) n sex-stratified DEGs, intersected separately per sex on a common disease-gene background
 suppressMessages({
   library(data.table); library(ggVennDiagram); library(ggplot2)
 })
@@ -108,8 +61,7 @@ build <- function(sx) {
     kME     = round(kme_of, 3),
     GS_RA   = gt$GS_RA[match(hit, gt$gene)])
 
-  # NB: setorder() accepts column NAMES only - it cannot evaluate abs().
-  # Ordering in i does evaluate expressions, so use that instead.
+  # i-order (not setorder) since it must evaluate abs()
   out <- out[order(-abs(logFC))]
   fwrite(out, file.path(tab, sprintf("candidates_%s_disease.csv", tolower(sx))))
 
@@ -146,10 +98,7 @@ say("shared by both    : %d", length(shared))
 say("union             : %d", length(union(R$Female$out$gene, R$Male$out$gene)))
 
 # ---- 2-set Venn per sex ------------------------------------------------------
-# ggVennDiagram centres each set-name label on a fixed anchor point, so a long
-# two-line label (e.g. "Disease modules\n(yellow + brown)") extends into the
-# ellipse it names. Right/left-justifying away from the anchor keeps the
-# label from crossing the ellipse boundary.
+# nudge long two-line set-name labels away from the anchor so they don't cross into the ellipse
 fix_label_overlap <- function(p) {
   is_setname_layer <- vapply(p$layers, function(l)
     inherits(l$geom, "GeomText") && "name" %in% names(l$data), logical(1))
@@ -187,12 +136,7 @@ for (sx in c("Female", "Male")) {
             if (sx == "Female") "#9E9E9E" else "#616161")
 }
 
-# =============================================================================
-# COMPOSITE FIGURE: the two candidate Venns beside the per-stratum module-trait
-# heatmap. One panel that shows WHICH modules were selected, HOW strongly each
-# stratum supports them, and HOW MANY candidates each sex yields.
-# Requires 08_module_trait_RA_control.R to have run (writes the per-stratum CSVs).
-# =============================================================================
+# Composite figure: the two candidate Venns beside the per-stratum module-trait heatmap (requires 08_module_trait_RA_control.R to have run)
 mt_files <- file.path(tab, sprintf("module_trait_RAvsControl_%s.csv",
                                    c("all", "female", "male")))
 if (!all(file.exists(mt_files))) {

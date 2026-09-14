@@ -1,56 +1,5 @@
 #!/usr/bin/env Rscript
-# =============================================================================
-# 18b_mr_roc_validation.R
-# -----------------------------------------------------------------------------
-# Diagnostic ROC / AUC for the sex-stratified MR consensus biomarker panels
-# (produced by 17b_mr_feature_selection.R) across THREE datasets:
-#     1. TRAIN         : 70% discovery cohort (GSE93272 + GSE110169), the data
-#                        the panel and model were built on.
-#     2. INTERNAL TEST : the sealed 30% internal-validation holdout, projected
-#                        onto the training scale with FROZEN quantile + ComBat
-#                        parameters (04_apply_holdout.R) so no holdout sample
-#                        influenced any training parameter (leakage-free).
-#     3. EXTERNAL BLOOD: an independent RA PBMC cohort (GSE15573, Illumina),
-#                        a different platform -> a true external test.
-#   (Cross-tissue SYNOVIUM validation, GSE89408, is deferred: that raw data is
-#    not present in data/raw. The dataset loader below is written so synovium
-#    can be slotted in later without changing the analysis logic.)
-#
-# PANELS (three-method LASSO n RF n SVM-RFE consensus; see mr_fs_consensus_*.csv)
-#     Female : BNIP2, NMI
-#     Male   : CLSTN1, GABBR1, HLA-DMA, SSRP1
-#   Females and males are analysed SEPARATELY throughout; the female panel is
-#   only ever evaluated in females and the male panel only in males.
-#
-# TWO COMPLEMENTARY READOUTS PER DATASET (both requested)
-#   (a) COMBINED PANEL MODEL: a multivariable logistic-regression classifier
-#       (RA vs HC) fitted on the TRAINING data using the consensus genes. To
-#       make the panel transferable across platforms, each gene is standardised
-#       (z-score) WITHIN each dataset (and, for the training cross-validation,
-#       within each CV training fold) before entering the model; this removes
-#       platform-specific location/scale offsets and is unsupervised (it never
-#       uses the RA/HC labels). AUC is reported as:
-#         - TRAIN apparent (resubstitution) AND TRAIN 10-fold CV (honest, the
-#           number to quote for the training cohort),
-#         - INTERNAL TEST and EXTERNAL BLOOD from the LOCKED training model
-#           applied once (honest out-of-sample).
-#   (b) PER-GENE (univariate) ROC: each panel gene alone as a classifier. Its
-#       orientation (which direction of expression marks RA) is FIXED on the
-#       training data and that same orientation is applied to the internal and
-#       external sets, so the per-gene external AUC reflects whether the
-#       training-learned rule holds out of sample (a gene that reverses
-#       direction is flagged as non-concordant, not silently re-oriented).
-#
-# All AUCs are reported with 95% DeLong confidence intervals. NOTE on power:
-#   male internal test (6 RA / 7 HC) and male blood (small n) give very wide
-#   CIs; these AUCs are indicative only and are flagged in the output.
-#
-# REPRODUCIBILITY: single seed (1234) for CV fold assignment. Package versions
-#   printed at the end. Outputs:
-#     results/tables/mr_roc_panel_auc.csv     (combined-panel AUC per dataset)
-#     results/tables/mr_roc_pergene_auc.csv   (per-gene AUC per dataset)
-#     data/processed/mr_roc_objects.rds        (ROC coordinates for the figures)
-# =============================================================================
+# Diagnostic ROC/AUC of the sex-stratified consensus biomarker panels across train, internal holdout and external blood: combined-panel model plus per-gene univariate ROC, orientation fixed on train.
 
 suppressMessages({library(Biobase); library(pROC); library(data.table)})
 options(stringsAsFactors = FALSE)
@@ -64,10 +13,7 @@ cat(sprintf("Female panel (%d): %s\nMale panel (%d): %s\n",
             length(panel$F), paste(panel$F, collapse = ", "),
             length(panel$M), paste(panel$M, collapse = ", ")))
 
-# -----------------------------------------------------------------------------
-# Dataset loaders -> list(expr = genes x samples, group = factor(HC,RA),
-#                         sex = c("F","M"), label).
-# -----------------------------------------------------------------------------
+# Dataset loaders -> list(expr = genes x samples, group = factor(HC,RA), sex, label)
 load_train <- function() {
   o <- readRDS(file.path(proc, "combined_train.rds"))
   list(expr = o$expr, group = factor(o$meta$group, levels = c("HC", "RA")),
@@ -100,15 +46,12 @@ for (d in datasets)
               d$label, nrow(d$expr), ncol(d$expr), sum(d$group == "RA"),
               sum(d$group == "HC"), sum(d$sex == "F"), sum(d$sex == "M")))
 
-# -----------------------------------------------------------------------------
-# Helpers.
-# -----------------------------------------------------------------------------
+# Helpers
 zscore <- function(M) {                              # z-score each gene (row); 0 if sd=0/NA
   t(apply(M, 1, function(v) { s <- sd(v, na.rm = TRUE)
     if (is.na(s) || s == 0) rep(0, length(v)) else (v - mean(v, na.rm = TRUE)) / s }))
 }
-# DeLong CI when n is adequate; stratified BOOTSTRAP CI for small n (<20),
-# where DeLong is unreliable and can print fake-precise 1.000-1.000 intervals.
+# DeLong CI when n is adequate; stratified bootstrap CI for small n (<20)
 auc_ci <- function(r) {
   n <- length(r$cases) + length(r$controls)
   ci <- if (n < 20) { set.seed(GLOBAL_SEED)
@@ -126,8 +69,7 @@ sex_panel <- function(d, sx, genes) {
        y = factor(d$group[cols], levels = c("HC", "RA")))
 }
 
-# 10-fold stratified CV out-of-fold probabilities for the panel logistic model,
-# with z-scoring re-estimated inside each training fold (honest).
+# 10-fold stratified CV out-of-fold probabilities, z-scoring re-estimated inside each training fold
 cv_oof_prob <- function(Xz_raw, y, k = 10) {
   set.seed(GLOBAL_SEED)
   idx <- unlist(tapply(seq_along(y), y, function(ii) sample(ii)))
@@ -148,9 +90,7 @@ cv_oof_prob <- function(Xz_raw, y, k = 10) {
   prob
 }
 
-# -----------------------------------------------------------------------------
-# Per-sex evaluation.
-# -----------------------------------------------------------------------------
+# Per-sex evaluation
 roc_store <- list(); panel_rows <- list(); gene_rows <- list()
 
 eval_sex <- function(sx) {

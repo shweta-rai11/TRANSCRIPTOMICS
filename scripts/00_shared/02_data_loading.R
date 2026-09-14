@@ -1,34 +1,6 @@
 #!/usr/bin/env Rscript
 # R version 4.4.2
-# NCBI GEO data and metadata retrieval
-#
-# Datasets:
-#   GSE93272 and GSE110169  TRAINING Blood
-#   GSE15573  VALIDATION Blood (PBMC)                  
-#   GSE89408  VALIDATION Synovium
-
-# It writes raw ExpressionSets to data/raw/*.rds and prints phenotype summaries
-# so the ComBat/merge architecture decision can be grounded in real metadata.
-#
-# ---- References (methods) --------------------------------------------------
-# NCBI Gene Expression Omnibus (data source):
-#   # Edgar R, Domrachev M, Lash AE. Gene Expression Omnibus: NCBI gene expression
-#   #   and hybridization array data repository. Nucleic Acids Res 2002;30(1):207-210.
-#   # Barrett T, et al. NCBI GEO: archive for functional genomics data sets - update.
-#   #   Nucleic Acids Res 2013;41(D1):D991-D995.
-# Programmatic retrieval (GEOquery):
-#   # Davis S, Meltzer PS. GEOquery: a bridge between the Gene Expression Omnibus (GEO)
-#   #   and BioConductor. Bioinformatics 2007;23(14):1846-1847.
-# ExpressionSet container (Biobase):
-#   # Huber W, et al. Orchestrating high-throughput genomic analysis with Bioconductor.
-#   #   Nat Methods 2015;12(2):115-121.
-# =============================================================================
-
-
-# load the library
-# read the data ID
-# function that reads the data ID and saves it in the data/raw folder.
-# function that describes the data ID and prints the summary of the data.
+# Retrieves GEO datasets (GSE93272, GSE110169, GSE15573; TRAINING/VALIDATION blood), writes raw ExpressionSets to data/raw/*.rds, and prints phenotype summaries
 
 suppressMessages({
   library(GEOquery)

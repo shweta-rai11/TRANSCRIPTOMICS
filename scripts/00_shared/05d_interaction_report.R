@@ -1,80 +1,5 @@
 #!/usr/bin/env Rscript
-# =============================================================================
-# 05d_interaction_report.R  —  The diagnosis x sex interaction, reported in full
-#
-# WHY THIS EXISTS — THE HOLE IT CLOSES
-#   This project's premise is that the RA blood transcriptome differs between the
-#   sexes. Everything downstream is sex-STRATIFIED: two DEG lists, two candidate
-#   sets, two panels. But stratification alone cannot support the premise. Two
-#   separately-thresholded gene lists differ for the trivial reason that the
-#   female stratum has 145 samples and the male stratum has 38; a set difference
-#   between them is a statement about power, not about biology. The ONLY test
-#   that speaks to the premise directly is the diagnosis x sex INTERACTION:
-#
-#       H0 : the RA-vs-control effect on a gene is the SAME in women and men
-#
-#   05b_dge_sensitivity.R already runs that test and finds 53 genes at FDR < 0.05
-#   on the pre-ComBat matrix with batch in the model. That result was never
-#   written up. Worse, REPRODUCIBILITY.md states "No interaction test is
-#   performed" and 00_NEW_pipeline_README.md records the interaction branch as
-#   removed - so the project's own documentation currently DENIES the existence
-#   of its only direct evidence for its central claim. This script promotes that
-#   result to a full, reportable analysis.
-#
-# WHY THE TWO MODELS DISAGREE (53 vs 270), AND WHICH ONE IS REPORTED
-#   05b runs the interaction on two matrices and gets different counts:
-#     pre-ComBat qnorm + batch_full in the design : 53 genes
-#     ComBat-corrected matrix, no batch term      : 270 genes
-#   The ComBat count is the inflated one and must NOT be the headline. ComBat was
-#   run with mod = ~ group + sex, which protects the two MAIN effects but does
-#   NOT protect their INTERACTION. Any group-by-sex structure that happens to be
-#   correlated with batch is therefore partly absorbed and partly redistributed
-#   by ComBat, and the downstream model is never debited the degrees of freedom
-#   ComBat spent (Nygaard 2016). The pre-ComBat model with batch as an explicit
-#   term is the conservative and correct one, and is what this script reports.
-#   The ComBat count is retained only as a sensitivity figure.
-#
-# WHAT IS REPORTED FOR EACH INTERACTION GENE
-#   The interaction coefficient alone is hard to read, so every gene is reported
-#   with the two within-sex effects that generate it, and classified into the
-#   pattern that actually matters biologically:
-#     OPPOSITE     significant in both sexes, in opposite directions
-#     FEMALE-ONLY  significant in women, null in men
-#     MALE-ONLY    significant in men, null in women
-#     MAGNITUDE    same direction in both, but significantly different size
-#   A gene is only interesting for the thesis's premise if it is OPPOSITE or
-#   sex-restricted; a MAGNITUDE difference is the weakest form of the claim.
-#
-# HONEST CAVEATS, STATED UP FRONT
-#   * Interaction tests have roughly a QUARTER the power of main-effect tests at
-#     the same n. With 17 male RA cases, this analysis is powered only for large
-#     interactions. 53 genes is therefore a FLOOR, not an estimate of how many
-#     sex-differential genes exist.
-#   * Nothing here is adjusted for cell composition. 05c shows leukocyte
-#     fractions differ by disease status; if they also differ by sex, part of an
-#     apparent interaction is compositional. A composition-adjusted interaction
-#     is therefore run as a sensitivity analysis.
-#   * These genes are NOT the panel. The panels were built sex-stratified from MR
-#     prioritised genes and are unchanged by this script. This analysis establishes
-#     that sex-differential RA biology EXISTS in these data; it does not
-#     retrospectively make the panels sex-specific.
-#
-#   in : data/processed/combined_train.rds
-#        data/processed/new/cell_fractions.rds     (optional, for the adjustment)
-#        results/tables/DEG_{female,male}_full.csv (optional, for per-sex logFC)
-#        data/processed/new/ml_features.rds        (optional, panel cross-ref)
-#   out: results/tables/DEG_interaction_full.csv          all genes, all stats
-#        results/tables/DEG_interaction_significant.csv   the FDR<0.05 set
-#        results/tables/DEG_interaction_patterns.csv      pattern classification
-#        results/tables/DEG_interaction_enrichment.csv    GO/KEGG over-representation
-#        results/tables/DEG_interaction_model_comparison.csv
-#        data/processed/new/interaction_objects.rds
-#
-#   Nygaard V, et al. Brief Bioinform 2016;17:29-39.   (ComBat then DE)
-#   Smyth GK. Stat Appl Genet Mol Biol 2004;3:Art3.    (limma / eBayes)
-#   Oliva M, et al. Science 2020;369:eaba3066.         (sex effects on expression)
-#   Yu G, et al. OMICS 2012;16:284-287.                (clusterProfiler)
-# =============================================================================
+# Full report of the diagnosis x sex interaction: primary (pre-ComBat+batch) vs ComBat-sensitivity models, per-sex effect patterns, and enrichment
 suppressMessages({
   library(limma); library(data.table)
 })
@@ -89,13 +14,11 @@ CFG <- list(fdr = 0.05, lfc = 0.1, comp_pcs = 3, top_n = 25)
 say <- function(...) cat(sprintf(...), "\n", sep = "")
 hdr <- function(x) cat("\n", strrep("=", 74), "\n", x, "\n", strrep("=", 74), "\n", sep = "")
 
-# =============================================================================
-# STEP 1 — DATA
-# =============================================================================
+# Step 1: load data
 hdr("STEP 1  DATA")
 o  <- readRDS(file.path(proc, "combined_train.rds"))
-qn <- o$expr_qnorm          # pre-ComBat, quantile-normalised  -> PRIMARY model
-cb <- o$expr                # ComBat-corrected                 -> sensitivity only
+qn <- o$expr_qnorm          # pre-ComBat, quantile-normalised -> primary model
+cb <- o$expr                # ComBat-corrected -> sensitivity only
 me <- as.data.table(o$meta)
 me[, group := factor(group, levels = c("HC", "RA"))]
 me[, sex   := factor(sex,   levels = c("F", "M"))]
@@ -110,9 +33,7 @@ say("NOTE: interaction power is ~1/4 of main-effect power at the same n, and the
 say("      male stratum contributes only %d RA cases. Treat the count as a FLOOR.",
     sum(me$sex == "M" & me$group == "RA"))
 
-# =============================================================================
-# STEP 2 — THE INTERACTION MODEL
-# =============================================================================
+# Step 2: fit the diagnosis x sex interaction model
 hdr("STEP 2  DIAGNOSIS x SEX INTERACTION")
 
 fit_int <- function(E, md, form, coefname, label) {
@@ -170,9 +91,7 @@ mc <- data.table(
 fwrite(mc, file.path(tab, "DEG_interaction_model_comparison.csv"))
 print(mc)
 
-# =============================================================================
-# STEP 3 — PER-SEX EFFECTS BEHIND EACH INTERACTION
-# =============================================================================
+# Step 3: within-sex effects behind each interaction, classified into patterns
 hdr("STEP 3  WITHIN-SEX EFFECTS AND PATTERN CLASSIFICATION")
 
 fit_within <- function(sx) {
@@ -253,9 +172,7 @@ if (file.exists(ml_path)) {
   say("  are not shown to behave differently between the sexes.")
 }
 
-# =============================================================================
-# STEP 4 — FUNCTIONAL ENRICHMENT OF THE INTERACTION GENES
-# =============================================================================
+# Step 4: functional enrichment of the interaction genes
 hdr("STEP 4  ENRICHMENT OF THE INTERACTION GENES")
 enr <- NULL
 ok <- requireNamespace("clusterProfiler", quietly = TRUE) &&

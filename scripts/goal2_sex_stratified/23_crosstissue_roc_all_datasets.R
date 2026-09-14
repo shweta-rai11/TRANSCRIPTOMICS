@@ -1,15 +1,5 @@
 #!/usr/bin/env Rscript
-# =============================================================================
-# new/25new_allvalidation_roc.R
-# -----------------------------------------------------------------------------
-# One figure per sex overlaying the PANEL ROC across all four datasets:
-#   Train (10-fold CV) | Internal test | External blood (GSE15573) |
-#   External synovium (GSE89408, RA vs Normal).
-# Train/Internal/Blood ROC coords come from data/processed/new/mr_roc_objects.rds
-# (18b); synovium panel ROC is computed here (z-scored logistic, apparent).
-# Output: results/figures/new/fig_allvalidation_roc.png/pdf
-#         results/tables/allvalidation_panel_auc.csv
-# =============================================================================
+# One figure per sex overlaying panel ROC across all four datasets: train (10-fold CV), internal test, external blood, and external synovium.
 suppressMessages({library(data.table); library(pROC); library(ggplot2)})
 proc <- "data/processed"; tabN <- "results/tables"; figN <- "results/figures/new"
 

@@ -1,62 +1,5 @@
 #!/usr/bin/env Rscript
-# =============================================================================
-# 16d_nested_cv_reconciliation.R  —  ONE authoritative nested-CV table
-#
-# THE PROBLEM THIS FIXES
-#   Three scripts reported a "nested-CV AUC" for what a reader would reasonably
-#   take to be the same quantity, and they disagreed:
-#
-#     14_model_training_nested_cv.R          female 0.816 | male 0.896
-#     16_model_training_final_panel.R        female 0.809 | male 0.952
-#     16b_model_training_final_panel_noMHC.R female 0.805 | male 0.796
-#
-#   The female spread (0.805-0.816) is tolerable. The MALE spread is 0.796 to
-#   0.952 - a range of 0.156 on 38 samples - and a reader opening two of those
-#   CSVs has no way to tell which number to believe or why they differ. That is
-#   a reporting defect regardless of whether each individual number is correct.
-#
-#   This script computes every variant IN ONE PROCESS, under ONE seed policy,
-#   with the differences made explicit as columns rather than left implicit
-#   across three files. It does NOT force the numbers to agree - they measure
-#   genuinely different procedures and forcing agreement would be dishonest.
-#   It makes the reader able to see exactly what differs.
-#
-# THE VARIANTS, AND WHY THEY LEGITIMATELY DIFFER
-#   Three axes vary across the legacy scripts. Every combination reported here
-#   is labelled on all three:
-#
-#     CANDIDATE SET   primary (MR-prioritised, MHC retained: 32 F / 25 M)
-#                     noMHC   (MHC-free: 14 F / 14 M)
-#     SELECTOR        consensus  - LASSO n RF n SVM-RFE re-derived in every fold
-#                     elasticnet - alpha tuned over a grid, re-fitted every fold
-#     RESAMPLING      female 10-fold x 5 repeats; male 5-fold x 10 repeats
-#                     (the male scheme uses fewer folds and more repeats because
-#                      at n = 38 a 10-fold split leaves ~4 samples per test fold)
-#
-#   The consensus and elastic-net variants are DIFFERENT MODELS. They are not
-#   expected to agree and their disagreement is not an error. What was an error
-#   was presenting both as "the nested-CV AUC" in separate files without saying
-#   which was which.
-#
-# WHY THE MALE NUMBERS SCATTER SO WIDELY
-#   Reported explicitly rather than smoothed over. At n = 38 (17 RA / 21 HC) a
-#   5-fold split puts 7-8 samples in each test fold, of which 3-4 are cases. A
-#   single sample changing side moves the fold AUC by ~0.1. The between-repeat
-#   standard deviation is therefore reported alongside every male estimate, and
-#   the spread across procedures should be read as a statement about the sample
-#   size, not about which procedure is better. This is the same reason the male
-#   arm is labelled EXPLORATORY everywhere else in the pipeline.
-#
-#   in : data/processed/combined_train.rds
-#        results/tables/FS_input_{female,male}{,_noMHC}.csv
-#   out: results/tables/NESTED_CV_AUTHORITATIVE.csv   <- the one to cite
-#        results/tables/NESTED_CV_legacy_reconciliation.csv
-#        data/processed/new/nested_cv_authoritative.rds
-#
-#   Ambroise C, McLachlan GJ. PNAS 2002;99:6562-6566.   (selection bias)
-#   Varma S, Simon R. BMC Bioinformatics 2006;7:91.     (nested CV)
-#   Krstajic D, et al. J Cheminform 2014;6:10.          (repeated nested CV)
-# =============================================================================
+# Single authoritative nested-CV table: recomputes every candidate-set x selector x sex combination in one process under one seed policy, reconciled against the legacy per-script numbers.
 suppressMessages({
   library(glmnet); library(randomForest); library(e1071)
   library(pROC); library(caret); library(data.table)
@@ -82,9 +25,7 @@ CAND <- list(
 RESAMPLE <- list(F = list(k = 10, reps = 5), M = list(k = 5, reps = 10))
 ALPHAS <- c(0.1, 0.3, 0.5, 0.7, 0.9, 1.0)
 
-# =============================================================================
-# SELECTORS (single definition, used by every variant - this is the fix)
-# =============================================================================
+# Selectors: single definition, used by every variant
 svm_rank <- function(X, y, cost = 1) {
   feats <- colnames(X); ranking <- character(0)
   while (length(feats) > 1) {
@@ -123,10 +64,7 @@ fit_enet <- function(X, y) {
   best
 }
 
-# =============================================================================
-# ONE nested-CV engine. Every variant goes through this function, so any
-# difference between reported numbers is attributable to its arguments alone.
-# =============================================================================
+# One nested-CV engine; every variant goes through it, so reported differences trace to arguments alone
 run_nested <- function(sex_code, genes, selector) {
   rs <- RESAMPLE[[sex_code]]
   genes <- unique(genes[genes %in% rownames(expr)])
@@ -176,9 +114,7 @@ run_nested <- function(sex_code, genes, selector) {
        med_genes = as.integer(stats::median(nsel)), agg = agg, roc = ro)
 }
 
-# =============================================================================
-# RUN EVERY COMBINATION
-# =============================================================================
+# Run every candidate-set x selector x sex combination
 hdr("NESTED CV - ALL VARIANTS, ONE PROCESS, ONE SEED POLICY")
 grid <- CJ(candidate_set = c("primary", "noMHC"),
            selector = c("consensus", "elasticnet"),
@@ -215,9 +151,7 @@ hdr("AUTHORITATIVE TABLE")
 print(auth[, .(sex, candidate_set, selector, n, nested_AUC, CI_lo, CI_hi,
                per_repeat_sd, recommended)])
 
-# =============================================================================
-# RECONCILIATION AGAINST THE LEGACY TABLES
-# =============================================================================
+# Reconciliation against the legacy per-script tables
 hdr("RECONCILIATION WITH THE LEGACY NUMBERS")
 legacy <- data.table(
   source = c("14_model_training_nested_cv.R", "14_model_training_nested_cv.R",

@@ -1,12 +1,5 @@
 #!/usr/bin/env Rscript
-# =============================================================================
-# 00_packages.R  —  ALL packages used across the sex-stratified RA biomarker
-# pipeline. Installs anything missing (CRAN + Bioconductor + GitHub), then loads
-# and prints versions. Run once to set up a fresh machine:  Rscript scripts/00_packages.R
-
-# R version 4.4.2
-
-# =============================================================================
+# Installs (CRAN + Bioconductor + GitHub) and loads all packages used across the pipeline, then prints versions. R version 4.4.2
 
 # ---- packages grouped by pipeline stage ------------------------------------
 cran <- c(

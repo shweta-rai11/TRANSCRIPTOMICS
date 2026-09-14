@@ -1,62 +1,5 @@
 #!/usr/bin/env Rscript
-# =============================================================================
-# 16b_model_training_final_panel_noMHC.R  —  Head-to-head evaluation: primary vs MHC-free panel
-#
-# WHY THIS EXISTS
-#   12b rebuilt the panels from the MHC-free candidate set. This script asks the
-#   question that decides whether the rebuild costs anything: **how much
-#   diagnostic performance was the MHC actually buying?**
-#
-#   That question has to be asked at two levels, because they answer different
-#   things and only one of them is honest about selection bias:
-#
-#   (1) PROCEDURE level - NESTED CV. Read from NESTED_CV_AUTHORITATIVE.csv,
-#       produced by 16d_nested_cv_reconciliation.R.
-#
-#       **This script no longer computes nested CV itself.** It used to, and that
-#       was a mistake: it was the THIRD implementation of the same procedure in
-#       this repository, and it disagreed with the other two - male AUC 0.796
-#       against 0.896 from 14_model_training_nested_cv.R, a gap of 0.100 on 38
-#       samples. 16d re-runs every variant in one process under one seed policy
-#       and reproduces script 14 EXACTLY (0.816 female, 0.896 male), which
-#       corroborates the engine against an independently-written older script and
-#       identifies this script's duplicate loop as the outlier.
-#
-#       The fix is deletion, not repair. Three implementations of one procedure
-#       is the defect; finding which line differed would only have left three
-#       implementations that happened to agree today. Nested CV now has exactly
-#       one implementation (16d) and one output table.
-#
-#   (2) PANEL level - LOCKED MODEL. The fixed consensus panels from 12 and 12b
-#       are trained once on the full training set and applied unchanged to the
-#       internal hold-out and external blood. This is what a clinician would
-#       actually deploy. Its training-set numbers are optimistic by construction
-#       (the panel was chosen using those samples) and are reported as apparent,
-#       never as validation.
-#
-# WHAT A NEGATIVE RESULT WOULD LOOK LIKE, AND WHY IT WOULD STILL BE FINE
-#   If the MHC-free panel performs WORSE, that is not a failure of this analysis
-#   - it quantifies how much of the original performance was attributable to
-#   genes whose MR support came from LD with HLA-DRB1. A smaller, honest AUC
-#   from a defensible gene set is worth more in a thesis than a larger one that
-#   cannot survive its own sensitivity analysis. The result is reported either
-#   way and no panel is declared the winner on the basis of a point estimate
-#   alone; the DeLong test on paired predictions decides.
-#
-#   in : data/processed/combined_train.rds
-#        data/processed/internal_val_holdout_processed.rds
-#        data/raw/GSE15573_raw.rds
-#        results/tables/FS_input_{female,male}{,_noMHC}.csv
-#        data/processed/new/ml_features{,_noMHC}.rds
-#   out: results/tables/PANEL_primary_vs_noMHC_performance.csv
-#        results/tables/PANEL_primary_vs_noMHC_nestedcv.csv
-#        results/tables/PANEL_primary_vs_noMHC_delong.csv
-#        data/processed/new/panel_noMHC_objects.rds
-#
-#   Ambroise C, McLachlan GJ. PNAS 2002;99:6562-6566.    (selection bias)
-#   DeLong ER, et al. Biometrics 1988;44:837-845.        (correlated ROC test)
-#   Carpenter J, Bithell J. Stat Med 2000;19:1141-1164.  (bootstrap CIs)
-# =============================================================================
+# Head-to-head evaluation of the primary vs MHC-free panel: nested-CV comparison (read from 16d's authoritative table) plus locked-panel performance on internal/external test data.
 suppressMessages({
   library(glmnet); library(randomForest); library(e1071)
   library(pROC); library(caret); library(Biobase); library(data.table)
@@ -71,9 +14,7 @@ SMALL_N <- 20
 say <- function(...) cat(sprintf(...), "\n", sep = "")
 hdr <- function(x) cat("\n", strrep("=", 74), "\n", x, "\n", strrep("=", 74), "\n", sep = "")
 
-# =============================================================================
-# STEP 1 — DATA, CANDIDATE SETS AND PANELS
-# =============================================================================
+# Step 1: data, candidate sets and panels
 hdr("STEP 1  INPUTS")
 o <- readRDS(file.path(proc, "combined_train.rds"))
 expr <- o$expr; meta <- as.data.table(o$meta)
@@ -116,9 +57,7 @@ load_blood <- function() {
 }
 internal <- load_internal(); blood <- load_blood()
 
-# =============================================================================
-# STEP 2 — HELPERS
-# =============================================================================
+# Step 2: helpers
 zrows <- function(M) t(apply(M, 1, function(v) {
   s <- sd(v, na.rm = TRUE)
   if (is.na(s) || s == 0) rep(0, length(v)) else (v - mean(v, na.rm = TRUE)) / s }))
@@ -166,9 +105,7 @@ select_infold <- function(X, y) {
   else if (length(lasso) >= 1) lasso else colnames(X)
 }
 
-# =============================================================================
-# STEP 3 — NESTED CV: READ THE AUTHORITATIVE TABLE (do not recompute)
-# =============================================================================
+# Step 3: nested CV - read the authoritative table (do not recompute)
 hdr("STEP 3  NESTED CV - FROM NESTED_CV_AUTHORITATIVE.csv (16d)")
 auth_path <- file.path(tab, "NESTED_CV_AUTHORITATIVE.csv")
 if (!file.exists(auth_path))
@@ -197,8 +134,7 @@ nest_tab <- rbindlist(lapply(c("Female", "Male"), function(sexlab) {
 fwrite(nest_tab, file.path(tab, "PANEL_primary_vs_noMHC_nestedcv.csv"))
 print(nest_tab[, .(sex, n, nested_AUC_primary, nested_AUC_noMHC, delta_AUC)])
 
-# The DeLong test needs paired per-sample predictions, which live in 16d's
-# saved object. If it is present, use it; otherwise say so rather than guess.
+# DeLong test needs paired per-sample predictions from 16d's saved object, if present
 delong_tab <- NULL
 auth_rds <- file.path(procN, "nested_cv_authoritative.rds")
 if (file.exists(auth_rds)) {
@@ -233,9 +169,7 @@ if (file.exists(auth_rds)) {
   say("nested_cv_authoritative.rds absent - DeLong comparison skipped.")
 }
 
-# =============================================================================
-# STEP 4 — LOCKED PANELS APPLIED TO HELD-OUT DATA
-# =============================================================================
+# Step 4: locked panels applied to held-out data
 hdr("STEP 4  LOCKED PANELS ON INTERNAL AND EXTERNAL DATA")
 
 eval_locked <- function(genes, sx, variant) {
@@ -295,9 +229,7 @@ saveRDS(list(nested_tab = nest_tab, delong = delong_tab,
              performance = perf_tab, panels = panel, candidates = cand),
         file.path(procN, "panel_noMHC_objects.rds"))
 
-# =============================================================================
-# STEP 5 — VERDICT
-# =============================================================================
+# Step 5: verdict
 hdr("STEP 5  VERDICT")
 if (is.null(delong_tab)) delong_tab <- data.table()
 for (i in seq_len(nrow(delong_tab))) {

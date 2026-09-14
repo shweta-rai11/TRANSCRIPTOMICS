@@ -1,26 +1,5 @@
 #!/usr/bin/env Rscript
-# =============================================================================
-# 12c_feature_selection_diagnostics.R
-# -----------------------------------------------------------------------------
-# Algorithm-level diagnostic figures for the three feature-selection methods
-# run in 12_feature_selection.R (LASSO, Random Forest, SVM-RFE), per sex.
-#
-# WHY THIS EXISTS
-#   12_feature_selection.R fits and saves the three selector objects ($cv, $rf,
-#   $svm_rank, $svm_curve) but never plots them; 13_feature_selection_venn.R
-#   only draws the CONSENSUS overlap. Nothing in the project showed what each
-#   individual algorithm's selection process looked like (the LASSO
-#   regularisation path, the RF importance ranking, the SVM-RFE elimination
-#   curve). This script draws those, straight from the objects 12 already
-#   fitted and saved — no models are re-run, so figures are reproducible byte-
-#   for-byte from ml_features.rds without re-fitting anything stochastic.
-#
-#   in : data/processed/new/ml_features.rds
-#   out: results/figures/FIG_G2_05_lasso_cv_{female,male}.png/.pdf
-#        results/figures/FIG_G2_06_rf_importance_{female,male}.png/.pdf
-#        results/figures/FIG_G2_07_svmrfe_curve_{female,male}.png/.pdf
-#        results/figures/FIG_G2_08_feature_selection_diagnostics_composite.png/.pdf
-# =============================================================================
+# Diagnostic figures for the three feature-selection methods (LASSO, Random Forest, SVM-RFE) fitted in 12_feature_selection.R, per sex.
 suppressMessages({
   library(glmnet); library(randomForest); library(ggplot2); library(patchwork)
 })
@@ -38,7 +17,7 @@ ml <- readRDS(file.path(procN, "ml_features.rds"))
 pal <- list(female = c(light = "#F7E6EF", dark = "#C2185B"),
             male   = c(light = "#E3EEF7", dark = "#1565C0"))
 
-# safe-name -> original gene symbol, same order used to build X in script 12
+# safe-name -> original gene symbol, same order used to build X in script 12 (unchanged, already terse)
 back_map <- function(r) setNames(r$mr_genes, make.names(r$mr_genes))
 
 save_fig <- function(p, name, w, h) {
@@ -47,9 +26,7 @@ save_fig <- function(p, name, w, h) {
   say("  wrote %s.{png,pdf}", name)
 }
 
-# =============================================================================
-# STEP 2  LASSO cross-validation (regularisation) curve
-# =============================================================================
+# Step 2: LASSO cross-validation (regularisation) curve
 lasso_cv_plot <- function(r, sexlab, dark) {
   cv <- r$cv
   df <- data.frame(loglambda = log(cv$lambda), cvm = cv$cvm, cvlo = cv$cvlo, cvup = cv$cvup)
@@ -73,9 +50,7 @@ lasso_cv_plot <- function(r, sexlab, dark) {
           plot.margin = margin(16, 10, 6, 6))
 }
 
-# =============================================================================
-# STEP 3  Random Forest importance ranking
-# =============================================================================
+# Step 3: Random Forest importance ranking
 rf_importance_plot <- function(r, sexlab, light, dark) {
   light <- unname(light); dark <- unname(dark)
   bm <- back_map(r)
@@ -96,9 +71,7 @@ rf_importance_plot <- function(r, sexlab, light, dark) {
           axis.text.y = element_text(size = 7.6))
 }
 
-# =============================================================================
-# STEP 4  SVM-RFE elimination curve
-# =============================================================================
+# Step 4: SVM-RFE elimination curve
 svmrfe_curve_plot <- function(r, sexlab, dark) {
   cu <- r$svm_curve
   df <- data.frame(k = cu$k, err = cu$err)
@@ -116,9 +89,7 @@ svmrfe_curve_plot <- function(r, sexlab, dark) {
     theme(plot.subtitle = element_text(size = 8.2, margin = margin(b = 10)))
 }
 
-# =============================================================================
-# STEP 5  BUILD, SAVE
-# =============================================================================
+# Step 5: build and save figures
 hdr("STEP 2  BUILD PLOTS")
 plots <- list()
 for (sx in c("female", "male")) {

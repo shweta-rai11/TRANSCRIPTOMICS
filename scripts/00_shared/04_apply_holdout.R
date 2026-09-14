@@ -1,39 +1,7 @@
 #!/usr/bin/env Rscript
 # R version 4.4.2
 #
-# 03_apply_holdout.R
-# ---------------------------------------------------------------------------
-# PURPOSE
-#   Project the FROZEN 30% internal-validation holdout onto the TRAINING scale,
-#   using normalisation + batch-correction parameters ESTIMATED ON TRAINING ONLY.
-#   No holdout sample contributes to any estimated parameter -> leakage-free.
-#
-# WHEN TO RUN THIS  (read before running)
-#   Run ONCE, at the very end, AFTER the biomarker panel and ML model are fully
-#   LOCKED on the 70% training data:
-#     - differential expression / WGCNA / feature discovery  -> done on train
-#     - the panel (which genes)                              -> chosen on train
-#     - the model, hyper-parameters and decision threshold   -> fixed via CV WITHIN train
-#   Until then the holdout stays sealed. Process it here, evaluate the locked model
-#   ONCE, and report that number. Do NOT revisit the model after seeing the holdout.
-#
-# WHY frozen parameters (and not a fresh joint normalisation/ComBat)
-#   Quantile normalisation learns a shared reference distribution across samples, and
-#   ComBat estimates batch + covariate effects (it even uses the outcome labels via `mod`).
-#   Re-estimating either on train+holdout together lets the holdout leak into the model's
-#   input representation -> optimistic bias. We therefore FIX the training parameters and
-#   only APPLY them to the holdout (an "addon"/frozen adjustment).
-#
-# REFERENCES
-#   # Ambroise C, McLachlan GJ. Selection bias in gene extraction... PNAS 2002;99(10):6562-6566.
-#   # Simon R, et al. Pitfalls in the use of DNA microarray data for classification. J Natl Cancer Inst 2003;95(1):14-18.
-#   # Kaufman S, et al. Leakage in data mining. ACM TKDD 2012;6(4):Article 15.
-#   # Bolstad BM, et al. A comparison of normalization methods... Bioinformatics 2003;19(2):185-193.  (quantile norm)
-#   # Ritchie ME, et al. limma powers differential expression analyses. Nucleic Acids Res 2015;43(7):e47.
-#   # Johnson WE, Li C, Rabinovic A. Adjusting batch effects... empirical Bayes. Biostatistics 2007;8(1):118-127.  (ComBat)
-#   # Leek JT, et al. The sva package for removing batch effects. Bioinformatics 2012;28(6):882-883.
-#   # Nygaard V, Rodland EA, Hovig E. Methodological variations in ...ComBat and their impact. Brief Bioinform 2016;17(1):29-39.  (caution: fit batch params on train, keep design balanced)
-# ---------------------------------------------------------------------------
+# Projects the frozen 30% internal-validation holdout onto the training scale, using normalization + ComBat parameters estimated on training only (leakage-free). Run once, after the panel/model are locked on the 70% training data.
 
 library(preprocessCore)   # normalize.quantiles.use.target : frozen quantile normalisation to a fixed target
 library(data.table)
@@ -57,11 +25,7 @@ hold_prenorm  <- holdout_obj$expr_prenorm[genes, , drop = FALSE]
 hold_meta     <- holdout_obj$meta
 
 # ---- STEP 1: frozen quantile normalisation --------------------------------
-# The training quantile reference = the common (averaged, sorted) distribution that
-# limma::normalizeBetweenArrays produced on the training set. After quantile norm every
-# training column shares this sorted distribution, so we recover the target as the
-# row-mean of the column-sorted training matrix and map each HOLDOUT sample onto it.
-# Skip if quantile normalisation was NOT applied in training (mirror the training decision).
+# Recover the training quantile target (row-mean of column-sorted training matrix) and map holdout onto it; skip if training skipped quantile norm.
 if (isTRUE(train_obj$normalization_applied)) {
   target <- rowMeans(apply(train_qnorm, 2, sort))                       # frozen training quantile target
   hold_qnorm <- preprocessCore::normalize.quantiles.use.target(as.matrix(hold_prenorm), target)
@@ -73,9 +37,7 @@ if (isTRUE(train_obj$normalization_applied)) {
 }
 
 # ---- parametric ComBat: fit on TRAIN, apply to HOLDOUT ---------------------
-# Faithful re-implementation of the parametric empirical-Bayes ComBat estimation
-# (Johnson et al. 2007) so the batch parameters can be FROZEN and applied out-of-sample.
-# Priors / iterative posterior solution follow the sva reference implementation.
+# Re-implementation of parametric empirical-Bayes ComBat so batch parameters can be frozen and applied out-of-sample
 aprior <- function(d) { m <- mean(d); s2 <- var(d); (2 * s2 + m^2) / s2 }
 bprior <- function(d) { m <- mean(d); s2 <- var(d); (m * s2 + m^3) / s2 }
 postmean <- function(g.hat, g.bar, n, d.star, t2) (t2 * n * g.hat + d.star * g.bar) / (t2 * n + d.star)
@@ -148,9 +110,7 @@ mk_mod <- function(m) {
 mod_train <- mk_mod(train_meta)
 mod_hold  <- mk_mod(hold_meta)
 
-# The training script uses batch = study+internal (batch_full) with a fallback to
-# study-level batch. Pick whichever batch definition BEST reproduces the saved training
-# ComBat output, then use that SAME definition to freeze-and-apply to the holdout.
+# Pick whichever batch definition (batch_full vs dataset) best reproduces the saved training ComBat output, then use it for the holdout
 recon_err <- function(batch_train) {
   par <- fit_combat(train_qnorm, batch_train, mod_train)
   rec <- apply_combat(par, train_qnorm, batch_train, mod_train)        # re-apply to train == should match saved combat

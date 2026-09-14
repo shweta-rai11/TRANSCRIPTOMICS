@@ -1,28 +1,5 @@
 #!/usr/bin/env Rscript
-# =============================================================================
-# 12d_feature_selection_diagnostics_extra.R
-# -----------------------------------------------------------------------------
-# Additional algorithm-level diagnostic figures for the feature-selection step
-# (12_feature_selection.R), one file per plot per sex (not composited), in the
-# style used for conference/thesis figure decks: LASSO coefficient shrinkage
-# path, LASSO coefficient direction at lambda.min, Random Forest OOB error vs
-# ntree, and the SVM-RFE accuracy curve (companion to the error curve already
-# drawn in 12c). All are built from the fitted objects already saved by 12 —
-# no models are re-run.
-#
-# NOTE ON METHOD SCOPE
-#   This pipeline's selectors are LASSO / Random Forest / SVM-RFE only; Boruta
-#   is explicitly NOT used here (see 12_feature_selection.R header: the
-#   candidate set is already small and causally pre-filtered by MR, so the
-#   wrapper Boruta test was omitted in favour of the three-algorithm design).
-#   No Boruta figure is produced — one would misrepresent what was run.
-#
-#   in : data/processed/new/ml_features.rds
-#   out: results/figures/FIG_G2_09_lasso_coefpath_{female,male}.png/.pdf
-#        results/figures/FIG_G2_10_lasso_coefdirection_{female,male}.png/.pdf
-#        results/figures/FIG_G2_11_rf_oob_error_{female,male}.png/.pdf
-#        results/figures/FIG_G2_12_svmrfe_accuracy_{female,male}.png/.pdf
-# =============================================================================
+# Additional per-sex diagnostic figures for the feature-selection step (12_feature_selection.R): LASSO coefficient path/direction, RF OOB error, SVM-RFE accuracy curve.
 suppressMessages({
   library(glmnet); library(randomForest); library(ggplot2)
 })
@@ -49,9 +26,7 @@ save_fig <- function(p, name, w, h) {
   say("  wrote %s.{png,pdf}", name)
 }
 
-# =============================================================================
-# STEP 2  LASSO coefficient shrinkage path
-# =============================================================================
+# Step 2: LASSO coefficient shrinkage path
 lasso_coefpath_plot <- function(r, sexlab, dark) {
   bm   <- back_map(r)
   beta <- as.matrix(r$cv$glmnet.fit$beta)                 # genes x lambda steps
@@ -78,9 +53,7 @@ lasso_coefpath_plot <- function(r, sexlab, dark) {
           legend.text = element_text(size = 7.5), legend.title = element_text(size = 8.5))
 }
 
-# =============================================================================
-# STEP 3  LASSO coefficient direction at lambda.min
-# =============================================================================
+# Step 3: LASSO coefficient direction at lambda.min
 lasso_coefdirection_plot <- function(r, sexlab) {
   bm <- back_map(r)
   co <- coef(r$cv, s = "lambda.min")[-1, 1]
@@ -102,9 +75,7 @@ lasso_coefdirection_plot <- function(r, sexlab) {
           legend.position = "top")
 }
 
-# =============================================================================
-# STEP 4  Random Forest OOB error vs ntree
-# =============================================================================
+# Step 4: Random Forest OOB error vs ntree
 rf_oob_plot <- function(r, sexlab, dark) {
   dark <- unname(dark)
   er <- r$rf$err.rate
@@ -125,9 +96,7 @@ rf_oob_plot <- function(r, sexlab, dark) {
           legend.position = "top")
 }
 
-# =============================================================================
-# STEP 5  SVM-RFE accuracy curve (companion to the 12c error curve)
-# =============================================================================
+# Step 5: SVM-RFE accuracy curve (companion to the 12c error curve)
 svmrfe_accuracy_plot <- function(r, sexlab, dark) {
   cu <- r$svm_curve
   df <- data.frame(k = cu$k, acc = 1 - cu$err)
@@ -148,9 +117,7 @@ svmrfe_accuracy_plot <- function(r, sexlab, dark) {
     theme(plot.subtitle = element_text(size = 8.2, margin = margin(t = 2, b = 10)))
 }
 
-# =============================================================================
-# STEP 6  BUILD, SAVE
-# =============================================================================
+# Step 6: build and save figures
 hdr("STEP 2  BUILD + SAVE FIGURES")
 for (sx in c("female", "male")) {
   r <- ml[[sx]]; sexlab <- tools::toTitleCase(sx); cols <- pal[[sx]]

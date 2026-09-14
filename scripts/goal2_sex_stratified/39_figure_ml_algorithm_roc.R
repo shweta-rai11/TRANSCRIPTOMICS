@@ -1,29 +1,5 @@
 #!/usr/bin/env Rscript
-# =============================================================================
-# 39_figure_ml_algorithm_roc.R
-# -----------------------------------------------------------------------------
-# ROC figures for the five-algorithm diagnostic comparison (37_/38_), in the
-# SAME visual format as fig_syn_panel_roc.png (21_testing_synovium_roc.R):
-# single square panel (no facets), theme_bw(base_size=12), dashed grey45-degree
-# reference line, legend inside the plot at bottom-right, 6in x 6in @ 300dpi.
-#
-# One figure per (sex x algorithm x tissue setting) -- Female and Male are
-# always SEPARATE files, never pooled or faceted together -- with the Train
-# (resampled CV) curve in red (#C0392B) and the Test curve in blue (#1F3B99),
-# exactly the two-colour convention already used for the female/male panel
-# comparison in fig_syn_panel_roc.png.
-#
-# A curve flagged SEPARATION in 38_'s table (AUC >= 0.999 at the small male
-# n) is kept solid (matching the reference format) but the legend text and a
-# caption line both say so explicitly, so a perfect curve is never read as a
-# precision estimate.
-#
-# Outputs (results/figures/new/), 5 algorithms x 2 tissue settings x 2 sexes:
-#   fig_ml_<algo>_sametissue_<sex>.{png,pdf}
-#   fig_ml_<algo>_crosstissue_<sex>.{png,pdf}
-# plus one composite summary:
-#   fig_ml_algorithm_comparison_auc.{png,pdf}
-# =============================================================================
+# ROC figures (Train vs Test, per sex x algorithm x tissue setting) for the five-algorithm comparison, plus a composite AUC dot plot.
 suppressMessages({ library(data.table); library(ggplot2) })
 procN <- "data/processed/new"; fig <- "results/figures/new"; tab <- "results/tables"
 dir.create(fig, showWarnings = FALSE, recursive = TRUE)
@@ -41,7 +17,7 @@ stale <- as.vector(outer(sprintf("fig_ml_%s_%s", rep(ALGO_TAG, each = 2), c("sam
                           c("png", "pdf"), FUN = function(a, b) paste0(a, ".", b)))
 unlink(file.path(fig, stale))
 
-## ---- single-panel Train(red)/Test(blue) ROC, one sex at a time -----------
+# single-panel Train(red)/Test(blue) ROC, one sex at a time
 plot_one <- function(roc_dt, perf, algo, sexlab, test_label, group_word) {
   d <- roc_dt[algorithm == algo & sex == sexlab]
   d[, curve := ifelse(dataset == "Train (resampled CV)", "Train", "Test")]
@@ -94,7 +70,7 @@ for (algo in names(ALGO_TAG)) {
   cat(sprintf("wrote fig_ml_%s_{sametissue,crosstissue}_{female,male}.{png,pdf}\n", tag))
 }
 
-## ---- composite AUC comparison dot plot (train=red, test=blue) ------------
+# composite AUC comparison dot plot (train=red, test=blue)
 parse_auc <- function(dt, setting_lab) {
   dt <- copy(dt)
   dt[, auc := as.numeric(sub("^([0-9.]+).*", "\\1", AUC_CI))]

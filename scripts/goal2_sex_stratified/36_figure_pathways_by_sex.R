@@ -1,31 +1,5 @@
 #!/usr/bin/env Rscript
-# =============================================================================
-# 36_figure_pathways_by_sex.R
-# -----------------------------------------------------------------------------
-# Composite figure: established RA / immune KEGG pathways compared between
-# female and male RA across the three enrichment layers already computed
-# upstream. No new enrichment is run here; every number is read from tables
-# written by 05_dge.R (stage 1) and 34_pathway_enrichment.R (stage 2).
-#
-#   A  Shared core        DEG over-representation, significant in BOTH sexes
-#   B  Sex-restricted     DEG over-representation, significant in ONE sex only
-#   C  Ranked GSEA        KEGG pathways displaced in ONE sex only (NES)
-#   D  MR-prioritised     KEGG enrichment of the causal gene sets, per sex
-#
-# "Sex-restricted" = FDR < 0.05 in one sex and not in the other. This is a
-# descriptive contrast between two separately thresholded analyses, not a
-# formal test of a sex-by-diagnosis interaction (that test, 05d, returned no
-# enriched terms). The caption must say so.
-#
-# Inputs:
-#   results/tables/9_DEG_enrichment_female.csv, 10_DEG_enrichment_male.csv
-#   results/tables/gsea_kegg.csv
-#   results/tables/enrich_KEGG_{female,male}.csv
-# Outputs:
-#   results/tables/pathways_by_sex_all_layers.csv   (all KEGG terms, 3 layers)
-#   results/tables/pathways_by_sex_figure_data.csv  (exactly what is plotted)
-#   results/figures/new/fig_pathways_by_sex.{png,pdf}
-# =============================================================================
+# Composite figure: established RA/immune KEGG pathways compared between female and male RA (DEG ORA, GSEA, MR-prioritised layers).
 suppressMessages({library(data.table); library(ggplot2); library(patchwork)})
 tabN <- "results/tables"; figN <- "results/figures/new"
 dir.create(figN, showWarnings = FALSE, recursive = TRUE)
@@ -33,7 +7,7 @@ dir.create(figN, showWarnings = FALSE, recursive = TRUE)
 sexcol <- c(Female = "#C0392B", Male = "#1F5FA8")
 FDR    <- 0.05
 
-# ---- 1. read the three layers ----------------------------------------------
+# 1. read the three layers
 ora <- rbindlist(list(
   fread(file.path(tabN, "9_DEG_enrichment_female.csv")),
   fread(file.path(tabN, "10_DEG_enrichment_male.csv"))))[source == "KEGG"]
@@ -47,7 +21,7 @@ mr <- rbindlist(list(
   fread(file.path(tabN, "enrich_KEGG_male.csv"))[, sex := "Male"]))
 mr <- mr[, .(ID, Description, sex, ratio = GeneRatio, n = Count, fdr = p.adjust, genes = geneID)]
 
-# ---- 2. full cross-tabulation (all KEGG terms, all layers) -------------------
+# 2. full cross-tabulation (all KEGG terms, all layers)
 w <- function(d, lab, cols) {
   x <- dcast(d, ID + Description ~ sex, value.var = cols)
   setnames(x, setdiff(names(x), c("ID", "Description")),
@@ -67,9 +41,7 @@ all3[, sex_pattern := {
 setorder(all3, ID)
 fwrite(all3, file.path(tabN, "pathways_by_sex_all_layers.csv"))
 
-# ---- 3. curated "established RA / immune" KEGG set for the figure ------------
-# Restricting to a named list keeps the figure readable; the full table above
-# is the unfiltered record. Axis: which arm of the disease the pathway sits in.
+# 3. curated "established RA/immune" KEGG set for the figure
 cur <- fread(text = "
 ID,label,axis
 hsa04662,B cell receptor signalling,Adaptive
@@ -120,7 +92,7 @@ hsa04672,Intestinal immune network for IgA,Adaptive
 cur[, axis := factor(axis, c("Adaptive", "Cytokine / signalling", "Innate", "Bone",
                              "Cell fate / metabolism", "Hormonal"))]
 
-# ---- 4. panel data ----------------------------------------------------------
+# 4. panel data
 # A: ORA, both sexes
 oA <- ora[ID %in% cur$ID]
 both_ids <- intersect(oA[sex == "Female", ID], oA[sex == "Male", ID])
@@ -162,7 +134,7 @@ fig_dat <- rbindlist(list(
   pD[, .(panel = "D_MR_genes", ID, label, axis = NA, sex, n, fdr, NES = NA_real_, genes)]), fill = TRUE)
 fwrite(fig_dat, file.path(tabN, "pathways_by_sex_figure_data.csv"))
 
-# ---- 5. plots ---------------------------------------------------------------
+# 5. plots
 base <- theme_bw(base_size = 11) +
   theme(panel.grid.minor = element_blank(), panel.grid.major.y = element_blank(),
         panel.grid.major.x = element_line(colour = "grey88", linewidth = 0.3),

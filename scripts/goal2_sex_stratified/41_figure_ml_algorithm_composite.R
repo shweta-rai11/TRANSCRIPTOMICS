@@ -1,30 +1,12 @@
 #!/usr/bin/env Rscript
-# =============================================================================
-# 41_figure_ml_algorithm_composite.R
-# -----------------------------------------------------------------------------
-# ONE composite figure per sex for the five-algorithm diagnostic comparison
-# (37_/38_/38b_): a sub-figure per algorithm (logistic regression, SVM-RBF,
-# k-NN, random forest, ANN), each showing all FOUR evaluation settings on the
-# same axes -- Train (resampled CV) | Internal test (blood) | External test
-# (blood, GSE15573) | Synovium (cross-tissue) -- so algorithm and tissue/
-# validation-stage comparisons can both be read off one figure. Female and
-# male are always separate files (never pooled).
-#
-# No plot title/subtitle text is drawn on either figure (captions are written
-# separately, matching the convention already used in 28_figure_final_roc.R).
-# The facet strip above each sub-panel names only the algorithm, which is
-# structural (it is how the sub-figures are told apart), not a title.
-#
-# Outputs:
-#   results/figures/new/fig_ml_composite_{female,male}.{png,pdf}
-# =============================================================================
+# One composite ROC figure per sex: a sub-panel per algorithm showing all four evaluation settings (Train/internal/external/synovium).
 suppressMessages({ library(data.table); library(ggplot2) })
 procN <- "data/processed/new"; fig <- "results/figures/new"; tab <- "results/tables"
 dir.create(fig, showWarnings = FALSE, recursive = TRUE)
 
 obj <- readRDS(file.path(procN, "ml_algo_roc.rds"))
 
-## ---- relabel each setting's dataset factor to a short, shared vocabulary --
+# relabel each setting's dataset factor to a short, shared vocabulary
 lab_map <- c("Train (resampled CV)" = "Train",
              "Blood test (internal holdout)" = "Internal test (blood)",
              "External blood test (GSE15573)" = "External test (blood)",

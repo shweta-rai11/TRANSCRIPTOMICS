@@ -1,16 +1,5 @@
 #!/usr/bin/env Rscript
-# =============================================================================
-# make_renv_lock.R  —  build a valid renv.lock recording the EXACT package
-# versions used to produce the reported results.
-#
-# Deliberately does NOT call renv::init(): that would relocate the project
-# library and install an auto-activating .Rprofile, which risks breaking a
-# working Bioconductor setup. This script only WRITES the lockfile; your
-# existing library is untouched. `renv::restore()` can consume it later.
-#
-# Dependency closure is computed from LOCALLY installed metadata, so no network
-# access is required.
-# =============================================================================
+# Build a renv.lock recording exact package versions, from locally installed metadata (no renv::init(), no network access).
 options(repos = c(CRAN = "https://cloud.r-project.org"))
 
 top <- c("limma","sva","WGCNA","edgeR","glmnet","randomForest","e1071","caret","pROC",

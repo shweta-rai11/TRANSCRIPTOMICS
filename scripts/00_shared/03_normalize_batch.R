@@ -2,39 +2,9 @@
 # R version 4.4.2
 
 
-# Steps
-# 1. Load libraries and set up directories
-# 2. Define helper functions for data processing
-# 3. Process each dataset (GSE93272 and GSE110169) training sets
-# 4. Clean datasets by keeping only RA and control (healthy control) samples, removing SLE and unknown sex, and deduplicating GSE93272
-# 5. Intersect common genes and merge the two datasets (cbind)
-# 6. Split the MERGED data 70:30 into a training set and an UNTOUCHED internal-validation
-#    holdout BEFORE any cross-sample learning (quantile normalisation / ComBat). This
-#    prevents information leakage; every step below (6-9) uses the 70% training set ONLY.
-# 7. Normalize the training set using quantile normalization
-# 8. Apply ComBat for batch correction on the training set, protecting biological variables (group and sex)
-# 9. Save the processed training data, the frozen internal-validation holdout, and cohort summary tables
-# 10. Print completion message and instructions for generating figures
-# 11. End of script
-#
-# ---- References (methods) --------------------------------------------------
-# Leakage / split-before-processing rationale:
-#   # Ambroise C, McLachlan GJ. Selection bias in gene extraction on the basis of microarray gene-expression data. PNAS 2002;99(10):6562-6566.
-#   # Simon R, Radmacher MD, Dobbin K, McShane LM. Pitfalls in the use of DNA microarray data for classification. J Natl Cancer Inst 2003;95(1):14-18.
-#   # Kaufman S, Rosset S, Perlich C, Stitelman O. Leakage in data mining: formulation, detection, and avoidance. ACM TKDD 2012;6(4):Article 15.
-# Probe->gene collapse:
-#   # Miller JA, et al. Strategies for aggregating gene expression data: the collapseRows R function. BMC Bioinformatics 2011;12:322.
-#   # Langfelder P, Horvath S. WGCNA: an R package for weighted correlation network analysis. BMC Bioinformatics 2008;9:559.
-# Quantile normalisation:
-#   # Bolstad BM, Irizarry RA, Astrand M, Speed TP. A comparison of normalization methods for high density oligonucleotide array data. Bioinformatics 2003;19(2):185-193.
-#   # Ritchie ME, et al. limma powers differential expression analyses for RNA-seq and microarray studies. Nucleic Acids Res 2015;43(7):e47.
-# Batch correction (ComBat / sva):
-#   # Johnson WE, Li C, Rabinovic A. Adjusting batch effects in microarray expression data using empirical Bayes methods. Biostatistics 2007;8(1):118-127.
-#   # Leek JT, Johnson WE, Parker HS, Jaffe AE, Storey JD. The sva package for removing batch effects. Bioinformatics 2012;28(6):882-883.
+# Loads, cleans and merges the two training datasets (GSE93272, GSE110169), splits 70:30 (train/frozen internal-validation holdout) before any cross-sample learning, then quantile-normalizes and ComBat batch-corrects the training set only
 
-
-
-# loading libraries 
+# loading libraries
 
 library(GEOquery)
 library(Biobase)
@@ -78,8 +48,7 @@ collapse_to_genes <- function(eset) {
 
   if (nrow(ex) == 0) stop("No probes remain for gene-level collapsing.")
 
-# collapseRows MaxMean rule: Miller et al. BMC Bioinformatics 2011;12:322 (WGCNA: Langfelder & Horvath 2008;9:559)
-# https://github.com/cran/WGCNA/blob/master/R/collapseRows.R
+# collapseRows MaxMean rule (WGCNA) for probe->gene collapsing
   g <- WGCNA::collapseRows(
     ex,
     rowGroup = sym,
@@ -118,9 +87,7 @@ log2_norm <- function(m, plot_dir = fig, prefix = "expr_distribution") {
   ggsave(plot_file, p, width = 7, height = 4, dpi = 150)
   message(sprintf("Saved expression distribution plot: %s", plot_file))
 
-  # Decide on SCALE, not normality: log2-scale microarray data is still skewed,
-  # so a normality test would wrongly re-log it (double-log crushes fold changes).
-  # GEO/limma convention: transform only if the data are on a linear scale (max > 100).
+  # Decide on scale (not normality): transform only if data are on a linear scale (max > 100)
   qx <- as.numeric(quantile(vals, c(0.25, 0.99), na.rm = TRUE))
   needs_log <- qx[2] > 100
   message(sprintf("log2 scale check: 99th pct = %.2f -> %s",
@@ -215,27 +182,11 @@ meta$batch_full <- paste(meta$dataset, meta$batch, sep = "_")
 stopifnot(identical(colnames(merged), meta$sample))
 
 # ---- 70:30 TRAIN / INTERNAL-VALIDATION SPLIT (leakage-safe) -----------------
-# The split is done on the MERGED but PRE-NORMALISATION data, i.e. BEFORE quantile
-# normalisation and BEFORE ComBat. Both of those "learn" parameters across samples
-# (a shared quantile reference distribution; batch + biological-covariate estimates,
-# where ComBat additionally uses the group labels via `mod`). Estimating them on the
-# full cohort would let the held-out 30% influence the training representation ->
-# optimistic, leaked performance. We therefore freeze the 30% here, completely
-# untouched, and run steps 7-9 on the 70% training set only.
-#   # Ambroise & McLachlan, PNAS 2002;99:6562-6566  (bias when split follows feature ops)
-#   # Simon et al., J Natl Cancer Inst 2003;95:14-18 (microarray classifier validation pitfalls)
-#   # Kaufman et al., ACM TKDD 2012;6(4):15          (data leakage: formulation & avoidance)
-# Stratified holdout: strata = dataset x group x sex, so RA/HC balance, sex balance and
-# batch (dataset) representation are preserved in BOTH partitions. Keeping both datasets
-# in the holdout is required so it can later be placed on the training scale at test time.
-#   # Kuhn M. Building predictive models in R using the caret package.
-#   #   J Stat Softw 2008;28(5):1-26. (createDataPartition: stratified train/test split)
+# Split on merged pre-normalization data, before quantile normalization and ComBat learn cross-sample parameters, to avoid leaking the holdout into training
 set.seed(70)                                          # reproducible 70:30 partition
 split_frac <- 0.70                                    # 70:30 train:test ratio
 
-# Stratified split via caret::createDataPartition: samples ~70% WITHIN each
-# stratum (dataset x group x sex), preserving RA/HC, sex and dataset balance
-# in both partitions - the leakage-safe holdout is the complementary 30%.
+# Stratified split via caret::createDataPartition (strata = dataset x group x sex)
 strata    <- factor(with(meta, paste(dataset, group, sex, sep = "|")))
 train_idx <- caret::createDataPartition(strata, p = split_frac, list = FALSE)
 train_sel <- logical(nrow(meta))
@@ -280,7 +231,6 @@ needs_qnorm <- before_diag$max_value > 100 || before_diag$median_sd > 0.5 || bef
 if (needs_qnorm) {
   message("Quantile normalization will be applied because the training microarray data still show strong between-sample distribution differences.")
   # Quantile normalisation fitted on the TRAINING set only.
-  # # Bolstad et al. Bioinformatics 2003;19:185-193 ; Ritchie et al. Nucleic Acids Res 2015;43:e47
   qn_data <- limma::normalizeBetweenArrays(as.matrix(merged), method = "quantile")
   after_diag <- summarize_norm_diagnostics(qn_data)
   normalization_applied <- TRUE
@@ -300,10 +250,7 @@ cat("Before -> median SD:", round(before_diag$median_sd, 4), "| IQR SD:", round(
 cat("After  -> median SD:", round(after_diag$median_sd, 4), "| IQR SD:", round(after_diag$iqr_sd, 4), "\n")
 
 # ---- BATCH CORRECTION: ComBat (TRAINING set only) --------------------------
-# ComBat parameters (batch location/scale + covariate effects) are estimated on the
-# 70% training set only; `mod = ~group + sex` protects the biological signal so RA-vs-HC
-# and sex effects are preserved, not removed as batch.
-# # Johnson, Li & Rabinovic. Biostatistics 2007;8:118-127 ; Leek et al. Bioinformatics 2012;28:882-883
+# ComBat estimated on the training set only; mod = ~group + sex protects biological signal from removal as batch
 meta$group <- factor(meta$group, levels = c("HC","RA"))
 meta$sex   <- factor(meta$sex,   levels = c("F","M"))
 mod <- model.matrix(~ group + sex, data = meta)

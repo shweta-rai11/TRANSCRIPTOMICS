@@ -1,55 +1,5 @@
 #!/usr/bin/env Rscript
-# =============================================================================
-# 18f_final_panel.R
-# -----------------------------------------------------------------------------
-# FINAL recommended MR-anchored diagnostic models, evaluated honestly across all
-# three datasets, and saved for the figure (18f_figure.R).
-#
-#   Female : elastic-net over the MR-PRIORITISED BH-FDR<0.05 set (32 genes,
-#            FS_input_female). The p<0.10 widening considered in 18e was
-#            REJECTED to preserve stringency.
-#   Male   : elastic-net over the 25 MR-prioritised FDR<0.05 genes (FS_input_male).
-# [header corrected 2026-07-28. Prior versions said 14/40 then 74/55, and called
-#  these "MR-screened p<0.05". BOTH the counts and the label are now wrong:
-#    (a) 10_MR.R fix D6 made FS_input the BH-FDR<0.05 SURVIVING set, so these are
-#        FDR-adjusted, not a nominal screen. "MR-prioritised" is now correct.
-#    (b) 10_MR.R fix D8 added the missing CIS filter (996/4,932 instruments were
-#        trans; HNRNPM OR=287 and FOXP3 OR=264 were pleiotropic by construction),
-#        which re-ran the MR and changed the counts again.
-#  Current: 32 female / 25 male, from 1,477 / 1,478 genes tested.]
-#
-# For each sex: (1) leakage-free NESTED CV on train (10x5 F / 5x10 M);
-#               (2) LOCKED elastic-net on full train applied ONCE to internal
-#                   holdout and external blood (per-dataset z-score transfer,
-#                   fixed direction "<", missing gene -> z=0). DeLong CI, or
-#                   bootstrap CI when n<20.
-# No estimate gaming (no auto-direction, no scoring train with its own model,
-# no seed-hunting).
-#
-# ---- EVIDENCE TIERS (added 2026-07-28) --------------------------------------
-# The male arm is NOT a co-equal result and this table must not present it as
-# one. Its sample sizes are:
-#       train n = 38 (17 RA / 21 HC) | internal n = 13 (6/7) | external n = 9 (4/5)
-# At n = 13 there are 42 case-control pairs, so a perfect AUC is an unremarkable
-# event rather than evidence of a perfect classifier, and the bootstrap interval
-# collapses to the degenerate "1.000 (1.000-1.000)" that earlier versions of this
-# table reported as if it were a validated performance estimate. Two things are
-# therefore added here:
-#   * an `evidence_tier` column - "primary" or "EXPLORATORY (underpowered)" -
-#     assigned from n, not from how good the number looks;
-#   * an explicit `separation_flag` wherever AUC >= 0.999, so a degenerate
-#     interval can never again be read as precision.
-# The male panel is reported as a POWER-LIMITED EXPLORATORY analysis. It is not
-# a validated diagnostic panel and no diagnostic claim may rest on it.
-#
-# Outputs:
-#   results/tables/mr_final_panel_summary.csv
-#   results/tables/mr_final_coefs_bysex.csv
-#   data/processed/mr_final_objects.rds
-#
-#   Simon R, et al. J Natl Cancer Inst 2003;95:14-18.     (small-n validation)
-#   Carpenter J, Bithell J. Stat Med 2000;19:1141-1164.   (bootstrap CIs)
-# =============================================================================
+# Final recommended MR-anchored elastic-net diagnostic models per sex: nested CV on train plus a locked fit evaluated once on internal holdout and external blood; male results flagged as power-limited exploratory.
 suppressMessages({library(glmnet); library(pROC); library(caret)
                   library(Biobase); library(data.table)})
 options(stringsAsFactors = FALSE)
@@ -130,8 +80,7 @@ nF<-run_nested("F",CAND$F,10,5); nM<-run_nested("M",CAND$M,5,10)
 lF<-run_locked("F",CAND$F);      lM<-run_locked("M",CAND$M)
 fwrite(rbindlist(list(lF$coefs,lM$coefs)), file.path(tab,"mr_final_coefs_bysex.csv"))
 
-# An AUC of 1.000 at n = 13 is a statement about how few discordant pairs exist,
-# not about classifier quality. Annotate rather than silently print it.
+# Annotate rather than silently print a perfect AUC, which at small n reflects too few discordant pairs, not classifier quality.
 SMALL_N <- 20
 fmt <- function(ci, n = NA_integer_) {
   s <- sprintf("%.3f (%.3f-%.3f)", ci[1], ci[2], ci[3])

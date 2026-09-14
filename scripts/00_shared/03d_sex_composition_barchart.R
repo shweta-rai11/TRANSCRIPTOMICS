@@ -1,15 +1,5 @@
 #!/usr/bin/env Rscript
-# =============================================================================
-# 03d_sex_composition_barchart.R  —  two-panel sex composition bar chart for
-# the training data: (a) sex distribution of the combined training set,
-# (b) RA/Control composition within each sex, ordered by RA proportion.
-# Same visual language as 03c_cohort_composition_barchart.R (black = Control,
-# grey = RA, dashed line at 50%, n + % labelled above each bar).
-#
-# Input  : results/tables/combined_cohort_summary.csv
-# Outputs: results/figures/fig_sex_composition_bar.png
-#          results/figures/fig_sex_composition_bar.pdf
-# =============================================================================
+# Two-panel sex composition bar chart: (a) sex distribution of combined training set, (b) RA/Control composition within each sex
 suppressMessages({library(data.table); library(ggplot2); library(patchwork)})
 tab <- "results/tables"; fig <- "results/figures"
 

@@ -1,24 +1,5 @@
 #!/usr/bin/env Rscript
-# =============================================================================
-# 05b_dge_sensitivity.R  —  Two checks the thesis needs and 05_dge.R does not do.
-#
-# CHECK 1  ComBat-then-DE vs batch-in-the-model
-#   05_dge.R runs limma on the ComBat-corrected matrix with design ~ group.
-#   The model therefore treats ComBat's output as raw data and never debits the
-#   degrees of freedom ComBat spent, which inflates significance - worst when the
-#   design is unbalanced across batches (Nygaard, Rodland & Hovig, Biostatistics
-#   2016;17:29-39, already cited in 05_dge.R). This re-runs DE on the PRE-ComBat
-#   quantile-normalised matrix with batch as a model term, and compares.
-#   Motivating anomaly: the male stratum (n=38) returned MORE DEGs (5,820) than
-#   the female stratum (n=145, 5,131). If that inverts here, the ComBat->DE path
-#   was the cause.
-#
-# CHECK 2  group x sex INTERACTION
-#   The thesis claims sex-stratified biology but never tests a sex interaction.
-#   ComBat protected only main effects (mod = ~group + sex), so the interaction
-#   is tested here on the PRE-ComBat matrix with batch in the model, where it was
-#   never at risk of being absorbed.
-# =============================================================================
+# Two sensitivity checks: (1) ComBat-then-DE vs batch-in-the-model DE on the pre-ComBat matrix, (2) group x sex interaction test
 suppressMessages({library(limma); library(data.table)})
 set.seed(1234)
 tab <- "results/tables"

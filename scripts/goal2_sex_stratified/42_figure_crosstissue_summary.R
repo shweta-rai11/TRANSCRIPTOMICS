@@ -1,13 +1,5 @@
 #!/usr/bin/env Rscript
-# =============================================================================
-# 42_figure_crosstissue_summary.R -- summary figure for the blood/synovium
-# consensus-panel overlap and concordance (companion to fig_crosstissue.png).
-#  (A) Venn of female vs male consensus biomarker panels.
-#  (B) Slopegraph of blood -> synovium log2FC per gene x sex, styled by
-#      concordant/discordant direction.
-# Uses data/processed/new/val_synovium.rds + ml_features.rds + dge_results.rds
-# Output: results/figures/new/fig_crosstissue_summary.png/pdf
-# =============================================================================
+# Summary figure for blood/synovium consensus-panel overlap (A: Venn) and concordance (B: slopegraph of logFC by sex).
 suppressMessages({
   library(data.table); library(ggplot2); library(ggforce); library(ggrepel)
   library(patchwork); library(eulerr)
@@ -31,13 +23,12 @@ sex_cols <- c(Female = "#C0392B", Male = "#1F3B99")
 base_theme <- theme_void(base_size = 12) +
   theme(legend.title = element_text(size = 10), legend.text = element_text(size = 9))
 
-# ---- (A) Venn of the two consensus panels -----------------------------------
+# (A) Venn of the two consensus panels
 shared   <- intersect(panels$Female, panels$Male)
 fem_only <- setdiff(panels$Female, shared)
 male_only<- setdiff(panels$Male, shared)
 
-# geometry solved by eulerr (exact, area-accurate circle placement) rather than
-# hand-picked coordinates -- avoids labels landing on/inside the wrong circle.
+# geometry solved by eulerr (exact, area-accurate circle placement) rather than hand-picked coordinates
 fit <- euler(c(Female = length(fem_only), Male = length(male_only),
                "Female&Male" = length(shared)), shape = "circle")
 ell   <- fit$ellipses
@@ -66,7 +57,7 @@ gA <- ggplot() +
   coord_fixed(clip = "off") +
   base_theme
 
-# ---- (B) slopegraph: blood log2FC -> synovium log2FC ------------------------
+# (B) slopegraph: blood log2FC -> synovium log2FC
 long <- rbindlist(list(
   cc[, .(gene, sex, concordant, x = 1, y = blood)],
   cc[, .(gene, sex, concordant, x = 2, y = syn)]

@@ -1,49 +1,5 @@
 #!/usr/bin/env Rscript
-# =============================================================================
-# 06_WGCNA.R  —  Weighted gene co-expression network analysis, ANALYSIS +
-#                FIGURES in ONE reproducible script.
-#
-# GOAL OF THIS SCRIPT IN THE THESIS PIPELINE
-#   Produce data-driven DISEASE MODULES (co-expression modules correlated with
-#   RA status), so that step 09 can compute:
-#
-#        candidates  =  disease-module genes  n  sex-stratified DEGs
-#
-#   Everything here exists to make that intersection defensible.
-#
-# DESIGN RULES (differences from the previous 06_WGCNA_NEW.R + _figure.R pair)
-#   R1  Modules are selected by their CORRELATION WITH RA, never by colour name.
-#       WGCNA colour names are assigned by module SIZE RANK (labels2colors), so
-#       "yellow"/"blue"/"green"/"brown" are not stable identifiers - they change
-#       whenever the gene filter, power or sample set changes. Colours are an
-#       OUTPUT of this script, never an input.
-#   R2  No undefined globals. The previous script used `MOD` in 6 places without
-#       ever assigning it; it only ran because `MOD` survived in an interactive
-#       .RData session. From a clean Rscript it crashed.
-#   R3  Caching is keyed to a hash of every parameter that affects the network.
-#       Change a parameter -> the cache misses -> it recomputes. The previous
-#       version returned a stale network after a parameter change.
-#   R4  Exports are explicit and named. No `mget(ls())` environment dumps.
-#   R5  cor() masking is undone by on.exit(), so an error cannot leave
-#       WGCNA::cor masking stats::cor in the session.
-#   R6  Every number printed in a comment is computed, never hardcoded.
-#
-# ---- References (methods) --------------------------------------------------
-#   Langfelder P, Horvath S. WGCNA: an R package for weighted correlation network
-#     analysis. BMC Bioinformatics 2008;9:559.
-#   Zhang B, Horvath S. A general framework for weighted gene co-expression
-#     network analysis. Stat Appl Genet Mol Biol 2005;4:Article 17.
-#   Langfelder P, Horvath S. Eigengene networks for studying the relationships
-#     between co-expression modules. BMC Syst Biol 2007;1:54.
-#   Langfelder P, Luo R, Oldham MC, Horvath S. Is my network module preserved and
-#     reproducible? PLoS Comput Biol 2011;7(1):e1001057.
-#   Langfelder P, Zhang B, Horvath S. Defining clusters from a hierarchical
-#     cluster tree: the Dynamic Tree Cut library. Bioinformatics 2008;24:719-720.
-#   Langfelder P, Horvath S. WGCNA package FAQ. (soft-power table is conditional
-#     on scale-free fit FAILING; gene filtering by variance is permitted,
-#     filtering by differential expression is not; >=15 samples, >=20 preferred)
-#   Yu G, et al. clusterProfiler 4.0. Innovation (Camb) 2021;2(3):100141.
-# =============================================================================
+# WGCNA: weighted gene co-expression network analysis, disease-module detection, and figures, in one script
 
 options(stringsAsFactors = FALSE)
 suppressMessages({
@@ -52,59 +8,19 @@ suppressMessages({
   library(scales); library(clusterProfiler); library(org.Hs.eg.db)
 })
 
-# =============================================================================
-# STEP 0 — CONFIGURATION.  Every tunable lives here and nowhere else.
-# =============================================================================
+# Step 0: configuration - every tunable lives here
 CFG <- list(
   seed              = 1234,   # global RNG seed
-  # --- GENE FILTER ----------------------------------------------------------
-  # 0 = NO variance filter (use every gene). The WGCNA FAQ permits mean/variance
-  # filtering, but Langfelder's own stated practice is NOT to filter on variance,
-  # and for THIS project a variance filter is actively harmful: any gene removed
-  # before the network can never enter a disease module, so it can never survive
-  # `disease-module n sex-DEG`. A 40% filter discarded 6,305 genes and with them
-  # 14.9% of female and 20.9% of male DEGs. Removing the filter eliminates an
-  # arbitrary threshold AND recovers those candidates.
+  # no variance filter: any gene removed pre-network can never enter a disease module
   var_quantile      = 0,
   drop_outliers     = TRUE,   # actually remove sample outliers (old script only printed them)
   outlier_sd        = 3,      # outlier cut = mean(merge height) + k*sd
   network_type      = "signed",
   tom_type          = "signed",
-  # --- CORRELATION ----------------------------------------------------------
-  # "pearson" or "bicor". We use PEARSON, with outlier robustness obtained at
-  # the SAMPLE level instead (10 outlying arrays removed in STEP 2, see below).
-  #
-  # The WGCNA FAQ recommends bicor + maxPOutliers = 0.05 for robustness against
-  # outlying OBSERVATIONS within a gene. We evaluated it and reverted, because
-  # bicor is iterative rather than closed-form (~3x slower) and, combined with
-  # the unfiltered 15,763-gene network, the TOM matrix multiply (O(n^3)) exceeded
-  # the available memory on this machine (16 GB; adjacency + TOM together need
-  # ~4 GB and the run entered swap). This is a computational constraint, stated
-  # openly, not a claim that Pearson is preferable.
-  #
-  # WHAT SUBSTITUTES FOR IT: outlier robustness is handled at the sample level.
-  # Ten outlying arrays were identified by hierarchical clustering and removed
-  # (STEP 2). That set is independently corroborated - 6 of the 10 are also
-  # among the 10 lowest-weighted arrays under limma's REML array quality weights
-  # (hypergeometric p = 8.5e-7), so the removal is not an arbitrary trim.
-  # Sample-level removal does not address within-gene outliers as bicor would;
-  # this is a stated limitation.
+  # pearson, with outlier robustness handled at the sample level (outliers dropped in STEP 2) rather than via bicor
   cor_type          = "pearson",
   max_p_outliers    = 0.05,   # retained; used only when cor_type = "bicor"
-  # --- SOFT POWER -----------------------------------------------------------
-  # "auto" = pickSoftThreshold estimate | "faq" = sample-size table | a number.
-  # WE USE 12, and the justification is CONNECTIVITY, not the FAQ precondition:
-  #   pickSoftThreshold returns the FIRST power clearing RsquaredCut, which here
-  #   is 6 (R^2=0.856). But at power 6 the network is far too dense - mean
-  #   connectivity 355, 24% of genes left unassigned (grey), and near-zero
-  #   pathway enrichment. The scale-free R^2 curve plateaus at ~0.888 from
-  #   power 9-12, where mean connectivity falls to 55. Power 12 sits at the
-  #   plateau with a well-conditioned connectivity, and coincides with the
-  #   WGCNA FAQ signed-network value for n>40. Both criteria agree.
-  #     power  6 : R^2 0.856, mean k 355   <- too dense
-  #     power 10 : R^2 0.888, mean k  92
-  #     power 12 : R^2 0.888, mean k  55   <- USED
-  #     power 14 : R^2 0.901, mean k  35
+  # soft power fixed at 12 for well-conditioned connectivity (see WGCNA_01_soft_threshold.csv for the R^2/connectivity tradeoff)
   power_mode        = 12,
   rsq_cut           = 0.85,   # scale-free R^2 target reported for the auto estimate
   max_block_size    = 20000,  # keep all genes in ONE block (default 5000 splits them)
@@ -125,12 +41,7 @@ set.seed(CFG$seed)
 proc <- "data/processed"; fig <- "results/figures"; tab <- "results/tables"
 for (d in c(proc, fig, tab)) dir.create(d, showWarnings = FALSE, recursive = TRUE)
 
-# Parameter hash -> cache key. Any change to a network-relevant parameter
-# produces a different key, so a stale network can never be silently reused.
-# The hash MUST cover the input data as well as the parameters. Hashing only
-# parameters leaves a hole: regenerate combined_train.rds without touching a
-# WGCNA parameter and the key is unchanged, so a network built on the OLD data
-# would be silently reused. A cheap data fingerprint closes that.
+# parameter + data fingerprint -> cache key, so a stale network is never silently reused
 .tmp_in <- readRDS(file.path("data/processed", "combined_train.rds"))
 data_fp <- paste(dim(.tmp_in$expr)[1], dim(.tmp_in$expr)[2],
                  sprintf("%.10g", sum(.tmp_in$expr)),
@@ -146,10 +57,7 @@ net_key <- substr(paste(
 key_hash <- sprintf("%08x", sum(utf8ToInt(net_key) * seq_len(nchar(net_key))))
 cache_of <- function(what) file.path(proc, sprintf("wgcna_%s_%s.rds", what, key_hash))
 
-# WGCNA takes the correlation two different ways: blockwiseModules wants
-# corType ("pearson"/"bicor"), while pickSoftThreshold and adjacency want a
-# FUNCTION NAME ("cor"/"bicor") plus its options. Map once, here, so the three
-# call sites can never drift apart.
+# map corType once to the function-name form used by pickSoftThreshold/adjacency
 COR_FNC  <- if (identical(CFG$cor_type, "bicor")) "bicor" else "cor"
 COR_OPTS <- if (identical(CFG$cor_type, "bicor"))
               list(maxPOutliers = CFG$max_p_outliers) else list(use = "p")
@@ -166,9 +74,7 @@ say("correlation          : %s (maxPOutliers = %.2f)", CFG$cor_type, CFG$max_p_o
 say("disease-module rule  : |cor(ME, %s)| >= %.2f  AND  p < %g",
     CFG$disease_trait, CFG$dm_min_abs_cor, CFG$dm_max_p)
 
-# =============================================================================
-# STEP 1 — LOAD the 70% training split (leakage-safe; holdout never seen here)
-# =============================================================================
+# Step 1: load the 70% training split (leakage-safe; holdout never seen here)
 hdr("STEP 1  LOAD DATA")
 o <- readRDS(file.path(proc, "combined_train.rds"))
 stopifnot(o$role == "combined_training_70pct")
@@ -180,9 +86,7 @@ say("expression : %d genes x %d samples", nrow(expr_all), ncol(expr_all))
 say("groups     : RA=%d  HC=%d", sum(meta_all$group == "RA"), sum(meta_all$group == "HC"))
 say("sex        : F=%d   M=%d",  sum(meta_all$sex == "F"),    sum(meta_all$sex == "M"))
 
-# =============================================================================
-# STEP 2 — QC:  goodSamplesGenes, then sample-outlier detection AND removal
-# =============================================================================
+# Step 2: QC - goodSamplesGenes, then sample-outlier detection and removal
 hdr("STEP 2  QUALITY CONTROL")
 datExpr0 <- t(expr_all)                              # WGCNA wants samples x genes
 gsg <- goodSamplesGenes(datExpr0, verbose = 0)
@@ -202,12 +106,7 @@ outlier_ids <- rownames(datExpr0)[!keep_samp]
 if (n_out > 0) say("  %s", paste(outlier_ids, collapse = ", "))
 if (CFG$drop_outliers && n_out > 0) datExpr0 <- datExpr0[keep_samp, , drop = FALSE]
 
-# =============================================================================
-# STEP 3 — GENE FILTER (variance).  FAQ permits mean/variance filtering.
-#   NOTE FOR THE THESIS: every gene removed here can NEVER enter a disease
-#   module, therefore can NEVER become a candidate in `disease-module n sex-DEG`.
-#   STEP 14 quantifies exactly how many sex-DEGs this filter costs you.
-# =============================================================================
+# Step 3: gene variance filter (STEP 14 quantifies sex-DEGs lost to it)
 hdr("STEP 3  GENE FILTER")
 gene_variance <- apply(datExpr0, 2, var)
 if (CFG$var_quantile <= 0) {
@@ -230,9 +129,7 @@ say("final matrix   : %d samples x %d genes", nrow(datExpr), ncol(datExpr))
 meta <- meta_all[rownames(datExpr), , drop = FALSE]
 stopifnot(identical(rownames(datExpr), meta$sample))
 
-# =============================================================================
-# STEP 4 — TRAIT MATRIX (binary indicators aligned to datExpr rows)
-# =============================================================================
+# Step 4: trait matrix (binary indicators aligned to datExpr rows)
 hdr("STEP 4  TRAIT MATRIX")
 traits <- data.frame(
   RA        = as.numeric(meta$group == "RA"),
@@ -248,11 +145,7 @@ traits <- data.frame(
 stopifnot(identical(rownames(traits), rownames(datExpr)))
 print(colSums(traits[, setdiff(names(traits), "Age")]))
 
-# =============================================================================
-# STEP 5 — SOFT-THRESHOLDING POWER
-#   FAQ: the sample-size table applies ONLY when the scale-free fit FAILS.
-#   We therefore take the data-driven estimate by default and REPORT both.
-# =============================================================================
+# Step 5: soft-thresholding power (data-driven estimate by default; FAQ table reported alongside)
 hdr("STEP 5  SOFT-THRESHOLDING POWER")
 enableWGCNAThreads()
 powers <- c(1:10, seq(12, 20, by = 2))
@@ -284,11 +177,7 @@ fwrite(data.table(power = fitI[, 1], signed_R2 = sfR2, slope = fitI[, 3],
                   mean_k = fitI[, 5], median_k = fitI[, 6], max_k = fitI[, 7]),
        file.path(tab, "WGCNA_01_soft_threshold.csv"))
 
-# =============================================================================
-# STEP 6 — NETWORK CONSTRUCTION + MODULE DETECTION
-#   WGCNA ships its own cor(); it must mask stats::cor for blockwiseModules.
-#   on.exit guarantees restoration even if the call errors (rule R5).
-# =============================================================================
+# Step 6: network construction + module detection (WGCNA::cor masking restored via on.exit)
 hdr("STEP 6  NETWORK CONSTRUCTION")
 build_net <- function(X, pw) {
   cor <- WGCNA::cor
@@ -318,16 +207,12 @@ say("modules detected: %d (plus grey = %d unassigned genes)",
     n_modules, if ("grey" %in% names(mod_sizes)) mod_sizes[["grey"]] else 0)
 print(mod_sizes)
 
-# =============================================================================
-# STEP 7 — MODULE EIGENGENES
-# =============================================================================
+# Step 7: module eigengenes
 hdr("STEP 7  MODULE EIGENGENES")
 MEs <- orderMEs(moduleEigengenes(datExpr, moduleColors)$eigengenes)
 say("eigengenes: %d modules x %d samples", ncol(MEs), nrow(MEs))
 
-# =============================================================================
-# STEP 8 — MODULE-TRAIT CORRELATION
-# =============================================================================
+# Step 8: module-trait correlation
 hdr("STEP 8  MODULE-TRAIT CORRELATION")
 nSamples <- nrow(datExpr)
 mtCor <- stats::cor(MEs, traits, use = "pairwise.complete.obs")
@@ -345,11 +230,7 @@ setorder(mt_tab, -cor_RA)
 fwrite(mt_tab, file.path(tab, "WGCNA_02_module_trait.csv"))
 print(mt_tab)
 
-# =============================================================================
-# STEP 9 — DISEASE MODULE SELECTION.  DATA-DRIVEN (rule R1).
-#   Colour names are recorded as OUTPUT. Nothing downstream refers to a colour
-#   literal, so a re-run that renames modules still selects the same biology.
-# =============================================================================
+# Step 9: disease module selection, data-driven by correlation with RA (not by colour name)
 hdr("STEP 9  DISEASE MODULE SELECTION (data-driven)")
 dm <- mt_tab[module != "grey" &
              abs(cor_RA) >= CFG$dm_min_abs_cor & p_RA < CFG$dm_max_p]
@@ -371,9 +252,7 @@ fwrite(data.table(gene = disease_genes,
                   module = moduleColors[disease_genes]),
        file.path(tab, "WGCNA_04_disease_module_genes.csv"))
 
-# =============================================================================
-# STEP 10 — kME (module membership) and GS (gene significance for RA)
-# =============================================================================
+# Step 10: kME (module membership) and GS (gene significance for RA)
 hdr("STEP 10  kME AND GENE SIGNIFICANCE")
 kME   <- signedKME(datExpr, MEs)
 GS_RA <- as.numeric(stats::cor(datExpr, traits[[CFG$disease_trait]],
@@ -390,9 +269,7 @@ fwrite(gene_tab, file.path(tab, "WGCNA_05_gene_module_assignment.csv"))
 say("gene table: %d genes | in a disease module: %d",
     nrow(gene_tab), sum(gene_tab$is_disease_module))
 
-# =============================================================================
-# STEP 11 — HUB GENES within each disease module (no colour literals)
-# =============================================================================
+# Step 11: hub genes within each disease module
 hdr("STEP 11  HUB GENES PER DISEASE MODULE")
 hub_list <- rbindlist(lapply(disease_modules, function(mc) {
   g <- names(moduleColors)[moduleColors == mc]
@@ -412,11 +289,7 @@ fwrite(hub_list, file.path(tab, "WGCNA_06_disease_module_hubs.csv"))
 fwrite(hub_list[is_hub == TRUE][order(module, -kME)],
        file.path(tab, "WGCNA_07_hub_genes_only.csv"))
 
-# =============================================================================
-# STEP 12 — FUNCTIONAL ENRICHMENT of the disease-module genes
-#   Universe = all genes in the network (the correct background: those are the
-#   genes that COULD have been assigned to a module).
-# =============================================================================
+# Step 12: functional enrichment of the disease-module genes (universe = all network genes)
 hdr("STEP 12  ENRICHMENT OF DISEASE-MODULE GENES")
 uni <- suppressWarnings(bitr(colnames(datExpr), "SYMBOL", "ENTREZID", org.Hs.eg.db))$ENTREZID
 dg  <- suppressWarnings(bitr(disease_genes,     "SYMBOL", "ENTREZID", org.Hs.eg.db))$ENTREZID
@@ -437,11 +310,7 @@ say("GO terms (p.adj<0.05)   : %d%s", nrow(go_dt),
 say("KEGG pathways (p.adj<.05): %d%s", nrow(kg_dt),
     if (nrow(kg_dt)) sprintf("  top: %s", kg_dt$Description[1]) else "")
 
-# =============================================================================
-# STEP 13 — SEX-STRATIFIED NETWORKS + MODULE PRESERVATION (Female -> Male)
-#   This is the sample-size-CONTROLLED test of whether module structure differs
-#   between sexes. It is a network statistic, not a per-gene interaction test.
-# =============================================================================
+# Step 13: sex-stratified networks + module preservation (Female -> Male)
 hdr("STEP 13  SEX NETWORKS AND MODULE PRESERVATION")
 fs <- rownames(datExpr)[meta$sex == "F"]; ms <- rownames(datExpr)[meta$sex == "M"]
 say("female n=%d | male n=%d  (WGCNA FAQ minimum 15, preferred >=20)",
@@ -469,11 +338,7 @@ if (CFG$do_preservation) {
     pres <- readRDS(pres_file); say("loaded cached preservation")
   } else {
     say("modulePreservation: %d permutations (slow) ...", CFG$pres_permutations)
-    # Reference COLOURS are the COMBINED-network modules, not the female-network
-    # modules. Using colF would test female-network modules, whose membership is
-    # NOT the same gene set as the combined-network disease modules even though
-    # the colour names coincide - so it would not answer "are the green/brown
-    # DISEASE modules preserved between sexes", which is the question we need.
+    # reference colours are the combined-network modules, not the female-network modules
     pres <- modulePreservation(
       list(Female = list(data = eF[, kp, drop = FALSE]),
            Male   = list(data = eM[, kp, drop = FALSE])),
@@ -491,9 +356,7 @@ if (CFG$do_preservation) {
   print(pres_dt)
 }
 
-# =============================================================================
-# STEP 14 — *** THE DELIVERABLE ***  disease-module  n  sex-stratified DEG
-# =============================================================================
+# Step 14: the deliverable - disease-module genes n sex-stratified DEGs
 hdr("STEP 14  DISEASE-MODULE  n  SEX-DEG   (the candidate step)")
 deg_file <- file.path(proc, "dge_results.rds")
 cand <- list()
@@ -505,12 +368,11 @@ if (!file.exists(deg_file)) {
   ov <- rbindlist(lapply(c("Female", "Male"), function(sx) {
     sig  <- as.data.table(D$res[[sx]])[sig == TRUE]
     hit  <- intersect(sig$gene, disease_genes)
-    # how many sex-DEGs were lost BEFORE the network, by the variance filter?
+    # sex-DEGs lost before the network, to the variance filter
     lost <- intersect(sig$gene, genes_dropped)
     cand[[sx]] <<- merge(sig[gene %in% hit, .(gene, logFC, adj.P.Val)],
                          gene_tab[, .(gene, module, GS_RA, kME_own)], by = "gene")
-    # NB: setorder() takes column names only - it cannot evaluate abs().
-    # Use i-order instead, which does evaluate expressions.
+    # i-order (not setorder) since it must evaluate abs()
     cand[[sx]] <<- cand[[sx]][order(-abs(logFC))]
     fwrite(cand[[sx]], file.path(tab, sprintf("WGCNA_11_candidates_%s.csv", tolower(sx))))
     data.table(sex = sx, n_sigDEG = nrow(sig), n_disease_genes = length(disease_genes),
@@ -526,9 +388,7 @@ if (!file.exists(deg_file)) {
       length(intersect(cand$Female$gene, cand$Male$gene)))
 }
 
-# =============================================================================
-# STEP 15 — EXPLICIT, NAMED EXPORT (rule R4).  No mget(ls()).
-# =============================================================================
+# Step 15: explicit, named export
 hdr("STEP 15  EXPORT")
 saveRDS(list(
   config = CFG, cache_key = key_hash, soft_power = soft_power,
@@ -543,9 +403,7 @@ saveRDS(list(
   file.path(proc, "wgcna_results.rds"))
 say("wrote data/processed/wgcna_results.rds")
 
-# =============================================================================
-# FIGURES  (all inline - no separate figure script, no list2env)
-# =============================================================================
+# Figures (all inline, no separate figure script)
 hdr("FIGURES")
 pngf <- function(n, w = 1100, h = 800) png(file.path(fig, paste0(n, ".png")),
                                            width = w, height = h, res = 110)

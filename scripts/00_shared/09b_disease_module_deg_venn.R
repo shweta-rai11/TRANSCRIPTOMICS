@@ -1,46 +1,5 @@
 #!/usr/bin/env Rscript
-# =============================================================================
-# 09b_disease_module_deg_venn.R
-# -----------------------------------------------------------------------------
-# Directional Venn diagrams: for EACH disease module, its overlap with the
-# UP-in-RA and DOWN-in-RA DEGs, within each sex.
-#
-# ***  RENAMED FROM 09_greenmodule_deg_venn.R  ***
-#   The old script was written around `gt[module == "green"]` with the header
-#   "the GREEN module (cor with RA = +0.57)". That is not a valid identifier.
-#   WGCNA assigns colour names by module SIZE RANK (labels2colors): the largest
-#   module becomes turquoise, the 2nd blue, 3rd brown, 4th yellow, 5th green.
-#   Change the gene filter, the soft power or the sample set and the SAME
-#   biology is renamed. That is exactly why the project README says the disease
-#   modules are "green + brown" while the previous script hardcoded
-#   "yellow + blue" - both were snapshots of different runs, and a script keyed
-#   to a colour string silently returns ZERO genes when the colour moves.
-#
-#   This version takes the disease modules from the analysis object and loops
-#   over whatever they turn out to be. No colour literal appears anywhere.
-#
-# DIRECTIONAL LOGIC
-#   A module with cor(ME, RA) > 0 is UP in RA, so its biologically consistent
-#   overlap is with the UP-in-RA DEGs; the DOWN overlap is the inconsistent one
-#   and should be small. For a module with cor(ME, RA) < 0 the expectation
-#   reverses. The script labels which overlap is the CONSISTENT one for each
-#   module rather than assuming a direction.
-#
-# INTERPRETATION LIMIT
-#   Female and Male panels are separate within-sex contrasts. A larger overlap
-#   in one sex is not evidence of a sex difference - see Gelman & Stern (2006).
-#
-# Inputs : data/processed/wgcna_results.rds  (moduleColors, disease_modules, kME)
-#          data/processed/dge_results.rds    (res$Female / res$Male; sig, dir)
-# Outputs: results/figures/fig_diseasemod_venn_{module}_{sex}_{up,down}.png
-#          results/tables/diseasemod_DEG_intersection_{sex}.csv
-#          results/tables/diseasemod_DEG_direction_summary.csv
-#
-# ---- References -------------------------------------------------------------
-#   Langfelder P, Horvath S. WGCNA. BMC Bioinformatics 2008;9:559.
-#   Ritchie ME, et al. limma. Nucleic Acids Res 2015;43(7):e47.
-#   Gelman A, Stern H. Am Stat 2006;60(4):328-331.
-# =============================================================================
+# Directional Venn diagrams: each disease module's overlap with UP-in-RA and DOWN-in-RA DEGs, per sex. Disease modules read from the analysis object, never hardcoded by colour.
 suppressMessages({
   library(data.table); library(ggVennDiagram); library(ggplot2)
 })
@@ -67,10 +26,7 @@ for (m in dis_mods)
       m, gt[module == m, .N], mt[module == m, cor_RA],
       ifelse(mt[module == m, cor_RA] > 0, "YES", "NO (module is DOWN in RA)"))
 
-# ggVennDiagram centres each set-name label on a fixed anchor point, so a long
-# two-line label (e.g. "yellow module\n(cor=+0.56)") extends into the ellipse
-# it names. Right/left-justifying away from the anchor keeps the label from
-# crossing the ellipse boundary.
+# nudge long two-line set-name labels away from the anchor so they don't cross into the ellipse
 fix_label_overlap <- function(p) {
   is_setname_layer <- vapply(p$layers, function(l)
     inherits(l$geom, "GeomText") && "name" %in% names(l$data), logical(1))
@@ -100,10 +56,7 @@ save_venn <- function(sets, file, title, hi) {
   ggsave(file.path(fig, file), p, width = 6.6, height = 5.4, dpi = 300)
 }
 
-# fill colour per module: yellow module gets yellow-family shades (matching
-# its WGCNA module colour) instead of the generic up/down red-blue, so the
-# module identity reads directly off the figure; direction is kept legible
-# via a dark (up) / light (down) shade of the same hue.
+# fill colour per module: matches the module's WGCNA colour, dark=up/light=down
 venn_hi <- function(m, dirn) {
   if (m == "yellow") {
     if (dirn == "up") "#F9A825" else "#FFF59D"

@@ -1,52 +1,5 @@
 #!/usr/bin/env Rscript
-# =============================================================================
-# load_GSE15573.R  —  SHARED LOADER for the external blood validation cohort,
-# with VERIFIED sex labels.
-#
-# WHY THIS FILE EXISTS
-#   GSE15573 is the external blood validation cohort for a SEX-STRATIFIED
-#   biomarker study, and two of its 33 GEO sex labels are wrong.
-#
-#   Verification: XIST (X-inactive specific transcript, high in females) and
-#   Y-linked genes were checked against the submitted `gender:ch1` label. On
-#   GPL6102, RPS4Y1 separates the sexes cleanly and unambiguously - 24 samples
-#   at 6.87-7.25 and 9 samples at 11.54-12.32, with nothing in between:
-#
-#       sample      GEO label   RPS4Y1   XIST    expression-based call
-#       GSM389714   F           11.94    8.26    MALE
-#       GSM389731   M            7.23    8.78    FEMALE
-#
-#   Both sit unambiguously in the opposite cluster. The pattern - one F that is
-#   male and one M that is female - is the signature of a LABEL SWAP (a sample
-#   mix-up, or a one-row offset in the submitted metadata table).
-#
-#   NOTE ON MARKER CHOICE: do NOT average a panel of Y genes on this platform.
-#   On GPL6102 the F-vs-M deltas are RPS4Y1 +4.18, KDM5D +1.54, but DDX3Y +0.03,
-#   UTY +0.07, USP9Y +0.01 - three dead probes. Averaging them dilutes a clean
-#   signal into noise and makes the cohort look uncheckable. Use RPS4Y1.
-#
-# WHY IT MATTERS
-#   The male stratum of this cohort is n = 9. One mislabelled sample is 11% of
-#   it, and it also puts a male into the female stratum. Any sex-stratified
-#   validation AUC computed on the raw GEO labels is computed on contaminated
-#   strata.
-#
-# WHAT THIS DOES NOT DO
-#   It does not modify data/raw/GSE15573_raw.rds. The raw file stays exactly as
-#   downloaded from GEO; the correction is applied on load and is auditable.
-#
-# USAGE
-#   source("scripts/00_shared/load_GSE15573.R")
-#   g <- load_gse15573()          # list(eset, meta, corrections)
-#   g$meta$sex                    # verified sex
-#   g$meta$sex_geo                # original GEO label
-#   g$meta$sex_corrected          # TRUE where they disagree
-#
-# ---- References -------------------------------------------------------------
-#   Toro-Dominguez D, et al. Sex-related differences in gene expression.  (sex QC rationale)
-#   Staedtler F, et al. Robust sex determination from expression data.
-#   Davis S, Meltzer PS. GEOquery. Bioinformatics 2007;23(14):1846-1847.
-# =============================================================================
+# Shared loader for the external blood validation cohort (GSE15573), with 2 of 33 GEO sex labels corrected via RPS4Y1/XIST expression verification.
 suppressMessages({ library(Biobase) })
 
 # Samples whose GEO sex label is contradicted by sex-chromosome expression.
@@ -76,7 +29,7 @@ load_gse15573 <- function(rds = "data/raw/GSE15573_raw.rds",
   meta$sex <- meta$sex_geo
   meta$sex_corrected <- FALSE
 
-  # ---- optional re-verification from the expression data itself -------------
+  # optional re-verification from the expression data itself
   if (verify) {
     fd  <- fData(e)
     sym <- as.character(fd[[grep("^gene[ ._]?symbol$", colnames(fd),
@@ -102,7 +55,7 @@ load_gse15573 <- function(rds = "data/raw/GSE15573_raw.rds",
     }
   }
 
-  # ---- apply the curated correction ----------------------------------------
+  # apply the curated correction
   if (apply_correction) {
     k <- match(GSE15573_SEX_CORRECTIONS$sample, meta$sample)
     ok <- !is.na(k)

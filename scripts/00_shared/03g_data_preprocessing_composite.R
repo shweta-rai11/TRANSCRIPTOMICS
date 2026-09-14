@@ -1,18 +1,5 @@
 #!/usr/bin/env Rscript
-# =============================================================================
-# 03g_data_preprocessing_composite.R -- assemble the data-preprocessing summary
-# figure (A-D) from panels already saved by earlier 03_* scripts:
-#   A. fig_combine_two_datasets.png       <- 03_normalize_batch_figure.R
-#   B. fig_combine_pca_combat.png         <- 03_normalize_batch_figure.R
-#   C. fig_dataset_gene_overlap_venn.png  <- 03_dataset_gene_overlap_venn.R
-#   D. fig_train_test_split_bar.png       <- 03f_train_test_split_barchart.R
-# Panels are read as images and composited with cowplot/magick (B and C are
-# grid/eulerr graphics, so image-compositing is the robust route).
-#
-# Output: results/figures/fig_data_preprocessing_composite.{png,pdf}
-#         results/DataPreprocessing.png (copy, for direct sharing)
-# Size  : 10 x 9.5 in @ 300 dpi -> 3000 x 2850 px
-# =============================================================================
+# Assembles the data-preprocessing summary figure (A-D) from panels saved by earlier 03_* scripts
 suppressMessages({library(cowplot); library(magick)})
 fig <- "results/figures"
 
@@ -22,10 +9,7 @@ P <- function(f) {
   ggdraw() + draw_image(p)
 }
 
-# Each source panel already prints its own text (e.g. "GSE93272") right at the
-# top-left corner, which collides with a plot_grid panel label placed there.
-# Pad a blank strip above each panel first, so the A)/B)/C)/D) label lands on
-# blank space instead of on top of the panel's own title text.
+# Pad a blank strip above each panel so the A)/B)/C)/D) label doesn't collide with panel titles
 pad_top <- function(p, frac = 0.07) plot_grid(NULL, p, ncol = 1, rel_heights = c(frac, 1 - frac))
 
 A <- pad_top(P("fig_combine_two_datasets.png"))
@@ -45,7 +29,4 @@ ggsave2(file.path(fig, "fig_data_preprocessing_composite.png"), composite,
 ggsave2(file.path(fig, "fig_data_preprocessing_composite.pdf"), composite,
         width = 10, height = 9.5, bg = "white")
 
-file.copy(file.path(fig, "fig_data_preprocessing_composite.png"),
-          "results/DataPreprocessing.png", overwrite = TRUE)
-
-cat("Wrote fig_data_preprocessing_composite.{png,pdf} and results/DataPreprocessing.png\n")
+cat("Wrote fig_data_preprocessing_composite.{png,pdf}\n")

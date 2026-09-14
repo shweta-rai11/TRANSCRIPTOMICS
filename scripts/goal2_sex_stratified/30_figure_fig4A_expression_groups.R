@@ -1,17 +1,5 @@
 #!/usr/bin/env Rscript
-# =============================================================================
-# 18j_gene_expression_groups.R
-# -----------------------------------------------------------------------------
-# Per-gene expression by group (style of reference Fig 4A): for each of the 6 MR
-# consensus genes, jittered expression across the four groups
-#   Female Control (HC) | Female RA | Male Control (HC) | Male RA
-# with the median +/- 95% CI (bootstrap) overlaid, and Wilcoxon significance
-# stars for RA vs HC WITHIN each sex. One faceted figure (2 female-panel genes +
-# 4 male-panel genes), free y per gene. Training cohort (combined_train.rds).
-#   ns p>0.05  *<=0.05  **<=0.01  ***<=0.001  ****<=0.0001
-# Outputs: results/figures/fig_mr_gene_expression_groups.png/pdf
-#          results/tables/mr_gene_group_stats.csv
-# =============================================================================
+# Fig 4A: per-gene expression by group (sex x RA/HC) for the MR consensus genes, with bootstrap CI and Wilcoxon significance stars.
 suppressMessages({library(data.table); library(ggplot2)})
 set.seed(1234)
 proc <- "data/processed"; tab <- "results/tables"; fig <- "results/figures/new"

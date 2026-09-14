@@ -1,15 +1,5 @@
 #!/usr/bin/env Rscript
-# =============================================================================
-# new/18o_diagnostic_model_validation.R  -- reference Fig 8 analog, per sex.
-# Clinical diagnostic-model validation of the sex-stratified MR consensus panels:
-#   (A) NOMOGRAM      : logistic (rms::lrm) points per gene -> total -> Risk(RA)
-#   (B) CALIBRATION   : apparent + 200-rep bootstrap bias-corrected (rms::calibrate)
-#   (C) DECISION CURVE: net benefit of the panel vs treat-all vs treat-none
-#   (D) CLINICAL IMPACT: per 1000, N flagged high-risk and N high-risk WITH RA
-# Training cohort (combined_train.rds). Female panel 7 genes, Male 4 genes.
-# Output: results/figures/new/fig_diag_validation_{female,male}.png/pdf
-#         results/tables/diag_dca_{female,male}.csv
-# =============================================================================
+# Clinical diagnostic-model validation of the sex-stratified MR consensus panels: nomogram, calibration, decision curve, and clinical impact, per sex.
 suppressMessages({library(rms); library(data.table); library(magick)})
 proc <- "data/processed"; figN <- "results/figures/new"; tabN <- "results/tables"
 dir.create(figN, showWarnings = FALSE, recursive = TRUE)

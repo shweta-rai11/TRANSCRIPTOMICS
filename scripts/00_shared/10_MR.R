@@ -1,82 +1,5 @@
 #!/usr/bin/env Rscript
-# =============================================================================
-# 10_MR.R  —  Two-sample Mendelian randomisation, END TO END in ONE script.
-#
-# SUPERSEDES scripts 10_mr_extract_instruments.R, 10b_mr_freshextract_primary.R
-# and 11_mr_primary_and_FSinput.R. Those three were one workflow that had been
-# broken into pieces by two successive failures:
-#
-#   10   extracted instruments (reusing a cache from ANOTHER project directory)
-#        then fetched the whole outcome in ONE query -> that query timed out at
-#        2,773 SNPs, so the script never reached the MR.
-#   11   was written as a RESUME for 10: it skips extraction entirely, assumes
-#        the instruments are already cached, and replaces the single outcome
-#        query with 250-SNP chunks + LD proxies + retries. It cannot bootstrap
-#        from nothing.
-#   10b  was a clean rewrite doing both halves with no cache dependency, and
-#        added the within-stratum FDR. It crashed on an unqualified slice().
-#
-# THIS SCRIPT is all of it, in order, with every one of those defects fixed.
-#
-# ---- DEFECTS CARRIED BY THE OLD SCRIPTS, AND THE FIX HERE -------------------
-#  D1  NAMESPACE COLLISION (fatal in 10 and 10b).
-#      org.Hs.eg.db -> AnnotationDbi -> IRanges is attached AFTER dplyr and
-#      masks dplyr::slice. Unqualified slice() dispatched to IRanges::slice and
-#      died with "Rle of type 'list' is not supported" AFTER all the MR had
-#      been computed. Every dplyr verb here is namespace-qualified.
-#  D2  CROSS-PROJECT CACHE (10). Script 10 read MR29_candidate_instruments.rds
-#      from a different project tree, mixing provenance. The cache here is
-#      written by THIS script, into THIS project, keyed by gene.
-#  D3  UNCHUNKED OUTCOME FETCH (10). Replaced by 250-SNP chunks with proxies
-#      and 3 retries.
-#  D4  EMPTY-CACHE CRASH. `cached[gene %in% have]` errors on an empty
-#      data.table ("Object 'gene' not found amongst []"). Guarded here.
-#  D5  POOLED FDR (10 and 11). Both corrected across the union of both sexes.
-#      In a sex-stratified design the denominator must be the genes tested IN
-#      THAT STRATUM. Computed per stratum here; the pooled value is retained
-#      only as a legacy column.
-#  D6  FS_input BUILT FROM THE NOMINAL SCREEN. p<0.05 returned 113 female /
-#      115 male genes against ~74.5 / ~74.7 expected false positives - about
-#      two thirds noise - and that list was feeding feature selection.
-#      FS_input is the FDR-surviving set.
-#
-# ---- DESIGN ----------------------------------------------------------------
-#   Exposure : eQTLGen whole-blood eQTL, eqtl-a-<ENSG>, p<5e-8, LD-clumped
-#              (r2<0.001, 10,000kb - TwoSampleMR defaults), then RESTRICTED TO CIS
-#              (same chromosome, within 1Mb of the gene body, GRCh37) - see D8.
-#              F = (beta/se)^2 >= 10 is a verification, not a filter: it is
-#              implied by p<5e-8 (min F = 29.7) and removes nothing.
-#   Outcome  : Okada 2014 European RA GWAS, ieu-a-832.
-#   Estimator: >=3 SNPs -> IVW + MR-Egger + weighted median
-#              2 SNPs   -> IVW
-#              1 SNP    -> Wald ratio
-#              primary ordered IVW > Wald > weighted median > MR-Egger.
-#   Sensitivity: Cochran's Q and MR-Egger intercept where >=3 instruments.
-#
-#   NOTE ON SEX. Both eQTLGen and Okada are SEX-COMBINED, and a survey of all
-#   37 RA datasets in OpenGWAS confirms no sex-stratified RA GWAS exists. The
-#   MR estimate for a gene is therefore IDENTICAL in the female and male
-#   outputs; the two differ only in which genes appear and in the FDR
-#   denominator. This is sex-stratified DISCOVERY followed by sex-combined
-#   CAUSAL VALIDATION. No sex-specific causal claim is supported.
-#
-#   in : results/tables/candidates_{female,male}_disease.csv
-#   out: data/processed/new/MR_instruments.rds
-#        data/processed/new/MR_primary_objects.rds
-#        results/tables/FS_input_{female,male}.csv          (FDR-surviving)
-#        results/tables/MR_causal_FDR_{female,male}.csv
-#        results/tables/MR_{sex}_TABLE1-4.csv
-#        results/tables/MR_{sex}_primary_okada.csv
-#        results/tables/MR_{sex}_all_tables.xlsx
-#
-# ---- References -------------------------------------------------------------
-#   Vosa U, et al. Nat Genet 2021;53:1300-1310.           (eQTLGen)
-#   Okada Y, et al. Nature 2014;506:376-381.              (RA GWAS)
-#   Burgess S, et al. Genet Epidemiol 2013;37:658-665.    (IVW)
-#   Bowden J, et al. Int J Epidemiol 2015;44:512-525.     (MR-Egger)
-#   Bowden J, et al. Genet Epidemiol 2016;40:304-314.     (weighted median)
-#   Benjamini Y, Hochberg Y. J R Stat Soc B 1995;57:289-300.
-# =============================================================================
+# Two-sample Mendelian randomisation, end to end: cis-eQTL instruments (eQTLGen) -> Okada 2014 RA GWAS outcome, per-sex FDR, FS_input. Supersedes the old 10/10b/11 script split.
 suppressMessages({
   library(TwoSampleMR); library(dplyr); library(data.table)
   library(org.Hs.eg.db); library(AnnotationDbi); library(writexl)
@@ -84,9 +7,7 @@ suppressMessages({
 })
 set.seed(2024)
 
-# =============================================================================
-# STEP 0 — CONFIGURATION
-# =============================================================================
+# Step 0: configuration
 CFG <- list(
   outcome        = "ieu-a-832",   # Okada 2014 EUR RA
   eqtl_p         = 5e-8,          # instrument selection threshold
@@ -99,10 +20,7 @@ CFG <- list(
   fdr_cut        = 0.05,
   fresh_extract  = FALSE          # TRUE = ignore cache, re-extract every gene
 )
-# NOTE ON min_F. F = (beta/se)^2 = Z^2. At p < 5e-8, |Z| >= 5.4513, so F >= 29.72
-# for EVERY instrument by construction. This filter removed 0 SNPs and cannot
-# remove any. It is retained as a VERIFICATION that instrument strength exceeds
-# the conventional threshold, not as a selection step. Report it as such.
+# min_F is a non-binding verification: p<5e-8 already implies F>=29.7, so it removes nothing
 
 proc <- "data/processed/new"; tab <- "results/tables"
 dir.create(proc, showWarnings = FALSE, recursive = TRUE)
@@ -118,9 +36,7 @@ say("outcome chunking  : %d SNPs/query, proxies on, %d retries",
     CFG$chunk_size, CFG$retries)
 say("fresh extraction  : %s", CFG$fresh_extract)
 
-# =============================================================================
-# STEP 1 — LOAD CANDIDATE GENES
-# =============================================================================
+# Step 1: load candidate genes
 hdr("STEP 1  CANDIDATE GENES")
 fem <- fread(file.path(tab, "candidates_female_disease.csv"))$gene
 mal <- fread(file.path(tab, "candidates_male_disease.csv"))$gene
@@ -128,12 +44,7 @@ allg <- union(fem, mal)
 say("female %d | male %d | union %d (MR is run ONCE on the union)",
     length(fem), length(mal), length(allg))
 
-# =============================================================================
-# STEP 2 — INSTRUMENTS (cis-eQTL exposure), with resume
-#   Instruments are a property of the GENE, not of the candidate list, so a
-#   cache written by this script is a legitimate reuse (cf. D2). Genes that
-#   return nothing are recorded too, so they are not re-queried every run.
-# =============================================================================
+# Step 2: instrument extraction (cis-eQTL exposure), cached and resumable per gene
 hdr("STEP 2  INSTRUMENT EXTRACTION")
 map <- suppressMessages(AnnotationDbi::select(org.Hs.eg.db, keys = allg,
         keytype = "SYMBOL", columns = "ENSEMBL"))
@@ -173,13 +84,7 @@ for (i in seq_along(need)) {
     say("  ...%d/%d queried, %d with instruments", i, length(need), length(found))
 }
 
-# D7 fix (2026-07-28). The cache must ACCUMULATE, never shrink. Previously the
-# saved object was filtered to `allg` first, so running the script with a
-# smaller candidate list silently discarded instruments for every gene outside
-# it - a later run with the original list then had to re-query them (observed:
-# the cache fell from 1,980 genes to 1,400). Instruments are a property of the
-# GENE, so anything ever extracted is kept; only the ANALYSIS object is
-# subset to the current candidate set.
+# cache accumulates across all genes ever queried; only the analysis object is subset to the current candidate set
 cache_all <- rbindlist(c(if (nrow(cached_inst)) list(cached_inst) else NULL,
                          inst_list), fill = TRUE)
 if (nrow(cache_all)) cache_all <- unique(cache_all, by = c("gene", "SNP"))
@@ -193,25 +98,7 @@ inst[, Fstat := (beta.exposure / se.exposure)^2]
 inst <- inst[Fstat >= CFG$min_F][gene %in% allg]
 say("instruments before cis filter: %d SNPs / %d genes", nrow(inst), uniqueN(inst$gene))
 
-# ---------------------------------------------------------------------------
-# D8  CIS FILTER (added 2026-07-28).
-#   The design has always claimed "cis-eQTL" instruments, but NOTHING enforced
-#   it: extract_instruments() returns whatever OpenGWAS holds for eqtl-a-<ENSG>,
-#   and eQTLGen's datasets include TRANS associations. 996 of 4,932 instruments
-#   (20%) were on a DIFFERENT CHROMOSOME from the gene they instrumented.
-#
-#   The two largest effect estimates in the whole analysis came from trans
-#   instruments sitting on the two strongest RA loci in the genome:
-#     HNRNPM (chr19) instrumented by chr6:32,431,962  -> MHC class II, OR 287.3
-#     FOXP3  (chrX)  instrumented by chr1:114,303,808 -> PTPN22 locus,  OR 263.9
-#   Both are horizontal pleiotropy by construction: the variant reaches RA
-#   through HLA-DRB1 / PTPN22, not through the gene's expression. The exclusion
-#   restriction is VIOLATED, not merely untested.
-#
-#   Gene coordinates come from EnsDb.Hsapiens.v75 (Ensembl 75 = GRCh37), which
-#   MATCHES the build of the eQTLGen/OpenGWAS SNP positions. Do not substitute a
-#   GRCh38 annotation here - the coordinates would not be comparable.
-# ---------------------------------------------------------------------------
+# cis filter: restrict instruments to same-chromosome, within cis_window of the gene body (GRCh37, via EnsDb.Hsapiens.v75), excluding trans associations
 inst[, chr.exposure := as.character(chr.exposure)]
 gr <- ensembldb::genes(EnsDb.Hsapiens.v75,
                        filter = AnnotationFilter::GeneNameFilter(unique(inst$gene)))
@@ -253,9 +140,7 @@ say("  %d of %d candidate genes have no usable cis instrument",
     length(allg) - uniqueN(inst$gene), length(allg))
 stopifnot(nrow(inst) > 0)
 
-# =============================================================================
-# STEP 3 — OUTCOME (RA GWAS), chunked with proxies and retries  (D3)
-# =============================================================================
+# Step 3: outcome (RA GWAS) extraction, chunked with proxies and retries
 hdr("STEP 3  OUTCOME EXTRACTION")
 snps <- unique(inst$SNP)
 chunks <- split(snps, ceiling(seq_along(snps) / CFG$chunk_size))
@@ -277,31 +162,18 @@ for (i in seq_along(chunks)) {
 out <- as.data.frame(rbindlist(out_list, fill = TRUE))
 say("outcome SNPs retrieved: %d of %d", nrow(out), length(snps))
 
-# =============================================================================
-# STEP 4 — HARMONISE
-#   action = 2 infers strand for palindromic SNPs from allele frequency and
-#   drops those that remain ambiguous.
-# =============================================================================
+# Step 4: harmonise (action=2 infers strand for palindromic SNPs, drops ambiguous ones)
 hdr("STEP 4  HARMONISATION")
 dat <- harmonise_data(as.data.frame(inst), out, action = 2)
 
-# D9 fix (2026-07-28). Gene labels were previously re-attached with
-#   dat$gene <- inst$gene[match(dat$SNP, inst$SNP)]
-# match() returns the FIRST hit, so any SNP instrumenting more than one gene had
-# ALL of its harmonised rows relabelled with whichever gene appeared first in
-# `inst` - silently moving instruments between genes. Before the cis filter this
-# affected 163 SNPs (one instrumented 83 genes); after it, 24 SNPs / 50 rows.
-# The exposure dataset id (eqtl-a-<ENSG>) is what actually identifies the gene,
-# so match on the (SNP, id.exposure) PAIR.
+# match on (SNP, id.exposure) pair, not SNP alone, so a multi-gene SNP isn't mislabelled
 dat$gene <- inst$gene[match(paste(dat$SNP, dat$id.exposure),
                             paste(inst$SNP, inst$id.exposure))]
 stopifnot(!any(is.na(dat$gene)))
 say("harmonised rows: %d | genes: %d | mr_keep: %d",
     nrow(dat), length(unique(dat$gene)), sum(dat$mr_keep))
 
-# =============================================================================
-# STEP 5 — MR PER GENE  (+ STEP 6 sensitivity, computed in the same pass)
-# =============================================================================
+# Step 5: MR per gene (STEP 6 sensitivity computed in the same pass)
 hdr("STEP 5  MR ESTIMATION")
 res <- list(); het <- list(); pleio <- list()
 genes <- unique(dat$gene)
@@ -324,9 +196,7 @@ stopifnot(nrow(res) > 0)
 res_or <- as.data.table(generate_odds_ratios(res))
 say("MR completed for %d genes", uniqueN(res$gene))
 
-# D1 fix: EVERY dplyr verb namespace-qualified. IRanges::slice masks
-# dplyr::slice once org.Hs.eg.db is attached, and the failure is silent until
-# it kills the run after all the MR is done.
+# every dplyr verb namespace-qualified: IRanges::slice masks dplyr::slice once org.Hs.eg.db is attached
 primary <- res %>%
   dplyr::group_by(gene) %>%
   dplyr::arrange(factor(method, levels = c("Inverse variance weighted",
@@ -341,9 +211,7 @@ primary[, FDR_pooled := p.adjust(pval, "BH")]     # legacy, NOT reported (D5)
 primary[, risk := ifelse(pval >= 0.05, "ns",
                   ifelse(OR > 1, "risk (OR>1)", "protective (OR<1)"))]
 
-# D8: carry the MHC flag and the instrument count through to every result table,
-# so no estimate is ever read without knowing (a) whether it sits in the MHC and
-# (b) whether any pleiotropy assessment was possible for it at all.
+# carry the MHC flag and instrument count through to every result table
 gene_flags <- inst[, .(MHC_gene = any(MHC), instrument_chr = chr.exposure[1]), by = gene]
 primary <- merge(primary, gene_flags, by = "gene", all.x = TRUE)
 primary[, sensitivity_testable := nSNP >= 3]
@@ -364,9 +232,7 @@ saveRDS(list(primary = primary, res_or = res_or, het = het, pleio = pleio,
              inst = inst, dat = as.data.frame(dat)),
         file.path(proc, "MR_primary_objects.rds"))
 
-# =============================================================================
-# STEP 7 — PER-SEX OUTPUT, within-stratum FDR (D5), FS_input = FDR set (D6)
-# =============================================================================
+# Step 7: per-sex output tables, within-stratum FDR, FS_input = FDR-surviving set
 hdr("STEP 7  PER-SEX TABLES")
 emit <- function(sx, sex_genes) {
   pr  <- copy(primary[gene %in% sex_genes])
@@ -375,7 +241,7 @@ emit <- function(sx, sex_genes) {
   ht  <- if (nrow(het))   as.data.table(het)[gene %in% sex_genes]   else data.table()
   pl  <- if (nrow(pleio)) as.data.table(pleio)[gene %in% sex_genes] else data.table()
 
-  # D5: correction denominator = genes tested IN THIS STRATUM
+  # correction denominator = genes tested in this stratum
   pr[, FDR_stratum := p.adjust(pval, "BH")]
   pr[, risk_fdr := ifelse(FDR_stratum >= CFG$fdr_cut, "ns",
                    ifelse(OR > 1, "risk (OR>1)", "protective (OR<1)"))]
@@ -394,7 +260,7 @@ emit <- function(sx, sex_genes) {
   sheets <- sheets[!vapply(sheets, is.null, logical(1))]
   write_xlsx(sheets, file.path(tab, sprintf("MR_%s_all_tables.xlsx", sx)))
 
-  # D6: FS_input is the FDR-SURVIVING set, not the nominal screen.
+  # FS_input is the FDR-surviving set, not the nominal screen
   fs <- pr[risk_fdr != "ns", .(gene, direction = risk_fdr,
                                MR_OR = round(OR, 3),
                                MR_pval = signif(pval, 3),
@@ -418,12 +284,7 @@ fs_f <- emit("female", fem)
 fs_m <- emit("male",   mal)
 
 hdr("SUMMARY")
-# Labels deliberately say "list only", NOT "specific". A set difference of two
-# separately-FDR-thresholded lists is not a test of sex-specificity (same reason
-# the setdiff sex-specific DEG lists were removed from 05_dge.R). Here it is
-# weaker still: shared genes carry IDENTICAL estimates because both GWAS are
-# sex-combined, so these differences reflect only which genes were eligible
-# upstream, plus near-identical FDR denominators (1,477 vs 1,478 tested).
+# "list only" not "specific": a set difference between two FDR-thresholded lists is not a sex-specificity test
 say("shared prioritised genes : %d", length(intersect(fs_f$gene, fs_m$gene)))
 say("in female list only : %s", paste(setdiff(fs_f$gene, fs_m$gene), collapse = ", "))
 say("in male list only   : %s", paste(setdiff(fs_m$gene, fs_f$gene), collapse = ", "))

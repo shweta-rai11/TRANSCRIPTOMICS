@@ -1,50 +1,5 @@
 #!/usr/bin/env Rscript
-# =============================================================================
-# 38_testing_ml_algorithms_sametissue_crosstissue.R
-# -----------------------------------------------------------------------------
-# TESTING PHASE for the five-algorithm diagnostic-model comparison trained in
-# 37_. Each of the five locked models (logistic regression, SVM-RBF, k-NN,
-# random forest, ANN), fitted per sex on the blood training cohort, is applied
-# ONCE to two independent test settings:
-#
-#   SAME-TISSUE  (blood -> blood): data/processed/internal_val_holdout_processed.rds,
-#     the sealed 30% internal-validation holdout already used throughout this
-#     chapter (frozen quantile + ComBat parameters; no holdout sample
-#     influenced training). Female n=61 (36 RA/25 HC); Male n=13 (6 RA/7 HC).
-#
-#   CROSS-TISSUE (blood -> synovium): the synovial RNA-seq log2-CPM matrix
-#     already computed and cached by 20_testing_synovium_external.R
-#     (data/processed/new/val_synovium.rds, GSE89408, RA vs Normal). Female
-#     n=120 (106 RA/14 Normal); Male n=60 (46 RA/14 Normal).
-#
-# Every model input is z-scored WITHIN the test dataset itself (own mean/sd),
-# not by re-using the training mean/sd, for the same reason given in 37_: the
-# synovial data is RNA-seq log2-CPM on a different platform and tissue from
-# the microarray training data, so a frozen training scale would not transfer,
-# and applying the identical unsupervised within-dataset standardisation to
-# both test settings keeps same-tissue and cross-tissue comparable.
-#
-# "TRAIN" CURVE shown alongside each test curve is the pooled out-of-fold
-# cross-validated prediction from 37_ (Train, resampled CV), NOT resubstitution
-# on the full training set, so it is not a foregone conclusion that train beats
-# test.
-#
-# EVIDENCE TIERS, carried over from 16_/18b_/20_: the male stratum (train
-# n=38) is flagged EXPLORATORY throughout this comparison regardless of how
-# strong an individual AUC looks, because at this sample size a handful of
-# discordant pairs can drive an apparently perfect classifier (see 37_'s log:
-# three of five male algorithms already reach CV ROC = 1.000 +/- 0.000 in
-# training, a small-n separation artefact, not evidence of superiority).
-# AUCs >= 0.999 are flagged SEPARATION in the table so they are never quoted
-# as if they were precise performance estimates. 95% CIs use DeLong's method
-# when n >= 20 and a stratified bootstrap (2000 resamples, seed 1234)
-# otherwise (Carpenter & Bithell, 2000).
-#
-# Outputs:
-#   results/tables/ML_performance_sametissue.csv
-#   results/tables/ML_performance_crosstissue.csv
-#   data/processed/new/ml_algo_roc.rds   (ROC coordinates for 39_figure_*.R)
-# =============================================================================
+# Testing phase: apply the five locked models from 37_ to same-tissue (blood holdout) and cross-tissue (synovium) test sets, per sex, with evidence tiers and AUC CIs.
 suppressMessages({
   library(caret); library(data.table); library(pROC)
 })
@@ -55,13 +10,13 @@ proc <- "data/processed"; procN <- "data/processed/new"; tab <- "results/tables"
 fit <- readRDS(file.path(procN, "ml_algo_models.rds"))
 PANEL <- fit$panel
 
-## ---- same-tissue test set: blood internal holdout -------------------------
+# same-tissue test set: blood internal holdout
 h <- readRDS(file.path(proc, "internal_val_holdout_processed.rds"))
 blood_test <- list(expr = h$expr,
                     group = factor(h$meta$group, levels = c("HC", "RA")),
                     sex = h$meta$sex, label = "Blood test (internal holdout)")
 
-## ---- cross-tissue test set: synovium (cached, see header) -----------------
+# cross-tissue test set: synovium (cached)
 syn <- readRDS(file.path(procN, "val_synovium.rds"))
 syn_group <- factor(as.character(syn$grp), levels = c("Normal", "RA"))
 syn_test  <- list(expr = syn$logcpm, group = syn_group, sex = syn$sex,
@@ -74,7 +29,7 @@ cat(sprintf("Synovium test: n=%d (RA=%d/Normal=%d) | F=%d M=%d\n",
             length(syn_test$group), sum(syn_test$group == "RA"), sum(syn_test$group == "Normal"),
             sum(syn_test$sex == "F"), sum(syn_test$sex == "M")))
 
-## ---- helpers ---------------------------------------------------------------
+# helpers
 zrows <- function(M) t(apply(M, 1, function(v) {
   s <- sd(v, na.rm = TRUE)
   if (is.na(s) || s == 0) rep(0, length(v)) else (v - mean(v, na.rm = TRUE)) / s
@@ -92,7 +47,7 @@ fmt <- function(a, n) {
   s
 }
 
-## score a fitted caret model on a new (already sex-subset) expression block
+# score a fitted caret model on a new (already sex-subset) expression block
 score_model <- function(m, genes, colnms, X_genesXsamples, y) {
   present <- genes[genes %in% rownames(X_genesXsamples)]
   Z <- zrows(X_genesXsamples[present, , drop = FALSE])
@@ -105,14 +60,13 @@ score_model <- function(m, genes, colnms, X_genesXsamples, y) {
        missing = setdiff(genes, present))
 }
 
-## roc-coordinate row for the figure script
+# roc-coordinate row for the figure script
 rc <- function(sexlab, algo, dataset, r, tier) {
   data.table(sex = sexlab, algorithm = algo, dataset = dataset,
              sens = r$sensitivities, spec = r$specificities,
              auc = as.numeric(auc(r)), evidence_tier = tier)
 }
 
-## -----------------------------------------------------------------------------
 run_setting <- function(test_set, setting_label, fixed_group_levels) {
   perf_rows <- list(); roc_rows <- list()
   for (sx in c("F", "M")) {

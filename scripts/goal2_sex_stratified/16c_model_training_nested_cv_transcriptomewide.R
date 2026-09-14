@@ -1,37 +1,11 @@
 #!/usr/bin/env Rscript
-# =============================================================================
-# 10c_nested_cv.R  —  NESTED cross-validation (leakage-free) diagnostic AUC,
-# per sex. Fixes the selection-bias that inflated the earlier "flat-CV" AUCs
-# (male = 1.000): ALL feature selection happens INSIDE each outer training fold
-# and the held-out fold is never seen during selection or tuning.
-#
-#   Outer loop : repeated stratified k-fold (male 5-fold x 20; female 10-fold x 5)
-#   Inside each outer-train fold, on TRAIN ONLY:
-#       (1) variance prefilter -> top 2000 genes
-#       (2) LASSO (cv.glmnet, inner 10-fold CV tunes lambda) selects features
-#       (3) the fitted LASSO is the classifier
-#   Predict the untouched outer-test fold -> pool out-of-fold probabilities.
-# Reports pooled AUC (+95% CI), per-repeat AUC distribution, and gene-selection
-# frequency (stability). Output: results/tables/nested_cv_*.csv + nested_cv.rds
-# =============================================================================
+# Nested cross-validation (leakage-free) of a transcriptome-wide limma -> LASSO pipeline, per sex: all feature selection redone inside each outer fold.
 suppressMessages({library(glmnet); library(pROC); library(caret); library(data.table); library(limma)})
 proc <- "data/processed"; tab <- "results/tables"
 o <- readRDS(file.path(proc, "combined_train.rds")); expr <- o$expr; meta <- as.data.table(o$meta)
 ml <- readRDS(file.path(proc, "ml_features.rds"))
 FC <- 0.5; PV <- 0.05; DEG_CAP <- 300
-# WARNING (corrected 2026-07-27). The previous comment here claimed these were
-# "the same thresholds as the pipeline (03_dge / 09)". They are NOT, and 03_dge.R
-# belongs to the SYNOVIUM chapter, not this one. This chapter's DEG step
-# (00_shared/05_dge.R lines 38, 56) uses |log2FC| > 0.1 and BH-FDR < 0.05.
-#
-# What this script actually benchmarks: limma -> LASSO, at the thresholds above.
-# What the reported pipeline actually is: limma -> WGCNA disease modules ->
-#   cis-eQTL MR -> LASSO n RF n SVM-RFE consensus.
-# WGCNA, MR and the 3-way consensus are ABSENT from the fold loop below.
-#
-# => These numbers bound the magnitude of feature-selection bias. They are NOT a
-#    leakage-free validation of the 7-gene / 4-gene panels, and must not be
-#    reported as such. See THESIS_METHODOLOGY_AUDIT.md finding A2.
+# This benchmarks limma -> LASSO only (no WGCNA/MR/3-way consensus); bounds feature-selection bias, not a validation of the reported panels.
 
 run_nested <- function(sex, kfold, repeats) {
   cols <- meta$sample[meta$sex == sex]

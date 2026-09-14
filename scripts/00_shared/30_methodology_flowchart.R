@@ -1,8 +1,5 @@
 #!/usr/bin/env Rscript
-# =============================================================================
-# 23_methodology_flowchart.R  —  publication-ready methodology flowchart for the
-# sex-stratified RA biomarker pipeline (base graphics; corrected & complete).
-# =============================================================================
+# Publication-ready methodology flowchart for the sex-stratified RA biomarker pipeline (base graphics)
 fig <- "results/figures"; dir.create(fig, showWarnings = FALSE, recursive = TRUE)
 
 png(file.path(fig, "fig_methodology_flowchart.png"),
@@ -25,7 +22,7 @@ c_down <- "#F4CCCC"; c_final <- "#FFD54A"
 
 # ================= MAIN SPINE (centre x = 38) ==============================
 cx <- 38
-box(cx, 95, 34, 6.5, "Discovery cohorts (NCBI GEO)\nGSE93272 + GSE110169  — whole blood, RA vs HC", c_data, cex=0.68, font=2)
+box(cx, 95, 34, 6.5, "Discovery cohorts (NCBI GEO)\nGSE93272 + GSE110169  - whole blood, RA vs HC", c_data, cex=0.68, font=2)
 box(cx, 87, 30, 4.5, "Merge (common genes)", c_pre)
 box(cx, 80.5, 30, 4.5, "Quantile normalization", c_pre)
 box(cx, 74, 30, 5, "ComBat batch correction\n(protect group + sex)", c_pre, cex=0.68)
@@ -45,9 +42,7 @@ arr(cx,41,cx,38.8); arr(cx,34.2,cx,31.8); arr(cx,26.2,cx,24.3)
 wx <- 80
 box(wx, 57.5, 30, 4.8, "WGCNA co-expression network", c_wg, cex=0.7, font=2)
 box(wx, 50.5, 30, 5, "Modules (blue = down, yellow = up)\n+ module–trait", c_wg, cex=0.66)
-# Hub genes are defined by kME, GS and intramodular connectivity ONLY.
-# No STRING PPI and no betweenness-centrality analysis exists in this
-# pipeline; the previous label advertised an analysis that was never run.
+# hub genes defined by kME, GS and intramodular connectivity only (no STRING PPI)
 box(wx, 43.5, 30, 4.5, "Hub genes (kME, GS, connectivity)", c_wg, cex=0.62)
 box(wx, 36.5, 30, 4.5, "DEG ∩ WGCNA candidates", c_wg)
 # DEG -> WGCNA branch

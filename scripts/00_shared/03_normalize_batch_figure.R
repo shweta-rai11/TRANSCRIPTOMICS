@@ -1,10 +1,5 @@
 #!/usr/bin/env Rscript
-# =============================================================================
-# fig_two_datasets_boxplot.R
-# Per-sample expression boxplots, BEFORE vs AFTER quantile normalization,
-# one row per dataset (GSE93272 on top, GSE110169 below), all samples shown.
-# Reads data/processed/combined_train.rds; writes PNG + PDF to results/figures/.
-# =============================================================================
+# Per-sample expression boxplots, before vs after quantile normalization, one row per dataset
 library(ggplot2)
 library(reshape2)
 library(patchwork)
@@ -20,16 +15,12 @@ pre  <- o$expr_prenorm    # merged, before normalization
 qn   <- o$expr_qnorm      # after quantile normalization (before ComBat)
 cb   <- o$expr            # after quantile normalization + ComBat batch correction
 
-# Per-dataset sample counts for the 70% TRAINING set (computed, never hardcoded,
-# so subtitles stay correct if the split or cohort changes).
+# Per-dataset sample counts for the 70% training set, computed (not hardcoded)
 ds_tab   <- table(meta$dataset)
 ds_label <- paste(sprintf("%s (n = %d)", names(ds_tab), as.integer(ds_tab)),
                   collapse = " and ")   # e.g. "GSE110169 (n = 84) and GSE93272 (n = 99)"
 
-# save helper: writes both a 300-dpi PNG and a vector PDF (preferred for print).
-# bg = "white" matches the other figures in results/figures/ (e.g. the Venn
-# diagram, fig_cohort_composition_bar) so PNGs don't pick up a transparent
-# background when viewed outside a white-background context.
+# save helper: writes a 300-dpi PNG and a vector PDF, white background
 save2 <- function(g, name, w, h) {
   ggsave(file.path(fig, paste0(name, ".png")), g, width = w, height = h, dpi = 300, bg = "white")
   ggsave(file.path(fig, paste0(name, ".pdf")), g, width = w, height = h, device = cairo_pdf, bg = "white")
@@ -80,9 +71,7 @@ make_ds_plot <- function(ds) {
     )
 }
 
-# ---- stack the two datasets into one figure ("/" = vertical); no overall
-# title/subtitle -- each panel already carries its own dataset name + stage
-# facet labels, so a figure-level title is redundant.
+# ---- stack the two datasets into one figure ("/" = vertical), no overall title
 p_two <- make_ds_plot("GSE93272") / make_ds_plot("GSE110169")
 
 save2(p_two, "fig_combine_two_datasets", 10, 9.5)   # matches fig_cohort_sex_composition_bar sizing (2-row layout)
@@ -114,10 +103,7 @@ save2(p_density, "fig_combine_density_norm", 9.5, 5)   # matches fig_cohort_comp
 
 
 
-# ---- 4. PCA before vs after ComBat, WITH marginal densities -----------------
-# Reference-style panels (Wang et al., "Managing batch effects"): a PC1/PC2
-# scatter with a PC1 density strip on top and a PC2 density strip on the right,
-# both split by study so the batch overlap is visible in the margins too.
+# ---- 4. PCA before vs after ComBat, with marginal PC1/PC2 density strips, split by study ----
 # study colours (colourblind-safe): one hue per dataset
 dcol <- c(GSE93272 = "#0072B2", GSE110169 = "#D55E00")
 

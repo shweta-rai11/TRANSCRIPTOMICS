@@ -1,16 +1,5 @@
 #!/usr/bin/env Rscript
-# =============================================================================
-# 03_dataset_gene_overlap_venn.R  —  Venn of gene-symbol overlap between the two
-# TRAINING datasets (GSE93272 [GPL570] and GSE110169 [GPL13667]). Shows how many
-# genes are measured in each platform and how many are COMMON (the intersection
-# used for the merged analysis).
-#
-# Inputs : data/raw/GSE93272_raw.rds, data/raw/GSE110169_raw.rds
-# Outputs: results/figures/fig_dataset_gene_overlap_venn.png
-#          results/figures/fig_dataset_gene_overlap_venn.pdf
-#          results/tables/dataset_gene_overlap.csv
-# ---- Reference: Langfelder & Horvath (WGCNA collapseRows). BMC Bioinf 2008;9:559.
-# =============================================================================
+# Venn/Euler diagram of gene-symbol overlap between the two training datasets (GSE93272, GSE110169)
 suppressMessages({library(Biobase); library(data.table); library(eulerr); library(scales); library(grid)})
 raw <- "data/raw"; fig <- "results/figures"; tab <- "results/tables"
 
@@ -29,21 +18,12 @@ common <- intersect(g93, g110)
 cat(sprintf("GSE93272 genes: %d | GSE110169 genes: %d | COMMON: %d\n",
             length(g93), length(g110), length(common)))
 
-# area-proportional Euler diagram (eulerr) sized by the two platform-exclusive
-# counts + the shared count. Plain black-on-white line art (no fill colour,
-# no title, no legend). Dataset names are drawn OUTSIDE the circles (top
-# margin) rather than via eulerr's own set labels, which crowd/clip against
-# the circle boundary when the two circles overlap this heavily; the diagram
-# itself is shrunk to ~2/3 of the canvas so it reads at a normal print size
-# instead of filling the whole figure.
+# area-proportional Euler diagram, plain black-on-white, dataset names drawn outside the circles
 only93 <- length(setdiff(g93, g110)); only110 <- length(setdiff(g110, g93))
 tot93 <- only93 + length(common); tot110 <- only110 + length(common)
 fit <- euler(c("GSE93272" = only93, "GSE110169" = only110,
                "GSE93272&GSE110169" = length(common)))
-# Each circle is labelled with its platform's TOTAL gene count (not the
-# exclusive-only count eulerr would print by default) so the number inside
-# each circle reads directly as "genes on this platform" -- the circle IS
-# the platform's full gene set, the overlap is just drawn on top of it.
+# label each circle with its platform's TOTAL gene count, not the exclusive-only count
 p <- plot(fit,
   quantities = list(labels = c(comma(tot93), comma(tot110), comma(length(common))),
                      fontsize = 11, col = "black"),

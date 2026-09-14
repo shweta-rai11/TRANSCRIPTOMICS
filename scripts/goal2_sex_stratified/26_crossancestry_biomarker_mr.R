@@ -1,34 +1,5 @@
 #!/usr/bin/env Rscript
-# =============================================================================
-# 26_crossancestry_biomarker_mr.R  —  Are the causal eQTL genes the same across
-# ancestral populations?  Comparative MR of the per-sex EUR MR-prioritised genes
-# (FS_input: 32 female / 25 male, BH-FDR<0.05, cis-only per 10_MR.R D8)
-# against RA GWAS from THREE cohorts spanning
-# two ancestries:
-#     Okada 2014  EUR  discovery    ieu-a-832   (reused from MR_new pipeline)
-#     Stahl 2010  EUR  replication  ieu-a-834
-#     BBJ  2019   EAS  cross-anc.   bbj-a-151   (Ishigaki, Biobank Japan)
-#
-# *** DESIGN / CAVEAT ***
-# OpenGWAS carries EUROPEAN eQTL only (eQTLGen). No East-Asian cis-eQTL exists
-# there, so the SAME European eQTLGen instruments are tested against each
-# outcome. The EUR arms (Okada/Stahl) are ancestry-matched; the EAS arm (BBJ) is
-# ancestry-MISMATCHED on the exposure side -> EXPLORATORY cross-ancestry, NOT a
-# like-for-like replication. To keep a BBJ null interpretable, we emit
-# INSTRUMENT-TRANSFERABILITY diagnostics (how many EUR instrument SNPs survive in
-# each outcome + EUR-vs-EAS allele-frequency divergence): a gene can be
-# "untestable in EAS" (instruments absent) as opposed to "not causal in EAS".
-#
-# Reuses European eQTLGen instruments + Okada results from:
-#   data/processed/new/MR_primary_objects.rds  (inst, dat, primary)
-#   results/tables/FS_input_{female,male}.csv       (the EUR-prioritised gene set)
-# Outputs (flat, MR35_ prefix; nothing overwritten):
-#   results/tables/MR35_crossancestry_{female,male}.csv
-#   results/tables/MR35_instrument_transferability_{female,male}.csv
-#   results/tables/MR35_crossancestry_summary.csv
-#   data/processed/MR35_crossancestry_objects.rds
-# ---- Ref: Okada Y Nature 2014 ; Stahl EA Nat Genet 2010 ; Ishigaki K Nat Genet 2022 (BBJ).
-# =============================================================================
+# Comparative MR of the per-sex EUR MR-prioritised genes against RA GWAS from three cohorts (Okada EUR discovery, Stahl EUR replication, BBJ EAS), with instrument-transferability diagnostics for the ancestry-mismatched EAS arm.
 suppressMessages({library(TwoSampleMR); library(dplyr); library(data.table)})
 set.seed(2024)
 proc <- "data/processed"; procN <- "data/processed/new"; tab <- "results/tables"
@@ -81,12 +52,12 @@ fetch_dat <- function(outcome_id, label) {
   as.data.table(dat)
 }
 
-# ---- 3. Okada (EUR) — reuse pipeline results; no refetch ---------------------
+# ---- 3. Okada (EUR) - reuse pipeline results; no refetch ---------------------
 okada <- as.data.table(o$primary)[gene %in% causal,
            .(gene, OR_okada = OR, p_okada = pval, risk_okada = risk)]
 dat_ok <- as.data.table(o$dat)[gene %in% causal]        # harmonised vs Okada (for SNP availability)
 
-# ---- 4. Stahl (EUR) + BBJ (EAS) — fetch & MR ---------------------------------
+# ---- 4. Stahl (EUR) + BBJ (EAS) - fetch & MR ---------------------------------
 dat_st <- fetch_dat(STAHL, "Stahl 2010 EUR")
 dat_bj <- fetch_dat(BBJ,   "BBJ 2019 EAS")
 

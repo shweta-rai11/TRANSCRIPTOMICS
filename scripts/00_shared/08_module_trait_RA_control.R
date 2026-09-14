@@ -1,49 +1,5 @@
 #!/usr/bin/env Rscript
-# =============================================================================
-# 08_module_trait_RA_control.R
-# -----------------------------------------------------------------------------
-# Module-trait association, RA vs Control, computed SEPARATELY within each sex
-# stratum (All / Female / Male), plus a combined selection figure showing which
-# modules were chosen as DISEASE modules and why.
-#
-# WHY BOTH HALVES ARE IN ONE FILE
-#   The previous version of this file contained TWO complete scripts
-#   concatenated (a second `#!/usr/bin/env Rscript` began at line 59). Only the
-#   first half ran under Rscript in some invocations, and the second half
-#   silently depended on tables the first half had just written. They are one
-#   logical step and are now one script.
-#
-# WHAT CHANGED (2026-07-27)
-#   - Reads data/processed/wgcna_results.rds (written by 06_WGCNA.R).
-#     The old file wgcna_new_results.rds came from the deleted 06_WGCNA_NEW.R.
-#   - NO hardcoded module colours. The previous version hardcoded
-#     `sel <- c("green","brown")`. WGCNA colour names are assigned by module
-#     SIZE RANK, so they are not stable identifiers; the disease modules are
-#     read from the analysis object instead.
-#   - Sample counts in figure labels are COMPUTED, not hardcoded ("n=183",
-#     "n=145", "n=38" were stale after outlier removal).
-#
-# IMPORTANT INTERPRETATION NOTE (sex-stratified, not sex-specific)
-#   The Female and Male panels are each an RA-vs-Control contrast computed
-#   WITHIN that sex. A module correlating more strongly with RA in males than in
-#   females is NOT evidence of a sex difference - the male stratum is far
-#   smaller, so its correlations are noisier and its extremes larger. Comparing
-#   the two columns is invalid without a formal interaction test.
-#     # Gelman A, Stern H. The difference between "significant" and "not
-#     #   significant" is not itself statistically significant.
-#     #   Am Stat 2006;60(4):328-331.
-#
-# Inputs : data/processed/wgcna_results.rds
-# Outputs: results/tables/module_trait_RAvsControl_{all,female,male}.csv
-#          results/figures/fig_wgcna_module_trait_RAvsControl_{all,female,male}.png
-#          results/figures/fig_module_trait_disease_selection.{png,pdf}
-#
-# ---- References -------------------------------------------------------------
-#   Langfelder P, Horvath S. WGCNA: an R package for weighted correlation
-#     network analysis. BMC Bioinformatics 2008;9:559.
-#   Langfelder P, Horvath S. Eigengene networks for studying the relationships
-#     between co-expression modules. BMC Syst Biol 2007;1:54.
-# =============================================================================
+# Module-trait association, RA vs Control, per sex stratum (All/Female/Male), plus a combined disease-module selection figure. Modules are read from wgcna_results.rds, not hardcoded by colour.
 suppressMessages({
   library(WGCNA); library(data.table); library(ggplot2)
 })
@@ -69,9 +25,7 @@ say("disease modules (from 06): %s", paste(dis_mods, collapse = " + "))
 say("selection rule           : |cor(ME,RA)| >= %.2f & p < %g",
     w$config$dm_min_abs_cor, w$config$dm_max_p)
 
-# =============================================================================
-# PART A — per-stratum module-trait tables + labeledHeatmap figures
-# =============================================================================
+# Part A: per-stratum module-trait tables + labeledHeatmap figures
 make_stratum <- function(keep, tag, label) {
   me  <- MEs[keep, , drop = FALSE]
   grp <- meta$group[keep]
@@ -120,9 +74,7 @@ res <- list(
   male   = make_stratum(meta$sex == "M",        "male",   "Male"))
 res <- Filter(Negate(is.null), res)
 
-# =============================================================================
-# PART B — combined selection figure (All / Female / Male side by side)
-# =============================================================================
+# Part B: combined selection figure (All / Female / Male side by side)
 cat("\n--- PART B: combined disease-module selection figure ---\n")
 d <- rbindlist(lapply(res, function(x)
        x[, .(module, cor = cor_RA, p = p_RA, n = n_samples, stratum)]))

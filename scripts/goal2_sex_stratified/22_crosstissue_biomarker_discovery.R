@@ -1,14 +1,5 @@
 #!/usr/bin/env Rscript
-# =============================================================================
-# new/23new_crosstissue.R  -- cross-tissue (blood -> synovium) summary.
-#  (1) PANEL AUC in synovium (RA vs Normal), per sex: z-scored panel genes,
-#      logistic model, apparent + 10-fold CV AUC (+ DeLong CI).
-#  (2) Figure: (A) blood vs synovium log2FC concordance scatter per gene;
-#              (B) per-gene synovium AUC bar (coloured by sex).
-# Uses data/processed/new/val_synovium.rds (from 21) + blood DE + new panels.
-# Output: results/tables/crosstissue_panel_auc.csv
-#         results/figures/new/fig_crosstissue.png/pdf
-# =============================================================================
+# Cross-tissue (blood -> synovium) summary: panel AUC in synovium per sex, plus a blood-vs-synovium log2FC concordance and per-gene AUC figure.
 suppressMessages({library(data.table); library(pROC); library(ggplot2); library(patchwork)})
 proc <- "data/processed"; tabN <- "results/tables"; figN <- "results/figures/new"
 

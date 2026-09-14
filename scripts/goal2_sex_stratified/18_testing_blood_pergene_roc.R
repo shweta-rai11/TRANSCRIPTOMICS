@@ -1,22 +1,5 @@
 #!/usr/bin/env Rscript
-# =============================================================================
-# 18h_pergene_roc_overlay.R
-# -----------------------------------------------------------------------------
-# Individual-gene ROC overlay, one panel per sex (style of the reference figure
-# "ROC Curve (Female/Male Group)"): every MR-prioritised gene plotted as its own
-# univariate ROC curve on a single axis, legend sorted by AUC (descending),
-# each label "GENE (AUC=0.xxx)". ORIENTATION CONVENTION: each gene is oriented
-# to its BETTER DIRECTION (AUC >= 0.5). This is a within-TRAIN discrimination
-# display only. It is NOT the train-fixed convention used for cross-dataset
-# comparison, and this figure must never be read as a transfer result.
-# See thesis 2.9 "Orientation conventions".
-#   Panel membership is NOT listed here: these names were wrong for three
-#   consecutive runs. Read it from mr_fs_summary.csv / ml_features.rds.
-#   n = 145 female, 38 male (training cohort).
-# Specificity axis reversed (1 -> 0). Outputs:
-#   results/figures/fig_mr_pergene_roc_{female,male}.png/pdf
-#   results/tables/mr_pergene_train_auc.csv
-# =============================================================================
+# Individual-gene ROC overlay per sex: each MR-prioritised gene as its own univariate ROC curve, oriented to its better direction, legend sorted by AUC (within-train discrimination only, not a transfer result).
 suppressMessages({library(pROC); library(data.table); library(ggplot2)})
 proc <- "data/processed"; procN <- "data/processed/new"; tab <- "results/tables"; fig <- "results/figures/new"
 dir.create(tab,showWarnings=FALSE,recursive=TRUE); dir.create(fig,showWarnings=FALSE,recursive=TRUE)

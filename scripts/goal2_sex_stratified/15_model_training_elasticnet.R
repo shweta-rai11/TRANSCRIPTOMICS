@@ -1,49 +1,5 @@
 #!/usr/bin/env Rscript
-# =============================================================================
-# 18d_mr_elasticnet_panel.R
-# -----------------------------------------------------------------------------
-# LEGITIMATE attempt to raise the (honest) diagnostic AUC by giving the model
-# more of the real signal that the strict 3-method consensus threw away.
-#
-# Rationale: the consensus panel is the intersection LASSO n RF n SVM-RFE, which
-# yields 7 genes in females and 4 in males. Here we instead let an ELASTIC-NET
-# logistic model use the FULL within-sex MR-screened gene set (74 female /
-# 55 male) and pick the
-# [header corrected 2026-07-27: previously described a superseded run in which
-#  the female consensus collapsed to 2 genes (BNIP2, NMI) over a 14/40-gene MR
-#  set. Current panels are 7 female (AZI2, CLSTN1, ESYT1, NMI, PCSK7, UBASH3A,
-#  WDR46) and 4 male (FNDC3A, GABBR1, RPN2, SSRP1). See CODE_WALKTHROUGH.md.]
-# sparsity itself (alpha + lambda tuned by inner CV). Elastic-net keeps
-# correlated-but-informative MR genes that a hard intersection discards.
-#
-# Everything is validated the SAME honest way as 18b/18c:
-#   * Candidate universe = the MR-prioritised genes, held FIXED across folds.
-#     NOT an external list: the genes submitted to MR were disease-module
-#     INTERSECT sex-DEG, both computed on the whole training partition using the
-#     labels; only the MR FILTER is external. So the nested loop below corrects
-#     the selection bias of the model-fitting stage, NOT that of the upstream
-#     DEG/WGCNA/MR stages. Upper bound, not a leakage-free estimate. See 2.9.2.
-#   * NOTE: this script is SUPERSEDED by 16d_nested_cv_reconciliation.R. No
-#     figure or table reported in the thesis comes from it (its seed policy,
-#     2000 + repeat, differs from the authoritative 1000 + repeat).
-#   * NESTED CV (leakage-free): inside every outer-train fold we tune alpha over
-#     a grid and lambda by inner 5-fold CV, fit, and predict the untouched
-#     outer-test fold. Female 10-fold x5, Male 5-fold x10 (as 18c).
-#   * LOCKED model: one elastic-net fit on the FULL training set, applied ONCE
-#     to the internal holdout and external blood. Per-dataset z-scoring (gene-
-#     wise, unsupervised) for cross-platform transfer; direction fixed ("<");
-#     missing external gene -> z=0 (mean). DeLong CI, or stratified BOOTSTRAP CI
-#     when n<20 (male internal/blood), matching hardened 18b.
-#
-# This does NOT game the estimate: no auto-direction, no scoring train with the
-# model that saw it, no seed-hunting. Whatever AUC comes out is reported, and it
-# is placed side by side with the consensus-panel numbers from 18b/18c.
-#
-# Outputs:
-#   results/tables/mr_elasticnet_summary.csv     (elastic-net vs consensus)
-#   results/tables/mr_elasticnet_coefs_{female,male}.csv  (locked-model coefs)
-#   data/processed/mr_elasticnet_objects.rds     (ROC coords for a figure)
-# =============================================================================
+# Elastic-net logistic model over the full within-sex MR-screened gene set (nested CV + locked fit on internal/external test sets), compared against the hard-consensus panel.
 suppressMessages({library(glmnet); library(pROC); library(caret)
                   library(Biobase); library(data.table)})
 options(stringsAsFactors = FALSE)
@@ -169,7 +125,7 @@ lF <- run_locked("F", mrF);         lM <- run_locked("M", mrM)
 fwrite(rbindlist(list(lF$coefs, lM$coefs)),
        file.path(tab, "mr_elasticnet_coefs_bysex.csv"))
 
-## ---- side-by-side summary vs consensus (from 18b/18c) -----------------------
+## ---- side-by-side summary vs consensus panel numbers ------------------------
 cons <- fread(file.path(tab, "mr_roc_panel_auc.csv"))     # consensus panel numbers
 getc <- function(sx, ds) { r <- cons[sex == sx & dataset == ds]
   if (nrow(r)) sprintf("%.3f (%.3f-%.3f)", r$AUC, r$AUC_lo, r$AUC_hi) else NA }

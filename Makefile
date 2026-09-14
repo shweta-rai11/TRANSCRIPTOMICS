@@ -1,31 +1,4 @@
-# =============================================================================
-# Makefile — enforces the pipeline execution order.
-#
-# WHY THIS EXISTS
-#   Before this file, the pipeline's dependency order existed only as an
-#   implicit convention (numbered script filenames) with nothing to enforce
-#   it. Running a script out of order silently produces wrong or stale
-#   output rather than failing loudly. This file makes the order explicit
-#   and checkable.
-#
-# HONEST SCOPE — read this before trusting it more than it claims
-#   This is a PHASE-level dependency graph, not an exhaustive file-level one.
-#   Each target is a `.PHONY` group of scripts known (from the header comment
-#   of each script and the CSV_SCRIPT map in scripts/verify_results_numbers.py)
-#   to belong to the same pipeline stage, in the order that stage's scripts
-#   must run. It does NOT track every individual .rds/.csv dependency between
-#   every pair of scripts the way a true `make` file-dependency graph would —
-#   doing that correctly for ~40 R scripts was judged higher-risk (getting one
-#   dependency wrong and silently skipping a stale rebuild) than valuable,
-#   given this pipeline is re-run end-to-end rather than incrementally. What
-#   this DOES guarantee: `make all` runs every stage in the right order, and
-#   a missing prerequisite output fails the build immediately instead of
-#   letting a later stage run on stale or absent input.
-#
-#   Practice followed: Wilson G, Bryan J, Cranston K, Kitzes J, Nederbragt L,
-#   Teal TK (2017). "Good enough practices in scientific computing." PLOS
-#   Computational Biology 13(6):e1005510. — explicit build automation over an
-#   ad hoc "run these files in this order" README.
+# Makefile - enforces the pipeline execution order as phase-level .PHONY targets, not a file-level dependency graph.
 #
 # USAGE
 #   make check        # verify all required input data/caches are present, no execution
