@@ -22,8 +22,17 @@
 
 SHELL := /bin/bash
 RSCRIPT := Rscript
-SHARED := scripts/00_shared
-GOAL2 := scripts/goal2_sex_stratified
+PREP := scripts/00_preprocess
+EXPR := scripts/01_expression
+NET := scripts/02_network
+CAND := scripts/03_candidates
+CAUSAL := scripts/04_causal
+FEAT := scripts/05_features
+MODELS := scripts/06_models
+EVAL := scripts/07_evaluate
+CROSST := scripts/08_crosstissue
+CROSSA := scripts/09_crossancestry
+GFIG := scripts/10_figures
 PY := python3
 
 .PHONY: all check preprocess expression network candidates causal features models evaluate crosstissue crossancestry figures provenance test clean-logs
@@ -32,65 +41,65 @@ all: provenance
 
 # ---- phase 0: data loading, normalisation, batch correction, partition -----
 preprocess:
-	$(RSCRIPT) $(SHARED)/02_data_loading.R
-	$(RSCRIPT) $(SHARED)/03_dataset_gene_overlap_venn.R
-	$(RSCRIPT) $(SHARED)/03_normalize_batch.R
-	$(RSCRIPT) $(SHARED)/03_normalize_batch_figure.R
-	$(RSCRIPT) $(SHARED)/04_apply_holdout.R
-	$(RSCRIPT) $(SHARED)/load_GSE15573.R
+	$(RSCRIPT) $(PREP)/02_data_loading.R
+	$(RSCRIPT) $(PREP)/03_dataset_gene_overlap_venn.R
+	$(RSCRIPT) $(PREP)/03_normalize_batch.R
+	$(RSCRIPT) $(PREP)/03_normalize_batch_figure.R
+	$(RSCRIPT) $(PREP)/04_apply_holdout.R
+	$(RSCRIPT) $(PREP)/load_GSE15573.R
 	@test -f results/tables/combined_cohort_summary.csv || \
 		(echo "preprocess phase did not produce combined_cohort_summary.csv" && exit 1)
 
 # ---- phase 1: differential expression, sensitivity, composition, interaction
 expression: preprocess
-	$(RSCRIPT) $(SHARED)/05_dge.R
-	$(RSCRIPT) $(SHARED)/05_dge_figure.R
-	$(RSCRIPT) $(SHARED)/05b_dge_sensitivity.R
-	$(RSCRIPT) $(SHARED)/05c_deconvolution.R
-	$(RSCRIPT) $(SHARED)/05d_interaction_report.R
+	$(RSCRIPT) $(EXPR)/05_dge.R
+	$(RSCRIPT) $(EXPR)/05_dge_figure.R
+	$(RSCRIPT) $(EXPR)/05b_dge_sensitivity.R
+	$(RSCRIPT) $(EXPR)/05c_deconvolution.R
+	$(RSCRIPT) $(EXPR)/05d_interaction_report.R
 	@test -f results/tables/DEG_summary.csv || \
 		(echo "expression phase did not produce DEG_summary.csv" && exit 1)
 
 # ---- phase 2: co-expression network (WGCNA) --------------------------------
 network: expression
-	$(RSCRIPT) $(SHARED)/06_WGCNA.R
+	$(RSCRIPT) $(NET)/06_WGCNA.R
 	@test -f results/tables/WGCNA_03_disease_modules.csv || \
 		(echo "network phase did not produce WGCNA_03_disease_modules.csv" && exit 1)
 
 # ---- phase 3: candidate genes (disease module x sex-stratified DEG) --------
 candidates: network
-	$(RSCRIPT) $(SHARED)/08_module_trait_RA_control.R
-	$(RSCRIPT) $(SHARED)/09_disease_module_deg_intersect.R
-	$(RSCRIPT) $(SHARED)/09b_disease_module_deg_venn.R
+	$(RSCRIPT) $(CAND)/08_module_trait_RA_control.R
+	$(RSCRIPT) $(CAND)/09_disease_module_deg_intersect.R
+	$(RSCRIPT) $(CAND)/09b_disease_module_deg_venn.R
 	@test -f results/tables/candidate_summary.csv || \
 		(echo "candidates phase did not produce candidate_summary.csv" && exit 1)
 
 # ---- phase 4: causal screening (MR, MHC sensitivity, colocalisation) -------
 causal: candidates
-	$(RSCRIPT) $(SHARED)/10_MR.R
-	$(RSCRIPT) $(SHARED)/10c_MR_mhc_sensitivity.R
-	$(RSCRIPT) $(SHARED)/10d_coloc_panel_genes.R
-	$(RSCRIPT) $(SHARED)/10e_coloc_susie_mhc.R
+	$(RSCRIPT) $(CAUSAL)/10_MR.R
+	$(RSCRIPT) $(CAUSAL)/10c_MR_mhc_sensitivity.R
+	$(RSCRIPT) $(CAUSAL)/10d_coloc_panel_genes.R
+	$(RSCRIPT) $(CAUSAL)/10e_coloc_susie_mhc.R
 	@test -f results/tables/MR_MHC_sensitivity_summary.csv || \
 		(echo "causal phase did not produce MR_MHC_sensitivity_summary.csv" && exit 1)
 
 # ---- phase 5: feature selection (LASSO / RF / SVM-RFE consensus) ----------
 features: causal
-	$(RSCRIPT) $(GOAL2)/12_feature_selection.R
-	$(RSCRIPT) $(GOAL2)/12b_feature_selection_noMHC.R
-	$(RSCRIPT) $(GOAL2)/13_feature_selection_venn.R
+	$(RSCRIPT) $(FEAT)/12_feature_selection.R
+	$(RSCRIPT) $(FEAT)/12b_feature_selection_noMHC.R
+	$(RSCRIPT) $(FEAT)/13_feature_selection_venn.R
 	@test -f results/tables/mr_fs_summary.csv || \
 		(echo "features phase did not produce mr_fs_summary.csv" && exit 1)
 
 # ---- phase 6: model training (nested CV, elastic net, final panels) -------
 models: features
-	$(RSCRIPT) $(GOAL2)/14_model_training_nested_cv.R
-	$(RSCRIPT) $(GOAL2)/15_model_training_elasticnet.R
-	$(RSCRIPT) $(GOAL2)/16_model_training_final_panel.R
-	$(RSCRIPT) $(GOAL2)/16b_model_training_final_panel_noMHC.R
-	$(RSCRIPT) $(GOAL2)/16c_model_training_nested_cv_transcriptomewide.R
-	$(RSCRIPT) $(GOAL2)/16d_nested_cv_reconciliation.R
-	$(RSCRIPT) $(GOAL2)/37_model_training_ml_algorithms.R
+	$(RSCRIPT) $(MODELS)/14_model_training_nested_cv.R
+	$(RSCRIPT) $(MODELS)/15_model_training_elasticnet.R
+	$(RSCRIPT) $(MODELS)/16_model_training_final_panel.R
+	$(RSCRIPT) $(MODELS)/16b_model_training_final_panel_noMHC.R
+	$(RSCRIPT) $(MODELS)/16c_model_training_nested_cv_transcriptomewide.R
+	$(RSCRIPT) $(MODELS)/16d_nested_cv_reconciliation.R
+	$(RSCRIPT) $(MODELS)/37_model_training_ml_algorithms.R
 	@test -f results/tables/NESTED_CV_AUTHORITATIVE.csv || \
 		(echo "models phase did not produce NESTED_CV_AUTHORITATIVE.csv" && exit 1)
 	@test -f results/tables/ML_hyperparameter_tuning.csv || \
@@ -98,22 +107,22 @@ models: features
 
 # ---- phase 7: blood evaluation (internal/external, per-gene ROC, nomogram) -
 evaluate: models
-	$(RSCRIPT) $(GOAL2)/17_testing_blood_internal_external.R
-	$(RSCRIPT) $(GOAL2)/17b_testing_blood_celladjusted.R
-	$(RSCRIPT) $(GOAL2)/18_testing_blood_pergene_roc.R
-	$(RSCRIPT) $(GOAL2)/19_testing_blood_clinical_utility.R
+	$(RSCRIPT) $(EVAL)/17_testing_blood_internal_external.R
+	$(RSCRIPT) $(EVAL)/17b_testing_blood_celladjusted.R
+	$(RSCRIPT) $(EVAL)/18_testing_blood_pergene_roc.R
+	$(RSCRIPT) $(EVAL)/19_testing_blood_clinical_utility.R
 	@test -f results/tables/mr_roc_panel_auc.csv || \
 		(echo "evaluate phase did not produce mr_roc_panel_auc.csv" && exit 1)
 
 # ---- phase 8: cross-tissue (synovium) validation ---------------------------
 crosstissue: evaluate
-	$(RSCRIPT) $(GOAL2)/20_testing_synovium_external.R
-	$(RSCRIPT) $(GOAL2)/21_testing_synovium_roc.R
-	$(RSCRIPT) $(GOAL2)/22_crosstissue_biomarker_discovery.R
-	$(RSCRIPT) $(GOAL2)/23_crosstissue_roc_all_datasets.R
-	$(RSCRIPT) $(GOAL2)/24_crosstissue_pergene_auc.R
-	$(RSCRIPT) $(GOAL2)/25_crosstissue_pergene_roc.R
-	$(RSCRIPT) $(GOAL2)/38_testing_ml_algorithms_sametissue_crosstissue.R
+	$(RSCRIPT) $(CROSST)/20_testing_synovium_external.R
+	$(RSCRIPT) $(CROSST)/21_testing_synovium_roc.R
+	$(RSCRIPT) $(CROSST)/22_crosstissue_biomarker_discovery.R
+	$(RSCRIPT) $(CROSST)/23_crosstissue_roc_all_datasets.R
+	$(RSCRIPT) $(CROSST)/24_crosstissue_pergene_auc.R
+	$(RSCRIPT) $(CROSST)/25_crosstissue_pergene_roc.R
+	$(RSCRIPT) $(CROSST)/38_testing_ml_algorithms_sametissue_crosstissue.R
 	@test -f results/tables/crosstissue_panel_auc.csv || \
 		(echo "crosstissue phase did not produce crosstissue_panel_auc.csv" && exit 1)
 	@test -f results/tables/ML_performance_crosstissue.csv || \
@@ -121,23 +130,23 @@ crosstissue: evaluate
 
 # ---- phase 9: cross-ancestry evaluation ------------------------------------
 crossancestry: evaluate
-	$(RSCRIPT) $(GOAL2)/26_crossancestry_biomarker_mr.R
-	$(RSCRIPT) $(GOAL2)/27_crossancestry_biomarker_figure.R
+	$(RSCRIPT) $(CROSSA)/26_crossancestry_biomarker_mr.R
+	$(RSCRIPT) $(CROSSA)/27_crossancestry_biomarker_figure.R
 	@test -f results/tables/MR35_crossancestry_summary.csv || \
 		(echo "crossancestry phase did not produce MR35_crossancestry_summary.csv" && exit 1)
 
 # ---- phase 10: figures + functional enrichment -----------------------------
 figures: crosstissue crossancestry
-	$(RSCRIPT) $(GOAL2)/28_figure_final_roc.R
-	$(RSCRIPT) $(GOAL2)/29_figure_nested_cv_roc.R
-	$(RSCRIPT) $(GOAL2)/30_figure_fig4A_expression_groups.R
-	$(RSCRIPT) $(GOAL2)/31_figure_fig4BC_logfc_heatmaps.R
-	$(RSCRIPT) $(GOAL2)/32_figure_fig4C_clustered_heatmap.R
-	$(RSCRIPT) $(GOAL2)/33_figure_fig4_composite.R
-	$(RSCRIPT) $(GOAL2)/34_pathway_enrichment.R
-	$(RSCRIPT) $(GOAL2)/35_figure_mr_diagnostics.R
-	$(RSCRIPT) $(GOAL2)/36_figure_pathways_by_sex.R
-	$(RSCRIPT) $(GOAL2)/39_figure_ml_algorithm_roc.R
+	$(RSCRIPT) $(GFIG)/28_figure_final_roc.R
+	$(RSCRIPT) $(GFIG)/29_figure_nested_cv_roc.R
+	$(RSCRIPT) $(GFIG)/30_figure_fig4A_expression_groups.R
+	$(RSCRIPT) $(GFIG)/31_figure_fig4BC_logfc_heatmaps.R
+	$(RSCRIPT) $(GFIG)/32_figure_fig4C_clustered_heatmap.R
+	$(RSCRIPT) $(GFIG)/33_figure_fig4_composite.R
+	$(RSCRIPT) $(GFIG)/34_pathway_enrichment.R
+	$(RSCRIPT) $(GFIG)/35_figure_mr_diagnostics.R
+	$(RSCRIPT) $(GFIG)/36_figure_pathways_by_sex.R
+	$(RSCRIPT) $(GFIG)/39_figure_ml_algorithm_roc.R
 
 # ---- provenance: regenerate the verification report and run the test suite -
 provenance: figures test

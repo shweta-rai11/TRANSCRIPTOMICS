@@ -209,7 +209,7 @@ print(memb[, .(sex, gene, in_primary_panel, in_noMHC_panel, MHC_gene, PP3, statu
 
 saveRDS(list(female = F, male = M, expr = expr, meta = meta, seed = GLOBAL_SEED,
              candidate_set = "MHC-free",
-             built = "goal2_sex_stratified/12b_feature_selection_noMHC.R"),
+             built = "05_features/12b_feature_selection_noMHC.R"),
         file.path(procN, "ml_features_noMHC.rds"))
 
 hdr("READING RULE")

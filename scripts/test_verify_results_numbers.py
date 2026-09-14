@@ -83,14 +83,14 @@ class TestSourceProvenance(unittest.TestCase):
     def test_brace_expansion(self):
         # a known real claim whose source uses {female,male} brace notation
         scripts = self.mod.scripts_for("WGCNA_11_candidates_{female,male}.csv")
-        self.assertIn("scripts/00_shared/06_WGCNA.R", scripts)
+        self.assertIn("scripts/02_network/06_WGCNA.R", scripts)
 
     def test_wildcard_expansion(self):
         # a known real claim whose source uses a *.csv wildcard plus a literal file
         scripts = self.mod.scripts_for("DEG_interaction_significant.csv + mr_fs_summary*.csv")
-        self.assertIn("scripts/00_shared/05d_interaction_report.R", scripts)
-        self.assertIn("scripts/goal2_sex_stratified/12_feature_selection.R", scripts)
-        self.assertIn("scripts/goal2_sex_stratified/12b_feature_selection_noMHC.R", scripts)
+        self.assertIn("scripts/01_expression/05d_interaction_report.R", scripts)
+        self.assertIn("scripts/05_features/12_feature_selection.R", scripts)
+        self.assertIn("scripts/05_features/12b_feature_selection_noMHC.R", scripts)
 
 
 class TestEndToEndOutputs(unittest.TestCase):

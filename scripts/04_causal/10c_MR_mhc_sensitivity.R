@@ -17,7 +17,7 @@ hdr <- function(x) cat("\n", strrep("=", 74), "\n", x, "\n", strrep("=", 74), "\
 hdr("STEP 0  LOAD CACHED PRIMARY MR OBJECTS")
 obj_path <- file.path(proc, "MR_primary_objects.rds")
 if (!file.exists(obj_path))
-  stop("Missing ", obj_path, " - run scripts/00_shared/10_MR.R first.")
+  stop("Missing ", obj_path, " - run scripts/04_causal/10_MR.R first.")
 o <- readRDS(obj_path)
 
 primary <- as.data.table(o$primary)      # one row per gene, MHC RETAINED

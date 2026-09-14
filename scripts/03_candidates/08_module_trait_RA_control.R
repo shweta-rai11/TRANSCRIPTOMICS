@@ -12,7 +12,7 @@ say <- function(...) cat(sprintf(...), "\n", sep = "")
 
 # ---- load -------------------------------------------------------------------
 wf <- file.path(proc, "wgcna_results.rds")
-if (!file.exists(wf)) stop("Missing ", wf, " - run scripts/00_shared/06_WGCNA.R first.")
+if (!file.exists(wf)) stop("Missing ", wf, " - run scripts/02_network/06_WGCNA.R first.")
 w        <- readRDS(wf)
 MEs      <- w$MEs
 meta     <- w$meta

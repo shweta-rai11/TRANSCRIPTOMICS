@@ -3,7 +3,7 @@
 suppressMessages({library(rms); library(data.table); library(magick)})
 proc <- "data/processed"; figN <- "results/figures/new"; tabN <- "results/tables"
 dir.create(figN, showWarnings = FALSE, recursive = TRUE)
-GLOBAL_SEED <- 1234  # matches GLOBAL_SEED convention used throughout scripts/goal2_sex_stratified/
+GLOBAL_SEED <- 1234  # matches GLOBAL_SEED convention used throughout the goal2 pipeline scripts
 
 o <- readRDS(file.path(proc, "combined_train.rds")); expr <- o$expr
 meta <- as.data.table(o$meta)

@@ -76,7 +76,7 @@ load_gse15573 <- function(rds = "data/raw/GSE15573_raw.rds",
   list(eset = e, meta = meta, corrections = GSE15573_SEX_CORRECTIONS)
 }
 
-# Run directly for a standalone QC report:  Rscript scripts/00_shared/load_GSE15573.R
+# Run directly for a standalone QC report:  Rscript scripts/00_preprocess/load_GSE15573.R
 if (sys.nframe() == 0) {
   g <- load_gse15573()
   cat("\n=== GSE15573 sex composition, before vs after correction ===\n")

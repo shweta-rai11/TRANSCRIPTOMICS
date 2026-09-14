@@ -119,7 +119,7 @@ fwrite(same$perf,  file.path(tab, "ML_performance_sametissue.csv"))
 fwrite(cross$perf, file.path(tab, "ML_performance_crosstissue.csv"))
 
 saveRDS(list(sametissue = same, crosstissue = cross, seed = GLOBAL_SEED,
-             built = "goal2_sex_stratified/38_testing_ml_algorithms_sametissue_crosstissue.R"),
+             built = "08_crosstissue/38_testing_ml_algorithms_sametissue_crosstissue.R"),
         file.path(procN, "ml_algo_roc.rds"))
 
 cat("\n====================  SAME-TISSUE PERFORMANCE  ====================\n")

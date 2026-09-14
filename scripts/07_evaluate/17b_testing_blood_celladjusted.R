@@ -73,7 +73,7 @@ frac_file <- c(train = "CELL_fractions_train.csv",
                external = "CELL_fractions_external.csv")
 for (dn in names(datasets)) {
   fp <- file.path(tab, frac_file[[dn]])
-  if (!file.exists(fp)) stop("Missing ", fp, " - run scripts/00_shared/05c_deconvolution.R first.")
+  if (!file.exists(fp)) stop("Missing ", fp, " - run scripts/01_expression/05c_deconvolution.R first.")
   datasets[[dn]]$frac <- fread(fp)
 }
 say("datasets: %s", paste(sapply(datasets, function(d)

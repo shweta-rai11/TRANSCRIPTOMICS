@@ -107,7 +107,7 @@ fwrite(externalblood$perf, file.path(tab, "ML_performance_externalblood.csv"))
 prior <- readRDS(file.path(procN, "ml_algo_roc.rds"))
 saveRDS(list(sametissue = prior$sametissue, crosstissue = prior$crosstissue,
              externalblood = externalblood, seed = GLOBAL_SEED,
-             built = "goal2_sex_stratified/38b_testing_ml_algorithms_externalblood.R"),
+             built = "08_crosstissue/38b_testing_ml_algorithms_externalblood.R"),
         file.path(procN, "ml_algo_roc.rds"))
 
 cat("\n====================  EXTERNAL BLOOD PERFORMANCE  ====================\n")

@@ -1,4 +1,0 @@
-Comparison,N_total,N_RA,N_HC,Genes_tested,Cutoff,Fold_change,DEG_significant,Up_in_RA,Down_in_RA,Pct_transcriptome,Median_absLogFC,ArrayWeight_median,ArrayWeight_min,ArrayWeight_max,Arrays_downweighted_lt0.5
-All,183,103,80,15763,FDR<0.05 & |log2FC|>0.1,1.07-fold,6422,2760,3662,40.74%,0.0799,1.042,0.38,2.055,8
-Female,145,86,59,15763,FDR<0.05 & |log2FC|>0.1,1.07-fold,5131,2238,2893,32.55%,0.0691,1.06,0.38,2.051,5
-Male,38,17,21,15763,FDR<0.05 & |log2FC|>0.1,1.07-fold,5820,2510,3310,36.92%,0.1392,1.101,0.338,1.702,3

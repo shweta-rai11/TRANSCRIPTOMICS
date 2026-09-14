@@ -98,7 +98,7 @@ tuning_tbl <- rbindlist(list(resF$tuning, resM$tuning))
 fwrite(tuning_tbl, file.path(tab, "ML_hyperparameter_tuning.csv"))
 
 saveRDS(list(female = resF, male = resM, panel = PANEL, seed = GLOBAL_SEED,
-             built = "goal2_sex_stratified/37_model_training_ml_algorithms.R"),
+             built = "06_models/37_model_training_ml_algorithms.R"),
         file.path(procN, "ml_algo_models.rds"))
 
 cat("\n====================  HYPERPARAMETER TUNING SUMMARY  ====================\n")

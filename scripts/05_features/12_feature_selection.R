@@ -212,7 +212,7 @@ cat(sprintf("\nGenes shared between female and male consensus panels: %s\n",
 
 # ---- save objects (drop-in structure for scripts 18/19) --------------------
 saveRDS(list(female = F, male = M, expr = expr, meta = meta,
-             seed = GLOBAL_SEED, built = "goal2_sex_stratified/12_feature_selection.R"),
+             seed = GLOBAL_SEED, built = "05_features/12_feature_selection.R"),
         file.path(procN, "ml_features.rds"))
 
 cat("\nSaved -> data/processed/new/ml_features.rds and results/tables/mr_fs_*.csv\n")
