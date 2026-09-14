@@ -1,0 +1,58 @@
+sex,gene,n_snp,diagnostics_possible
+female,HLA-DRB1,1,Wald ratio only
+female,WDR46,1,Wald ratio only
+female,AIF1,2,IVW only
+female,VPS52,1,Wald ratio only
+female,GNL1,1,Wald ratio only
+female,VARS2,3,funnel/LOO/Egger
+female,AP4B1,1,Wald ratio only
+female,HLA-DMA,1,Wald ratio only
+female,CSNK2B,1,Wald ratio only
+female,LSM2,1,Wald ratio only
+female,HLA-DPA1,2,IVW only
+female,BRD2,1,Wald ratio only
+female,C6orf136,1,Wald ratio only
+female,PHF19,2,IVW only
+female,IKZF3,2,IVW only
+female,NCOA5,1,Wald ratio only
+female,DAXX,2,IVW only
+female,PGAP3,1,Wald ratio only
+female,ZBTB9,1,Wald ratio only
+female,MED1,1,Wald ratio only
+female,INPP5B,1,Wald ratio only
+female,ZNF785,1,Wald ratio only
+female,SMARCC2,1,Wald ratio only
+female,SH2B1,1,Wald ratio only
+female,LPCAT2,3,funnel/LOO/Egger
+female,IKZF4,1,Wald ratio only
+female,CDC37,1,Wald ratio only
+female,KLF2,1,Wald ratio only
+female,ESYT1,1,Wald ratio only
+female,LAX1,2,IVW only
+female,RETSAT,3,funnel/LOO/Egger
+female,FCGR2B,2,IVW only
+male,HLA-DRB1,1,Wald ratio only
+male,WDR46,1,Wald ratio only
+male,AIF1,2,IVW only
+male,VPS52,1,Wald ratio only
+male,VARS2,3,funnel/LOO/Egger
+male,AP4B1,1,Wald ratio only
+male,HLA-DMA,1,Wald ratio only
+male,CSNK2B,1,Wald ratio only
+male,BRD2,1,Wald ratio only
+male,C6orf136,1,Wald ratio only
+male,PHF19,2,IVW only
+male,IKZF3,2,IVW only
+male,NCOA5,1,Wald ratio only
+male,DAXX,2,IVW only
+male,PGAP3,1,Wald ratio only
+male,TAB1,1,Wald ratio only
+male,MED1,1,Wald ratio only
+male,INPP5B,1,Wald ratio only
+male,ZNF785,1,Wald ratio only
+male,SMARCC2,1,Wald ratio only
+male,SH2B1,1,Wald ratio only
+male,LPCAT2,3,funnel/LOO/Egger
+male,CDC37,1,Wald ratio only
+male,KLF2,1,Wald ratio only
+male,ESYT1,1,Wald ratio only
