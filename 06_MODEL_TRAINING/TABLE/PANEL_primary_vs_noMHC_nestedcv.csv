@@ -1,0 +1,3 @@
+sex,evidence_tier,n,n_candidates_primary,n_candidates_noMHC,nested_AUC_primary,nested_AUC_noMHC,delta_AUC,per_repeat_sd_primary,per_repeat_sd_noMHC,med_genes_primary,med_genes_noMHC,source
+Female,primary,145,32,14,0.816 (0.747-0.884),0.798 (0.725-0.871),-0.018,0.01,0.006,5,3,16d_nested_cv_reconciliation.R (single authoritative implementation)
+Male,EXPLORATORY (underpowered),38,25,14,0.896 (0.800-0.993),0.924 (0.841-1.000),0.028,0.06,0.056,3,3,16d_nested_cv_reconciliation.R (single authoritative implementation)

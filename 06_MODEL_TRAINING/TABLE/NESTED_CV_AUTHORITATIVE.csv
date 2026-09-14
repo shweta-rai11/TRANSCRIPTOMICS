@@ -1,0 +1,9 @@
+sex,candidate_set,selector,n,resampling,nested_AUC,CI_lo,CI_hi,per_repeat_mean,per_repeat_sd,median_genes_used,evidence_tier,recommended
+Female,noMHC,consensus,145,10-fold x 5 repeats,0.798,0.725,0.871,0.793,0.006,3,primary,TRUE
+Female,noMHC,elasticnet,145,10-fold x 5 repeats,0.791,0.716,0.866,0.79,0.003,7,primary,FALSE
+Female,primary,consensus,145,10-fold x 5 repeats,0.816,0.747,0.884,0.811,0.01,5,primary,FALSE
+Female,primary,elasticnet,145,10-fold x 5 repeats,0.801,0.73,0.873,0.794,0.009,12,primary,FALSE
+Male,noMHC,consensus,38,5-fold x 10 repeats,0.924,0.841,1,0.833,0.056,3,EXPLORATORY (underpowered),TRUE
+Male,noMHC,elasticnet,38,5-fold x 10 repeats,0.961,0.909,1,0.948,0.028,13,EXPLORATORY (underpowered),FALSE
+Male,primary,consensus,38,5-fold x 10 repeats,0.896,0.8,0.993,0.822,0.06,3,EXPLORATORY (underpowered),FALSE
+Male,primary,elasticnet,38,5-fold x 10 repeats,0.958,0.902,1,0.954,0.015,20,EXPLORATORY (underpowered),FALSE

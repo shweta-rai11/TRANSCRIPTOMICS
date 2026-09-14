@@ -1,0 +1,10 @@
+comparison,lfc_threshold,fold_change,posthoc_filter_n,treat_n
+All,0.1,1.07x,6422,3331
+All,0.263,1.20x,1942,464
+All,0.5,1.41x,321,22
+Female,0.1,1.07x,5131,1771
+Female,0.263,1.20x,1300,86
+Female,0.5,1.41x,163,3
+Male,0.1,1.07x,5820,3493
+Male,0.263,1.20x,4126,745
+Male,0.5,1.41x,1225,48

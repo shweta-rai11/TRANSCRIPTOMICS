@@ -1,0 +1,3 @@
+sex,comparison,AUC_primary,AUC_noMHC,delong_p,verdict
+Female,nested CV: primary vs MHC-free (consensus selector),0.816,0.798,0.322,NO significant difference - MHC removal costs nothing detectable
+Male,nested CV: primary vs MHC-free (consensus selector),0.896,0.924,0.582,NO significant difference - MHC removal costs nothing detectable

@@ -1,0 +1,257 @@
+#!/usr/bin/env Rscript
+# Head-to-head evaluation of the primary vs MHC-free panel: nested-CV comparison (read from 16d's authoritative table) plus locked-panel performance on internal/external test data.
+suppressMessages({
+  library(glmnet); library(randomForest); library(e1071)
+  library(pROC); library(caret); library(Biobase); library(data.table)
+})
+options(stringsAsFactors = FALSE)
+GLOBAL_SEED <- 1234
+set.seed(GLOBAL_SEED)
+
+proc <- "data/processed"; procN <- "data/processed/new"; tab <- "results/tables"
+SMALL_N <- 20
+
+say <- function(...) cat(sprintf(...), "\n", sep = "")
+hdr <- function(x) cat("\n", strrep("=", 74), "\n", x, "\n", strrep("=", 74), "\n", sep = "")
+
+# Step 1: data, candidate sets and panels
+hdr("STEP 1  INPUTS")
+o <- readRDS(file.path(proc, "combined_train.rds"))
+expr <- o$expr; meta <- as.data.table(o$meta)
+
+cand <- list(
+  primary = list(F = fread(file.path(tab, "FS_input_female.csv"))$gene,
+                 M = fread(file.path(tab, "FS_input_male.csv"))$gene),
+  noMHC   = list(F = fread(file.path(tab, "FS_input_female_noMHC.csv"))$gene,
+                 M = fread(file.path(tab, "FS_input_male_noMHC.csv"))$gene))
+
+mlP <- readRDS(file.path(procN, "ml_features.rds"))
+mlN <- readRDS(file.path(procN, "ml_features_noMHC.rds"))
+panel <- list(
+  primary = list(F = mlP$female$consensus, M = mlP$male$consensus),
+  noMHC   = list(F = mlN$female$consensus, M = mlN$male$consensus))
+
+for (v in c("primary", "noMHC"))
+  for (sx in c("F", "M"))
+    say("%-8s %s : %2d candidates -> %d-gene panel (%s)", v, sx,
+        length(cand[[v]][[sx]]), length(panel[[v]][[sx]]),
+        paste(panel[[v]][[sx]], collapse = ", "))
+
+load_internal <- function() {
+  h <- readRDS(file.path(proc, "internal_val_holdout_processed.rds"))
+  list(expr = h$expr, group = factor(h$meta$group, levels = c("HC", "RA")),
+       sex = h$meta$sex, label = "Internal test")
+}
+load_blood <- function() {
+  e <- readRDS("data/raw/GSE15573_raw.rds"); if (is.list(e)) e <- e[[1]]
+  x <- exprs(e); if (max(x, na.rm = TRUE) > 50) x <- log2(x + 1)
+  sym <- fData(e)[["Gene symbol"]]; keep <- !is.na(sym) & sym != ""
+  x <- x[keep, ]; sym <- sym[keep]
+  rmean <- rowMeans(x)
+  best <- tapply(seq_along(sym), sym, function(ix) ix[which.max(rmean[ix])])
+  xg <- x[unlist(best), ]; rownames(xg) <- names(best); p <- pData(e)
+  grp <- ifelse(grepl("Rheumatoid|RA", p[["status:ch1"]], ignore.case = TRUE), "RA", "HC")
+  sex <- ifelse(grepl("Female", p[["gender:ch1"]], ignore.case = TRUE), "F", "M")
+  list(expr = xg, group = factor(grp, levels = c("HC", "RA")), sex = sex,
+       label = "External blood")
+}
+internal <- load_internal(); blood <- load_blood()
+
+# Step 2: helpers
+zrows <- function(M) t(apply(M, 1, function(v) {
+  s <- sd(v, na.rm = TRUE)
+  if (is.na(s) || s == 0) rep(0, length(v)) else (v - mean(v, na.rm = TRUE)) / s }))
+
+auc_ci <- function(r) {
+  n <- length(r$cases) + length(r$controls)
+  ci <- if (n < SMALL_N) { set.seed(GLOBAL_SEED)
+    suppressWarnings(as.numeric(ci.auc(r, method = "bootstrap", boot.n = 2000)))
+  } else suppressWarnings(as.numeric(ci.auc(r)))
+  c(auc = as.numeric(auc(r)), lo = ci[1], hi = ci[3])
+}
+fmt <- function(a, n) {
+  s <- sprintf("%.3f (%.3f-%.3f) [n=%d]", a[1], a[2], a[3], n)
+  if (!is.na(a[1]) && a[1] >= 0.999) s <- paste0(s, " SEPARATION")
+  s
+}
+
+# in-fold three-selector consensus, identical in spirit to 14_model_training_nested_cv.R
+svm_rank <- function(X, y, cost = 1) {
+  feats <- colnames(X); ranking <- character(0)
+  while (length(feats) > 1) {
+    m <- svm(X[, feats, drop = FALSE], y, kernel = "linear", scale = TRUE, cost = cost)
+    w2 <- ((t(m$coefs) %*% m$SV)[1, ])^2
+    d <- names(sort(w2))[1]; ranking <- c(d, ranking); feats <- setdiff(feats, d)
+  }
+  c(feats, ranking)
+}
+svm_size <- function(X, y, rank, cost = 1) {
+  err <- sapply(seq_along(rank), function(k)
+    1 - svm(X[, rank[1:k], drop = FALSE], y, kernel = "linear", scale = TRUE,
+            cost = cost, cross = 5)$tot.accuracy / 100)
+  rank[1:which.min(err)]
+}
+select_infold <- function(X, y) {
+  lasso <- character(0)
+  cv <- tryCatch(cv.glmnet(X, y, family = "binomial", alpha = 1, nfolds = 5),
+                 error = function(e) NULL)
+  if (!is.null(cv)) { co <- coef(cv, s = "lambda.min")[-1, 1]; lasso <- colnames(X)[co != 0] }
+  rf <- randomForest(X, y, ntree = 500)
+  gini <- rf$importance[, "MeanDecreaseGini"]; rfs <- names(gini)[gini > mean(gini)]
+  svs <- svm_size(X, y, svm_rank(X, y))
+  cons <- Reduce(intersect, list(lasso, rfs, svs))
+  uni  <- Reduce(union, list(lasso, rfs, svs))
+  if (length(cons) >= 2) cons else if (length(uni) >= 1) uni
+  else if (length(lasso) >= 1) lasso else colnames(X)
+}
+
+# Step 3: nested CV - read the authoritative table (do not recompute)
+hdr("STEP 3  NESTED CV - FROM NESTED_CV_AUTHORITATIVE.csv (16d)")
+auth_path <- file.path(tab, "NESTED_CV_AUTHORITATIVE.csv")
+if (!file.exists(auth_path))
+  stop("Missing ", auth_path, " - run 16d_nested_cv_reconciliation.R first.")
+auth <- fread(auth_path)
+
+pick <- function(sexlab, cs) auth[sex == sexlab & candidate_set == cs & selector == "consensus"]
+nest_tab <- rbindlist(lapply(c("Female", "Male"), function(sexlab) {
+  a <- pick(sexlab, "primary"); b <- pick(sexlab, "noMHC")
+  sx <- if (sexlab == "Female") "F" else "M"
+  data.table(
+    sex = sexlab,
+    evidence_tier = a$evidence_tier,
+    n = a$n,
+    n_candidates_primary = length(cand$primary[[sx]]),
+    n_candidates_noMHC   = length(cand$noMHC[[sx]]),
+    nested_AUC_primary = sprintf("%.3f (%.3f-%.3f)", a$nested_AUC, a$CI_lo, a$CI_hi),
+    nested_AUC_noMHC   = sprintf("%.3f (%.3f-%.3f)", b$nested_AUC, b$CI_lo, b$CI_hi),
+    delta_AUC = round(b$nested_AUC - a$nested_AUC, 3),
+    per_repeat_sd_primary = a$per_repeat_sd,
+    per_repeat_sd_noMHC   = b$per_repeat_sd,
+    med_genes_primary = a$median_genes_used,
+    med_genes_noMHC   = b$median_genes_used,
+    source = "16d_nested_cv_reconciliation.R (single authoritative implementation)")
+}))
+fwrite(nest_tab, file.path(tab, "PANEL_primary_vs_noMHC_nestedcv.csv"))
+print(nest_tab[, .(sex, n, nested_AUC_primary, nested_AUC_noMHC, delta_AUC)])
+
+# DeLong test needs paired per-sample predictions from 16d's saved object, if present
+delong_tab <- NULL
+auth_rds <- file.path(procN, "nested_cv_authoritative.rds")
+if (file.exists(auth_rds)) {
+  A <- readRDS(auth_rds)
+  delong_tab <- rbindlist(lapply(c("F", "M"), function(sx) {
+    ra <- A$results[[paste("primary consensus", sx)]]
+    rb <- A$results[[paste("noMHC consensus",   sx)]]
+    if (is.null(ra) || is.null(rb)) return(NULL)
+    m <- merge(ra$agg, rb$agg, by = "sample", suffixes = c("_pri", "_no"))
+    r1 <- roc(m$obs_pri, m$prob_pri, levels = c("HC", "RA"), direction = "<", quiet = TRUE)
+    r2 <- roc(m$obs_pri, m$prob_no,  levels = c("HC", "RA"), direction = "<", quiet = TRUE)
+    p <- tryCatch(suppressWarnings(roc.test(r1, r2, method = "delong",
+                                            paired = TRUE)$p.value),
+                  error = function(e) NA_real_)
+    data.table(sex = if (sx == "F") "Female" else "Male",
+               comparison = "nested CV: primary vs MHC-free (consensus selector)",
+               AUC_primary = round(as.numeric(auc(r1)), 3),
+               AUC_noMHC   = round(as.numeric(auc(r2)), 3),
+               delong_p = signif(p, 3),
+               verdict = fifelse(is.na(p), "indeterminate",
+                          fifelse(p >= 0.05,
+                            "NO significant difference - MHC removal costs nothing detectable",
+                          fifelse(as.numeric(auc(r2)) < as.numeric(auc(r1)),
+                            "MHC-free panel significantly WORSE",
+                            "MHC-free panel significantly BETTER"))))
+  }))
+  if (!is.null(delong_tab) && nrow(delong_tab)) {
+    fwrite(delong_tab, file.path(tab, "PANEL_primary_vs_noMHC_delong.csv"))
+    say(""); print(delong_tab)
+  }
+} else {
+  say("nested_cv_authoritative.rds absent - DeLong comparison skipped.")
+}
+
+# Step 4: locked panels applied to held-out data
+hdr("STEP 4  LOCKED PANELS ON INTERNAL AND EXTERNAL DATA")
+
+eval_locked <- function(genes, sx, variant) {
+  genes <- unique(genes[genes %in% rownames(expr)])
+  if (length(genes) < 2) return(NULL)
+  tcols <- meta$sample[meta$sex == sx]
+  ytr <- factor(meta$group[match(tcols, meta$sample)], levels = c("HC", "RA"))
+  Ztr <- as.data.frame(t(zrows(expr[genes, tcols, drop = FALSE])))
+  colnames(Ztr) <- make.names(genes)
+  fit <- suppressWarnings(glm(ytr ~ ., data = cbind(ytr = ytr, Ztr), family = binomial))
+
+  score <- function(ds) {
+    sp <- which(ds$sex == sx); present <- genes[genes %in% rownames(ds$expr)]
+    y <- factor(ds$group[sp], levels = c("HC", "RA"))
+    if (length(sp) < 3 || length(unique(y)) < 2 || !length(present)) return(NULL)
+    Z <- as.data.frame(t(zrows(ds$expr[present, sp, drop = FALSE])))
+    colnames(Z) <- make.names(present)
+    for (g in setdiff(make.names(genes), colnames(Z))) Z[[g]] <- 0
+    Z <- Z[, make.names(genes), drop = FALSE]
+    p <- as.numeric(predict(fit, newdata = Z, type = "response"))
+    r <- roc(y, p, levels = c("HC", "RA"), direction = "<", quiet = TRUE)
+    list(a = auc_ci(r), n = length(y), miss = setdiff(genes, present))
+  }
+  ap <- roc(ytr, as.numeric(predict(fit, type = "response")),
+            levels = c("HC", "RA"), direction = "<", quiet = TRUE)
+  list(train_apparent = list(a = auc_ci(ap), n = length(ytr), miss = character(0)),
+       internal = score(internal), blood = score(blood),
+       n_genes = length(genes), missing_ext = setdiff(genes, rownames(blood$expr)))
+}
+
+perf <- list()
+rows <- list()
+for (v in c("primary", "noMHC")) for (sx in c("F", "M")) {
+  r <- eval_locked(panel[[v]][[sx]], sx, v)
+  perf[[paste(v, sx)]] <- r
+  if (is.null(r)) next
+  sexlab <- if (sx == "F") "Female" else "Male"
+  for (dn in c("train_apparent", "internal", "blood")) {
+    x <- r[[dn]]; if (is.null(x)) next
+    rows[[length(rows) + 1]] <- data.table(
+      sex = sexlab, panel = v, n_panel_genes = r$n_genes,
+      dataset = c(train_apparent = "Train (apparent)", internal = "Internal test",
+                  blood = "External blood")[[dn]],
+      n = x$n, AUC = round(x$a[1], 3), AUC_lo = round(x$a[2], 3), AUC_hi = round(x$a[3], 3),
+      reported = fmt(x$a, x$n),
+      genes_missing_in_dataset = paste(x$miss, collapse = ";"),
+      evidence_tier = if (sx == "M" || x$n < SMALL_N) "EXPLORATORY (underpowered)" else "primary",
+      note = if (dn == "train_apparent")
+        "APPARENT - panel was selected using these samples; not a validation estimate" else "")
+  }
+}
+perf_tab <- rbindlist(rows)
+fwrite(perf_tab, file.path(tab, "PANEL_primary_vs_noMHC_performance.csv"))
+print(perf_tab[, .(sex, panel, dataset, n, reported, evidence_tier)])
+
+saveRDS(list(nested_tab = nest_tab, delong = delong_tab,
+             performance = perf_tab, panels = panel, candidates = cand),
+        file.path(procN, "panel_noMHC_objects.rds"))
+
+# Step 5: verdict
+hdr("STEP 5  VERDICT")
+if (is.null(delong_tab)) delong_tab <- data.table()
+for (i in seq_len(nrow(delong_tab))) {
+  d <- delong_tab[i]
+  say("%s: nested-CV AUC %.3f (primary) vs %.3f (MHC-free), DeLong p = %s",
+      d$sex, d$AUC_primary, d$AUC_noMHC, format.pval(d$delong_p, digits = 3))
+  say("   -> %s", d$verdict)
+}
+say("")
+say("READING RULE FOR THE THESIS")
+say("  CITE NESTED_CV_AUTHORITATIVE.csv for every nested-CV figure. This script")
+  say("  reads it; it does not recompute it. There is one implementation (16d).")
+  say("  Report the NESTED-CV comparison, not the locked-panel training numbers.")
+say("  The nested comparison is between two PROCEDURES and is leakage-free; the")
+say("  locked 'Train (apparent)' rows are optimistic by construction and are")
+say("  labelled as such in the output.")
+say("  If the DeLong test shows no significant difference, the correct sentence")
+say("  is: 'excluding the MHC did not measurably reduce diagnostic performance,")
+say("  so the panel does not depend on HLA linkage disequilibrium'. That is a")
+say("  STRENGTH of the MHC-free panel, and it is the version to carry forward.")
+say("  Every Male row remains EXPLORATORY at n = 38/13/9 regardless of AUC.")
+say("")
+say("Wrote PANEL_primary_vs_noMHC_{performance,nestedcv,delong}.csv and")
+say("panel_noMHC_objects.rds")
+cat("\nDONE\n")

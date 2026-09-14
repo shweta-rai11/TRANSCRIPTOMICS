@@ -1,0 +1,49 @@
+sex,panel,dataset,model,n,n_RA,n_HC,n_panel_genes,AUC,AUC_lo,AUC_hi,CI_method,evidence_tier
+Female,primary,Train,A panel only,145,86,59,6,0.831,0.764,0.897,DeLong,primary
+Female,primary,Train,B composition only,145,86,59,6,0.662,0.571,0.752,DeLong,primary
+Female,primary,Train,C panel + composition,145,86,59,6,0.828,0.761,0.895,DeLong,primary
+Female,primary,Train,D panel residualised,145,86,59,6,0.779,0.703,0.855,DeLong,primary
+Female,primary,Internal test,A panel only,61,36,25,6,0.721,0.585,0.857,DeLong,primary
+Female,primary,Internal test,B composition only,61,36,25,6,0.714,0.584,0.845,DeLong,primary
+Female,primary,Internal test,C panel + composition,61,36,25,6,0.77,0.646,0.894,DeLong,primary
+Female,primary,Internal test,D panel residualised,61,36,25,6,0.679,0.541,0.816,DeLong,primary
+Female,primary,External blood,A panel only,24,14,10,6,1,1,1,DeLong,primary
+Female,primary,External blood,B composition only,24,14,10,6,0.429,0.187,0.671,DeLong,primary
+Female,primary,External blood,C panel + composition,24,14,10,6,0.943,0.83,1,DeLong,primary
+Female,primary,External blood,D panel residualised,24,14,10,6,0.954,0.874,1,DeLong,primary
+Male,primary,Train,A panel only,38,17,21,6,0.933,0.847,1,DeLong,EXPLORATORY (underpowered)
+Male,primary,Train,B composition only,38,17,21,6,0.857,0.723,0.991,DeLong,EXPLORATORY (underpowered)
+Male,primary,Train,C panel + composition,38,17,21,6,0.924,0.839,1,DeLong,EXPLORATORY (underpowered)
+Male,primary,Train,D panel residualised,38,17,21,6,0.734,0.555,0.913,DeLong,EXPLORATORY (underpowered)
+Male,primary,Internal test,A panel only,13,6,7,6,1,1,1,bootstrap (n<20),EXPLORATORY (underpowered)
+Male,primary,Internal test,B composition only,13,6,7,6,0.798,0.512,1,bootstrap (n<20),EXPLORATORY (underpowered)
+Male,primary,Internal test,C panel + composition,13,6,7,6,0.952,0.786,1,bootstrap (n<20),EXPLORATORY (underpowered)
+Male,primary,Internal test,D panel residualised,13,6,7,6,0.595,0.262,0.929,bootstrap (n<20),EXPLORATORY (underpowered)
+Male,primary,External blood,A panel only,9,4,5,6,0.725,0.35,1,bootstrap (n<20),EXPLORATORY (underpowered)
+Male,primary,External blood,B composition only,9,4,5,6,0.575,0.175,0.95,bootstrap (n<20),EXPLORATORY (underpowered)
+Male,primary,External blood,C panel + composition,9,4,5,6,0.725,0.35,1,bootstrap (n<20),EXPLORATORY (underpowered)
+Male,primary,External blood,D panel residualised,9,4,5,6,0.525,0.15,0.875,bootstrap (n<20),EXPLORATORY (underpowered)
+Female,noMHC,Train,A panel only,145,86,59,4,0.812,0.742,0.882,DeLong,primary
+Female,noMHC,Train,B composition only,145,86,59,4,0.662,0.571,0.752,DeLong,primary
+Female,noMHC,Train,C panel + composition,145,86,59,4,0.805,0.733,0.877,DeLong,primary
+Female,noMHC,Train,D panel residualised,145,86,59,4,0.746,0.665,0.827,DeLong,primary
+Female,noMHC,Internal test,A panel only,61,36,25,4,0.789,0.662,0.916,DeLong,primary
+Female,noMHC,Internal test,B composition only,61,36,25,4,0.714,0.584,0.845,DeLong,primary
+Female,noMHC,Internal test,C panel + composition,61,36,25,4,0.777,0.653,0.9,DeLong,primary
+Female,noMHC,Internal test,D panel residualised,61,36,25,4,0.671,0.529,0.813,DeLong,primary
+Female,noMHC,External blood,A panel only,24,14,10,4,0.843,0.67,1,DeLong,primary
+Female,noMHC,External blood,B composition only,24,14,10,4,0.429,0.187,0.671,DeLong,primary
+Female,noMHC,External blood,C panel + composition,24,14,10,4,0.65,0.387,0.913,DeLong,primary
+Female,noMHC,External blood,D panel residualised,24,14,10,4,0.707,0.48,0.935,DeLong,primary
+Male,noMHC,Train,A panel only,38,17,21,5,0.888,0.782,0.994,DeLong,EXPLORATORY (underpowered)
+Male,noMHC,Train,B composition only,38,17,21,5,0.857,0.723,0.991,DeLong,EXPLORATORY (underpowered)
+Male,noMHC,Train,C panel + composition,38,17,21,5,0.959,0.897,1,DeLong,EXPLORATORY (underpowered)
+Male,noMHC,Train,D panel residualised,38,17,21,5,0.723,0.546,0.899,DeLong,EXPLORATORY (underpowered)
+Male,noMHC,Internal test,A panel only,13,6,7,5,1,1,1,bootstrap (n<20),EXPLORATORY (underpowered)
+Male,noMHC,Internal test,B composition only,13,6,7,5,0.798,0.512,1,bootstrap (n<20),EXPLORATORY (underpowered)
+Male,noMHC,Internal test,C panel + composition,13,6,7,5,1,1,1,bootstrap (n<20),EXPLORATORY (underpowered)
+Male,noMHC,Internal test,D panel residualised,13,6,7,5,0.643,0.286,1,bootstrap (n<20),EXPLORATORY (underpowered)
+Male,noMHC,External blood,A panel only,9,4,5,5,0.7,0.25,1,bootstrap (n<20),EXPLORATORY (underpowered)
+Male,noMHC,External blood,B composition only,9,4,5,5,0.575,0.175,0.95,bootstrap (n<20),EXPLORATORY (underpowered)
+Male,noMHC,External blood,C panel + composition,9,4,5,5,0.95,0.7,1,bootstrap (n<20),EXPLORATORY (underpowered)
+Male,noMHC,External blood,D panel residualised,9,4,5,5,0.725,0.375,1,bootstrap (n<20),EXPLORATORY (underpowered)

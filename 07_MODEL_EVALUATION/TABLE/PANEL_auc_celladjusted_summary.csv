@@ -1,0 +1,13 @@
+sex,panel,dataset,n,AUC_panel,AUC_composition,delta,LRT_p,evidence_tier,perfect_separation,verdict
+Female,primary,Train,145,0.831,0.662,0.169,1.21e-10,primary,FALSE,PANEL ADDS SIGNAL beyond composition
+Female,primary,Internal test,61,0.721,0.714,0.007,0.00142,primary,FALSE,MARGINAL - statistically additive but AUC gain < 0.02
+Female,primary,External blood,24,1,0.429,0.571,2.42e-05,primary,TRUE,"PANEL ADDS SIGNAL beyond composition [AUC = 1.000: perfect separation, treat as unstable]"
+Male,primary,Train,38,0.933,0.857,0.076,5.21e-05,EXPLORATORY (underpowered),FALSE,EXPLORATORY - not interpretable at this n
+Male,primary,Internal test,13,1,0.798,0.202,1,EXPLORATORY (underpowered),TRUE,"EXPLORATORY - not interpretable at this n [AUC = 1.000: perfect separation, treat as unstable]"
+Male,primary,External blood,9,0.725,0.575,0.15,0.118,EXPLORATORY (underpowered),FALSE,EXPLORATORY - not interpretable at this n
+Female,noMHC,Train,145,0.812,0.662,0.15,4.08e-09,primary,FALSE,PANEL ADDS SIGNAL beyond composition
+Female,noMHC,Internal test,61,0.789,0.714,0.074,0.0322,primary,FALSE,PANEL ADDS SIGNAL beyond composition
+Female,noMHC,External blood,24,0.843,0.429,0.414,0.000803,primary,FALSE,PANEL ADDS SIGNAL beyond composition
+Male,noMHC,Train,38,0.888,0.857,0.031,1.97e-05,EXPLORATORY (underpowered),FALSE,EXPLORATORY - not interpretable at this n
+Male,noMHC,Internal test,13,1,0.798,0.202,1,EXPLORATORY (underpowered),TRUE,"EXPLORATORY - not interpretable at this n [AUC = 1.000: perfect separation, treat as unstable]"
+Male,noMHC,External blood,9,0.7,0.575,0.125,0.118,EXPLORATORY (underpowered),FALSE,EXPLORATORY - not interpretable at this n

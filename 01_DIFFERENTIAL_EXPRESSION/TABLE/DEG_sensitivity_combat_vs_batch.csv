@@ -1,0 +1,4 @@
+comparison,n,combat_then_DE,batch_in_model,ratio,resid_df_combat,resid_df_batch
+All,183,6422,6580,1.025,181,176
+Female,145,5131,4780,0.932,143,138
+Male,38,5820,5612,0.964,36,31

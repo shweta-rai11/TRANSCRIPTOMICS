@@ -1,0 +1,3 @@
+sex,n_sig_DEG,n_disease_module_genes,n_candidates,n_up_in_RA,n_down_in_RA,DEGs_lost_to_variance_filter,pct_DEG_lost,per_module
+Female,5131,2586,2045,595,1450,0,0,yellow=595 brown=1450
+Male,5820,2586,2079,585,1494,0,0,yellow=585 brown=1494

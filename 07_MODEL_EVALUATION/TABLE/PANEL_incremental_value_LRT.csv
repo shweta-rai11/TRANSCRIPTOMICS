@@ -1,0 +1,13 @@
+sex,panel,dataset,n,AUC_panel,AUC_composition,AUC_both,delta_panel_minus_composition,delong_p_panel_vs_composition,LRT_df,LRT_deviance,LRT_p_panel_beyond_composition,separation_warning,evidence_tier
+Female,primary,Train,145,0.831,0.662,0.828,0.169,1.33e-05,6,57.88,1.21e-10,FALSE,primary
+Female,primary,Internal test,61,0.721,0.714,0.77,0.007,0.931,6,21.62,0.00142,FALSE,primary
+Female,primary,External blood,24,1,0.429,0.943,0.571,3.67e-06,6,31.11,2.42e-05,TRUE,primary
+Male,primary,Train,38,0.933,0.857,0.924,0.076,0.271,6,29.36,5.21e-05,TRUE,EXPLORATORY (underpowered)
+Male,primary,Internal test,13,1,0.798,0.952,0.202,0.152,6,0,1,TRUE,EXPLORATORY (underpowered)
+Male,primary,External blood,9,0.725,0.575,0.725,0.15,0.491,5,8.79,0.118,TRUE,EXPLORATORY (underpowered)
+Female,noMHC,Train,145,0.812,0.662,0.805,0.15,0.000178,4,44.95,4.08e-09,FALSE,primary
+Female,noMHC,Internal test,61,0.789,0.714,0.777,0.074,0.265,4,10.54,0.0322,FALSE,primary
+Female,noMHC,External blood,24,0.843,0.429,0.65,0.414,0.000469,4,18.95,0.000803,FALSE,primary
+Male,noMHC,Train,38,0.888,0.857,0.959,0.031,0.696,5,29.36,1.97e-05,TRUE,EXPLORATORY (underpowered)
+Male,noMHC,Internal test,13,1,0.798,1,0.202,0.152,5,0,1,TRUE,EXPLORATORY (underpowered)
+Male,noMHC,External blood,9,0.7,0.575,0.95,0.125,0.612,5,8.79,0.118,TRUE,EXPLORATORY (underpowered)
