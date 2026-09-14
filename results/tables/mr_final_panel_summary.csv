@@ -1,3 +1,0 @@
-sex,evidence_tier,candidate,n_train,n_internal,n_external,nested_CV,nested_per_repeat,internal_test,external_blood,median_genes_used,interpretation
-Female,primary,MR-causal BH-FDR<0.05 (32),145,61,24,0.809 (0.738-0.879) [n=145],0.804 +/- 0.020,0.860 (0.768-0.952) [n=61],0.850 (0.690-1.000) [n=24],11,Reportable as a diagnostic performance estimate.
-Male,EXPLORATORY (underpowered),MR-causal BH-FDR<0.05 (25),38,13,9,0.952 (0.893-1.000) [n=38],0.944 +/- 0.013,1.000 (1.000-1.000) [n=13] SEPARATION,0.900 (0.600-1.000) [n=9],20,"POWER-LIMITED. Not a validated panel. Any AUC marked SEPARATION is a perfect-separation artefact of small n, not a performance estimate."

@@ -1,3 +1,0 @@
-sex,n_samples,n_mr_candidates,n_lasso,n_rf,n_svmrfe,n_consensus,tuned_lasso_lambda_min,tuned_rf_mtry,tuned_svm_cost,consensus_genes
-Female,145,32,7,10,8,6,0.0434,2,0.01,C6orf136; ESYT1; GNL1; IKZF3; MED1; SMARCC2
-Male,38,25,10,10,11,6,0.0204,1,0.01,ESYT1; HLA-DMA; INPP5B; MED1; SMARCC2; VPS52

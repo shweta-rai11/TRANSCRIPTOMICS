@@ -1,5 +1,0 @@
-sex,module,module_size,cor_ME_RA,module_direction,n_overlap_up,n_overlap_down,n_consistent,n_inconsistent
-Female,yellow,708,0.556,UP in RA,595,0,595,0
-Female,brown,1878,-0.59,DOWN in RA,0,1450,1450,0
-Male,yellow,708,0.556,UP in RA,585,0,585,0
-Male,brown,1878,-0.59,DOWN in RA,0,1494,1494,0

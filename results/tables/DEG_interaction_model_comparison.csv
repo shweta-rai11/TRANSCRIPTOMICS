@@ -1,4 +1,0 @@
-model,matrix_used,n_interaction_FDR05,resid_df,note
-PRIMARY: qnorm + batch_full (reported),pre-ComBat quantile-normalised,53,174,"conservative; batch modelled explicitly, df correctly debited"
-"sensitivity: ComBat matrix, no batch term",ComBat-corrected,270,179,"INFLATED: ComBat mod = ~group+sex protects main effects only, not the interaction"
-sensitivity: qnorm + batch + composition PCs,pre-ComBat quantile-normalised,7,171,tests whether the interaction survives leukocyte-composition adjustment

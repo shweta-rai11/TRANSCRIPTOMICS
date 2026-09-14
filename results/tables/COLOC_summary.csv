@@ -1,5 +1,0 @@
-set,n_genes,n_run,colocalised,coloc_prior_fragile,suggestive,distinct_variants,mhc_unreliable,inconclusive,not_run
-All causal genes,33,33,0,2,4,9,13,5,0
-MHC genes,14,14,0,0,0,0,13,1,0
-non-MHC genes,19,19,0,2,4,9,0,4,0
-Final panels (F union M),9,9,0,0,1,2,4,2,0

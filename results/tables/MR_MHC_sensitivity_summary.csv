@@ -1,3 +1,0 @@
-sex,genes_tested_primary,genes_tested_noMHC,causal_FDR05_primary,causal_FDR05_noMHC,causal_robust,causal_untestable_noMHC,causal_MHC_dependent,causal_FDR_rank_only,panel_n,panel_robust,panel_untestable,panel_MHC_dependent,panel_FDR_rank_only
-Female,1477,1448,32,14,14,14,0,4,6,3,2,0,1
-Male,1478,1456,25,14,14,10,0,1,6,3,2,0,1

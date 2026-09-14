@@ -1,9 +1,0 @@
-sex,dataset,AUC
-Female,Train (10-fold CV),0.831
-Female,Internal test,0.823
-Female,External blood,0.957
-Female,External synovium,0.986
-Male,Train (10-fold CV),0.933
-Male,Internal test,1
-Male,External blood,0.75
-Male,External synovium,0.776
