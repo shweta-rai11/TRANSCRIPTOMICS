@@ -13,7 +13,7 @@
 #   make crosstissue                     # phase 8: synovium validation
 #   make crossancestry                      # phase 9: cross-ancestry MR
 #   make figures                               # phase 10: figures + enrichment
-#   make provenance                               # regenerate RESULTS.md / .tsv + run tests
+#   make provenance                               # regenerate results/RESULTS_PROVENANCE.tsv + run tests
 #   make all                                          # phases 0-10 + provenance, in order
 #
 #   Each phase target depends on the previous phase's target, so `make evaluate`

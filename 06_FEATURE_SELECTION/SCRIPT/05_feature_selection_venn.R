@@ -154,6 +154,5 @@ say("wrote results/tables/FS_venn_membership.csv (%d rows)", nrow(memb))
 print(memb[in_consensus == TRUE, .(candidate_set, sex, gene, n_methods)])
 
 say("")
-say("Every panel figure now has a script behind it. FIG_G2_01_* was previously")
-say("listed in REPRODUCIBILITY.md as having no generator; that gap is closed.")
+say("Every panel figure now has a script behind it (FIG_G2_01_* included).")
 cat("\nDONE\n")

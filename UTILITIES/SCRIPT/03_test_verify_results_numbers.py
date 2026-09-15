@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Regression tests for the provenance harness (verify_results_numbers.py): checks claim bookkeeping, source-script resolution, and the two output files it writes. Run with `python3 scripts/test_verify_results_numbers.py`."""
+"""Regression tests for the provenance harness (02_verify_results_numbers.py): checks claim bookkeeping, source-script resolution, and the RESULTS_PROVENANCE.tsv it writes. Run with `python3 UTILITIES/SCRIPT/03_test_verify_results_numbers.py`."""
 import importlib.util
 import os
 import subprocess
@@ -7,8 +7,8 @@ import sys
 import unittest
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-ROOT = os.path.dirname(HERE)
-TARGET = os.path.join(HERE, "verify_results_numbers.py")
+ROOT = os.path.dirname(os.path.dirname(HERE))
+TARGET = os.path.join(HERE, "02_verify_results_numbers.py")
 
 
 def _load_module():
@@ -28,7 +28,7 @@ class TestClaimBookkeeping(unittest.TestCase):
 
     def test_claims_were_built(self):
         self.assertGreater(len(self.mod.CLAIMS), 300,
-            "expected 300+ claims - if this drops, a whole results/tables/*.csv "
+            "expected 300+ claims - if this drops, a whole TABLE/*.csv "
             "input probably went missing and its `rows()` calls silently returned [].")
 
     def test_no_missing_source_files(self):
@@ -83,18 +83,18 @@ class TestSourceProvenance(unittest.TestCase):
     def test_brace_expansion(self):
         # a known real claim whose source uses {female,male} brace notation
         scripts = self.mod.scripts_for("WGCNA_11_candidates_{female,male}.csv")
-        self.assertIn("scripts/02_network/06_WGCNA.R", scripts)
+        self.assertIn("03_WGCNA/SCRIPT/01_WGCNA.R", scripts)
 
     def test_wildcard_expansion(self):
         # a known real claim whose source uses a *.csv wildcard plus a literal file
         scripts = self.mod.scripts_for("DEG_interaction_significant.csv + mr_fs_summary*.csv")
-        self.assertIn("scripts/01_expression/05d_interaction_report.R", scripts)
-        self.assertIn("scripts/05_features/12_feature_selection.R", scripts)
-        self.assertIn("scripts/05_features/12b_feature_selection_noMHC.R", scripts)
+        self.assertIn("02_DIFFERENTIAL_GENE_EXPRESSION/SCRIPT/06_interaction_report.R", scripts)
+        self.assertIn("06_FEATURE_SELECTION/SCRIPT/01_feature_selection.R", scripts)
+        self.assertIn("06_FEATURE_SELECTION/SCRIPT/02_feature_selection_noMHC.R", scripts)
 
 
 class TestEndToEndOutputs(unittest.TestCase):
-    """Runs the script exactly as a human/CI would, via subprocess, and checks the two files it promises to produce."""
+    """Runs the script exactly as a human/CI would, via subprocess, and checks the TSV it promises to produce."""
 
     def test_check_mode_exits_zero(self):
         r = subprocess.run([sys.executable, TARGET, "--check"], cwd=ROOT,
@@ -108,9 +108,7 @@ class TestEndToEndOutputs(unittest.TestCase):
         self.assertEqual(r.returncode, 0, f"full run failed:\n{r.stdout}\n{r.stderr}")
 
         tsv_path = os.path.join(ROOT, "results", "RESULTS_PROVENANCE.tsv")
-        md_path = os.path.join(ROOT, "results", "RESULTS.md")
         self.assertTrue(os.path.exists(tsv_path))
-        self.assertTrue(os.path.exists(md_path))
 
         with open(tsv_path, encoding="utf-8") as fh:
             lines = fh.read().splitlines()
@@ -122,11 +120,6 @@ class TestEndToEndOutputs(unittest.TestCase):
             "row count in RESULTS_PROVENANCE.tsv does not match len(CLAIMS) - "
             "main() and the module-level CLAIMS build must be out of sync")
 
-        with open(md_path, encoding="utf-8") as fh:
-            md = fh.read()
-        self.assertIn("§2.1", md)
-        self.assertIn("§2.15", md)
-        self.assertGreater(len(md), 10_000, "RESULTS.md looks suspiciously short")
 
 
 if __name__ == "__main__":

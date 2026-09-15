@@ -1,12 +1,11 @@
 #!/usr/bin/env python3
-"""Provenance harness for the Results chapter: re-derives each [R-xxx] claim from results/tables/*.csv and results/logs/*, and writes results/RESULTS_PROVENANCE.tsv and results/RESULTS.md. Run with `python3 scripts/verify_results_numbers.py` (optionally a claim id, or --check)."""
-import csv, os, re, sys, datetime, statistics as st
+"""Provenance harness for the Results chapter: re-derives each [R-xxx] claim from the per-layer TABLE/*.csv files (falling back to results/tables/ and results/logs/ when a live pipeline run is present) and writes results/RESULTS_PROVENANCE.tsv. Run with `python3 UTILITIES/SCRIPT/02_verify_results_numbers.py` (optionally a claim id, or --check)."""
+import csv, glob, os, re, sys, datetime, statistics as st
 
-ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 TAB  = os.path.join(ROOT, "results", "tables")
 LOG  = os.path.join(ROOT, "results", "logs")
 OUT  = os.path.join(ROOT, "results", "RESULTS_PROVENANCE.tsv")
-MD   = os.path.join(ROOT, "results", "RESULTS.md")
 STAMP = datetime.date.today().isoformat()
 
 CLAIMS = []           # (id, description, value, source, derivation, section)
@@ -17,9 +16,17 @@ def section(label):
     global CUR_SECTION
     CUR_SECTION = label
 
-def rows(fn):
+def locate(fn):
+    """Return the path of a source CSV: results/tables/ first, else the lowest-numbered <layer>/TABLE/ copy."""
     p = os.path.join(TAB, fn)
-    if not os.path.exists(p):
+    if os.path.exists(p):
+        return p
+    hits = sorted(glob.glob(os.path.join(ROOT, "[0-9][0-9]_*", "TABLE", fn)))
+    return hits[0] if hits else None
+
+def rows(fn):
+    p = locate(fn)
+    if p is None:
         MISSING.append(fn); return []
     with open(p, newline="", encoding="utf-8-sig") as fh:
         return list(csv.DictReader(fh))
@@ -624,129 +631,129 @@ for sx in ("female", "male"):
 
 # =================================================================== provenance: csv/log -> producing R script
 CSV_SCRIPT = {
-    "combined_cohort_summary.csv": "scripts/00_preprocess/03_normalize_batch.R",
-    "internal_val_holdout_meta.csv": "scripts/00_preprocess/03_normalize_batch.R",
-    "normalization_diagnostics.csv": "scripts/00_preprocess/03_normalize_batch.R",
-    "dataset_gene_overlap.csv": "scripts/00_preprocess/03_dataset_gene_overlap_venn.R",
-    "05d_interaction.log": "scripts/01_expression/05d_interaction_report.R",
-    "DEG_summary.csv": "scripts/01_expression/05_dge.R",
-    "DEG_array_weights.csv": "scripts/01_expression/05_dge.R",
-    "DEG_female_significant.csv": "scripts/01_expression/05_dge.R",
-    "DEG_male_significant.csv": "scripts/01_expression/05_dge.R",
-    "DEG_treat_sensitivity.csv": "scripts/01_expression/05_dge.R",
-    "DEG_sensitivity_combat_vs_batch.csv": "scripts/01_expression/05b_dge_sensitivity.R",
-    "dge_enriched_terms_female.csv": "scripts/01_expression/05_dge.R",
-    "dge_enriched_terms_male.csv": "scripts/01_expression/05_dge.R",
-    "dge_enriched_terms_all.csv": "scripts/01_expression/05_dge.R",
-    "gsea_kegg.csv": "scripts/01_expression/05_dge.R",
-    "WGCNA_01_soft_threshold.csv": "scripts/02_network/06_WGCNA.R",
-    "WGCNA_02_module_trait.csv": "scripts/02_network/06_WGCNA.R",
-    "WGCNA_03_disease_modules.csv": "scripts/02_network/06_WGCNA.R",
-    "WGCNA_05_gene_module_assignment.csv": "scripts/02_network/06_WGCNA.R",
-    "WGCNA_06_disease_module_hubs.csv": "scripts/02_network/06_WGCNA.R",
-    "WGCNA_08_disease_GO.csv": "scripts/02_network/06_WGCNA.R",
-    "WGCNA_09_disease_KEGG.csv": "scripts/02_network/06_WGCNA.R",
-    "WGCNA_10_module_preservation.csv": "scripts/02_network/06_WGCNA.R",
-    "WGCNA_11_candidates_female.csv": "scripts/02_network/06_WGCNA.R",
-    "WGCNA_11_candidates_male.csv": "scripts/02_network/06_WGCNA.R",
-    "WGCNA_12_candidate_summary.csv": "scripts/02_network/06_WGCNA.R",
-    "06_WGCNA_run3.log": "scripts/02_network/06_WGCNA.R",
-    "module_trait_RAvsControl_ALLSTRATA.csv": "scripts/03_candidates/08_module_trait_RA_control.R",
-    "module_trait_RAvsControl_all.csv": "scripts/03_candidates/08_module_trait_RA_control.R",
-    "module_trait_RAvsControl_female.csv": "scripts/03_candidates/08_module_trait_RA_control.R",
-    "module_trait_RAvsControl_male.csv": "scripts/03_candidates/08_module_trait_RA_control.R",
-    "candidate_summary.csv": "scripts/03_candidates/09_disease_module_deg_intersect.R",
-    "candidates_female_disease.csv": "scripts/03_candidates/09_disease_module_deg_intersect.R",
-    "candidates_male_disease.csv": "scripts/03_candidates/09_disease_module_deg_intersect.R",
-    "disease_module_selection.csv": "scripts/03_candidates/09_disease_module_deg_intersect.R",
-    "diseasemod_DEG_direction_summary.csv": "scripts/03_candidates/09b_disease_module_deg_venn.R",
-    "diseasemod_DEG_intersection_female.csv": "scripts/03_candidates/09b_disease_module_deg_venn.R",
-    "diseasemod_DEG_intersection_male.csv": "scripts/03_candidates/09b_disease_module_deg_venn.R",
-    "MR_MHC_sensitivity_summary.csv": "scripts/04_causal/10c_MR_mhc_sensitivity.R",
-    "MR_MHC_sensitivity_female.csv": "scripts/04_causal/10c_MR_mhc_sensitivity.R",
-    "MR_MHC_sensitivity_male.csv": "scripts/04_causal/10c_MR_mhc_sensitivity.R",
-    "MR_MHC_sensitivity_panel_fate.csv": "scripts/04_causal/10c_MR_mhc_sensitivity.R",
-    "FS_input_female.csv": "scripts/04_causal/10_MR.R",
-    "FS_input_male.csv": "scripts/04_causal/10_MR.R",
-    "FS_input_female_noMHC.csv": "scripts/04_causal/10c_MR_mhc_sensitivity.R",
-    "FS_input_male_noMHC.csv": "scripts/04_causal/10c_MR_mhc_sensitivity.R",
-    "MR_female_TABLE1_instruments.csv": "scripts/04_causal/10_MR.R",
-    "MR_male_TABLE1_instruments.csv": "scripts/04_causal/10_MR.R",
-    "MR_female_TABLE2_results_allmethods.csv": "scripts/04_causal/10_MR.R",
-    "MR_male_TABLE2_results_allmethods.csv": "scripts/04_causal/10_MR.R",
-    "MR_female_TABLE3_pleiotropy.csv": "scripts/04_causal/10_MR.R",
-    "MR_male_TABLE3_pleiotropy.csv": "scripts/04_causal/10_MR.R",
-    "MR_female_TABLE4_heterogeneity.csv": "scripts/04_causal/10_MR.R",
-    "MR_male_TABLE4_heterogeneity.csv": "scripts/04_causal/10_MR.R",
-    "MR_female_primary_okada.csv": "scripts/04_causal/10_MR.R",
-    "MR_male_primary_okada.csv": "scripts/04_causal/10_MR.R",
-    "COLOC_results.csv": "scripts/04_causal/10d_coloc_panel_genes.R",
-    "COLOC_panel_genes.csv": "scripts/04_causal/10d_coloc_panel_genes.R",
-    "COLOC_summary.csv": "scripts/04_causal/10d_coloc_panel_genes.R",
-    "COLOC_SUSIE_mhc.csv": "scripts/04_causal/10e_coloc_susie_mhc.R",
-    "COLOC_combined_abf_susie.csv": "scripts/04_causal/10e_coloc_susie_mhc.R",
-    "mr_fs_summary.csv": "scripts/05_features/12_feature_selection.R",
-    "mr_fs_consensus_female.csv": "scripts/05_features/12_feature_selection.R",
-    "mr_fs_consensus_male.csv": "scripts/05_features/12_feature_selection.R",
-    "mr_fs_selected_bymethod_female.csv": "scripts/05_features/12_feature_selection.R",
-    "mr_fs_selected_bymethod_male.csv": "scripts/05_features/12_feature_selection.R",
-    "mr_fs_summary_noMHC.csv": "scripts/05_features/12b_feature_selection_noMHC.R",
-    "PANEL_primary_vs_noMHC_membership.csv": "scripts/05_features/12b_feature_selection_noMHC.R",
-    "FS_venn_membership.csv": "scripts/05_features/13_feature_selection_venn.R",
-    "mr_nested_cv_stability_female.csv": "scripts/06_models/14_model_training_nested_cv.R",
-    "mr_nested_cv_stability_male.csv": "scripts/06_models/14_model_training_nested_cv.R",
-    "mr_nested_cv_summary.csv": "scripts/06_models/14_model_training_nested_cv.R",
-    "mr_elasticnet_summary.csv": "scripts/06_models/15_model_training_elasticnet.R",
-    "mr_final_coefs_bysex.csv": "scripts/06_models/16_model_training_final_panel.R",
-    "mr_final_panel_summary.csv": "scripts/06_models/16_model_training_final_panel.R",
-    "PANEL_primary_vs_noMHC_nestedcv.csv": "scripts/06_models/16b_model_training_final_panel_noMHC.R",
-    "PANEL_primary_vs_noMHC_delong.csv": "scripts/06_models/16b_model_training_final_panel_noMHC.R",
-    "PANEL_primary_vs_noMHC_performance.csv": "scripts/06_models/16b_model_training_final_panel_noMHC.R",
-    "nested_cv_stability_female.csv": "scripts/06_models/16c_model_training_nested_cv_transcriptomewide.R",
-    "nested_cv_stability_male.csv": "scripts/06_models/16c_model_training_nested_cv_transcriptomewide.R",
-    "nested_cv_summary.csv": "scripts/06_models/16c_model_training_nested_cv_transcriptomewide.R",
-    "NESTED_CV_AUTHORITATIVE.csv": "scripts/06_models/16d_nested_cv_reconciliation.R",
-    "NESTED_CV_legacy_reconciliation.csv": "scripts/06_models/16d_nested_cv_reconciliation.R",
-    "mr_roc_panel_auc.csv": "scripts/07_evaluate/17_testing_blood_internal_external.R",
-    "mr_roc_pergene_auc.csv": "scripts/07_evaluate/17_testing_blood_internal_external.R",
-    "PANEL_auc_celladjusted.csv": "scripts/07_evaluate/17b_testing_blood_celladjusted.R",
-    "PANEL_incremental_value_LRT.csv": "scripts/07_evaluate/17b_testing_blood_celladjusted.R",
-    "PANEL_auc_celladjusted_summary.csv": "scripts/07_evaluate/17b_testing_blood_celladjusted.R",
-    "mr_pergene_train_auc.csv": "scripts/07_evaluate/18_testing_blood_pergene_roc.R",
-    "diag_dca_female.csv": "scripts/07_evaluate/19_testing_blood_clinical_utility.R",
-    "diag_dca_male.csv": "scripts/07_evaluate/19_testing_blood_clinical_utility.R",
-    "19_testing_blood_clinical_utility.log": "scripts/07_evaluate/19_testing_blood_clinical_utility.R",
-    "val_synovium_pergene_female.csv": "scripts/08_crosstissue/20_testing_synovium_external.R",
-    "val_synovium_pergene_male.csv": "scripts/08_crosstissue/20_testing_synovium_external.R",
-    "crosstissue_panel_auc.csv": "scripts/08_crosstissue/22_crosstissue_biomarker_discovery.R",
-    "pergene_auc_alltissues.csv": "scripts/08_crosstissue/24_crosstissue_pergene_auc.R",
-    "MR35_crossancestry_female.csv": "scripts/09_crossancestry/26_crossancestry_biomarker_mr.R",
-    "MR35_crossancestry_male.csv": "scripts/09_crossancestry/26_crossancestry_biomarker_mr.R",
-    "MR35_crossancestry_summary.csv": "scripts/09_crossancestry/26_crossancestry_biomarker_mr.R",
-    "MR35_instrument_transferability_female.csv": "scripts/09_crossancestry/26_crossancestry_biomarker_mr.R",
-    "MR35_instrument_transferability_male.csv": "scripts/09_crossancestry/26_crossancestry_biomarker_mr.R",
-    "CELL_fractions_train.csv": "scripts/01_expression/05c_deconvolution.R",
-    "CELL_fractions_holdout.csv": "scripts/01_expression/05c_deconvolution.R",
-    "CELL_fractions_external.csv": "scripts/01_expression/05c_deconvolution.R",
-    "CELL_mcpcounter_train.csv": "scripts/01_expression/05c_deconvolution.R",
-    "CELL_mcpcounter_external.csv": "scripts/01_expression/05c_deconvolution.R",
-    "CELL_fraction_group_tests.csv": "scripts/01_expression/05c_deconvolution.R",
-    "CELL_composition_pca.csv": "scripts/01_expression/05c_deconvolution.R",
-    "CELL_panel_gene_adjustment.csv": "scripts/01_expression/05c_deconvolution.R",
-    "DEG_celladjusted_female.csv": "scripts/01_expression/05c_deconvolution.R",
-    "DEG_celladjusted_male.csv": "scripts/01_expression/05c_deconvolution.R",
-    "DEG_celladjusted_summary.csv": "scripts/01_expression/05c_deconvolution.R",
-    "DEG_interaction_summary.csv": "scripts/01_expression/05b_dge_sensitivity.R",
-    "DEG_interaction_top.csv": "scripts/01_expression/05b_dge_sensitivity.R",
-    "DEG_interaction_model_comparison.csv": "scripts/01_expression/05d_interaction_report.R",
-    "DEG_interaction_full.csv": "scripts/01_expression/05d_interaction_report.R",
-    "DEG_interaction_significant.csv": "scripts/01_expression/05d_interaction_report.R",
-    "DEG_interaction_patterns.csv": "scripts/01_expression/05d_interaction_report.R",
-    "DEG_interaction_enrichment.csv": "scripts/01_expression/05d_interaction_report.R",
-    "enrich_GO_BP_female.csv": "scripts/10_figures/34_pathway_enrichment.R",
-    "enrich_GO_BP_male.csv": "scripts/10_figures/34_pathway_enrichment.R",
-    "enrich_KEGG_female.csv": "scripts/10_figures/34_pathway_enrichment.R",
-    "enrich_KEGG_male.csv": "scripts/10_figures/34_pathway_enrichment.R",
+    "combined_cohort_summary.csv": "01_DATA_PREPROCESSING/SCRIPT/04_normalize_batch.R",
+    "internal_val_holdout_meta.csv": "01_DATA_PREPROCESSING/SCRIPT/04_normalize_batch.R",
+    "normalization_diagnostics.csv": "01_DATA_PREPROCESSING/SCRIPT/04_normalize_batch.R",
+    "dataset_gene_overlap.csv": "01_DATA_PREPROCESSING/SCRIPT/03_dataset_gene_overlap_venn.R",
+    "05d_interaction.log": "02_DIFFERENTIAL_GENE_EXPRESSION/SCRIPT/06_interaction_report.R",
+    "DEG_summary.csv": "02_DIFFERENTIAL_GENE_EXPRESSION/SCRIPT/01_dge.R",
+    "DEG_array_weights.csv": "02_DIFFERENTIAL_GENE_EXPRESSION/SCRIPT/01_dge.R",
+    "DEG_female_significant.csv": "02_DIFFERENTIAL_GENE_EXPRESSION/SCRIPT/01_dge.R",
+    "DEG_male_significant.csv": "02_DIFFERENTIAL_GENE_EXPRESSION/SCRIPT/01_dge.R",
+    "DEG_treat_sensitivity.csv": "02_DIFFERENTIAL_GENE_EXPRESSION/SCRIPT/01_dge.R",
+    "DEG_sensitivity_combat_vs_batch.csv": "02_DIFFERENTIAL_GENE_EXPRESSION/SCRIPT/03_dge_sensitivity.R",
+    "dge_enriched_terms_female.csv": "02_DIFFERENTIAL_GENE_EXPRESSION/SCRIPT/01_dge.R",
+    "dge_enriched_terms_male.csv": "02_DIFFERENTIAL_GENE_EXPRESSION/SCRIPT/01_dge.R",
+    "dge_enriched_terms_all.csv": "02_DIFFERENTIAL_GENE_EXPRESSION/SCRIPT/01_dge.R",
+    "gsea_kegg.csv": "02_DIFFERENTIAL_GENE_EXPRESSION/SCRIPT/01_dge.R",
+    "WGCNA_01_soft_threshold.csv": "03_WGCNA/SCRIPT/01_WGCNA.R",
+    "WGCNA_02_module_trait.csv": "03_WGCNA/SCRIPT/01_WGCNA.R",
+    "WGCNA_03_disease_modules.csv": "03_WGCNA/SCRIPT/01_WGCNA.R",
+    "WGCNA_05_gene_module_assignment.csv": "03_WGCNA/SCRIPT/01_WGCNA.R",
+    "WGCNA_06_disease_module_hubs.csv": "03_WGCNA/SCRIPT/01_WGCNA.R",
+    "WGCNA_08_disease_GO.csv": "03_WGCNA/SCRIPT/01_WGCNA.R",
+    "WGCNA_09_disease_KEGG.csv": "03_WGCNA/SCRIPT/01_WGCNA.R",
+    "WGCNA_10_module_preservation.csv": "03_WGCNA/SCRIPT/01_WGCNA.R",
+    "WGCNA_11_candidates_female.csv": "03_WGCNA/SCRIPT/01_WGCNA.R",
+    "WGCNA_11_candidates_male.csv": "03_WGCNA/SCRIPT/01_WGCNA.R",
+    "WGCNA_12_candidate_summary.csv": "03_WGCNA/SCRIPT/01_WGCNA.R",
+    "06_WGCNA_run3.log": "03_WGCNA/SCRIPT/01_WGCNA.R",
+    "module_trait_RAvsControl_ALLSTRATA.csv": "04_CANDIDATE_GENE/SCRIPT/01_module_trait_RA_control.R",
+    "module_trait_RAvsControl_all.csv": "04_CANDIDATE_GENE/SCRIPT/01_module_trait_RA_control.R",
+    "module_trait_RAvsControl_female.csv": "04_CANDIDATE_GENE/SCRIPT/01_module_trait_RA_control.R",
+    "module_trait_RAvsControl_male.csv": "04_CANDIDATE_GENE/SCRIPT/01_module_trait_RA_control.R",
+    "candidate_summary.csv": "04_CANDIDATE_GENE/SCRIPT/02_disease_module_deg_intersect.R",
+    "candidates_female_disease.csv": "04_CANDIDATE_GENE/SCRIPT/02_disease_module_deg_intersect.R",
+    "candidates_male_disease.csv": "04_CANDIDATE_GENE/SCRIPT/02_disease_module_deg_intersect.R",
+    "disease_module_selection.csv": "04_CANDIDATE_GENE/SCRIPT/02_disease_module_deg_intersect.R",
+    "diseasemod_DEG_direction_summary.csv": "04_CANDIDATE_GENE/SCRIPT/03_disease_module_deg_venn.R",
+    "diseasemod_DEG_intersection_female.csv": "04_CANDIDATE_GENE/SCRIPT/03_disease_module_deg_venn.R",
+    "diseasemod_DEG_intersection_male.csv": "04_CANDIDATE_GENE/SCRIPT/03_disease_module_deg_venn.R",
+    "MR_MHC_sensitivity_summary.csv": "05_MENDELIAN_RANDOMISATION/SCRIPT/02_MR_mhc_sensitivity.R",
+    "MR_MHC_sensitivity_female.csv": "05_MENDELIAN_RANDOMISATION/SCRIPT/02_MR_mhc_sensitivity.R",
+    "MR_MHC_sensitivity_male.csv": "05_MENDELIAN_RANDOMISATION/SCRIPT/02_MR_mhc_sensitivity.R",
+    "MR_MHC_sensitivity_panel_fate.csv": "05_MENDELIAN_RANDOMISATION/SCRIPT/02_MR_mhc_sensitivity.R",
+    "FS_input_female.csv": "05_MENDELIAN_RANDOMISATION/SCRIPT/01_MR.R",
+    "FS_input_male.csv": "05_MENDELIAN_RANDOMISATION/SCRIPT/01_MR.R",
+    "FS_input_female_noMHC.csv": "05_MENDELIAN_RANDOMISATION/SCRIPT/02_MR_mhc_sensitivity.R",
+    "FS_input_male_noMHC.csv": "05_MENDELIAN_RANDOMISATION/SCRIPT/02_MR_mhc_sensitivity.R",
+    "MR_female_TABLE1_instruments.csv": "05_MENDELIAN_RANDOMISATION/SCRIPT/01_MR.R",
+    "MR_male_TABLE1_instruments.csv": "05_MENDELIAN_RANDOMISATION/SCRIPT/01_MR.R",
+    "MR_female_TABLE2_results_allmethods.csv": "05_MENDELIAN_RANDOMISATION/SCRIPT/01_MR.R",
+    "MR_male_TABLE2_results_allmethods.csv": "05_MENDELIAN_RANDOMISATION/SCRIPT/01_MR.R",
+    "MR_female_TABLE3_pleiotropy.csv": "05_MENDELIAN_RANDOMISATION/SCRIPT/01_MR.R",
+    "MR_male_TABLE3_pleiotropy.csv": "05_MENDELIAN_RANDOMISATION/SCRIPT/01_MR.R",
+    "MR_female_TABLE4_heterogeneity.csv": "05_MENDELIAN_RANDOMISATION/SCRIPT/01_MR.R",
+    "MR_male_TABLE4_heterogeneity.csv": "05_MENDELIAN_RANDOMISATION/SCRIPT/01_MR.R",
+    "MR_female_primary_okada.csv": "05_MENDELIAN_RANDOMISATION/SCRIPT/01_MR.R",
+    "MR_male_primary_okada.csv": "05_MENDELIAN_RANDOMISATION/SCRIPT/01_MR.R",
+    "COLOC_results.csv": "05_MENDELIAN_RANDOMISATION/SCRIPT/03_coloc_panel_genes.R",
+    "COLOC_panel_genes.csv": "05_MENDELIAN_RANDOMISATION/SCRIPT/03_coloc_panel_genes.R",
+    "COLOC_summary.csv": "05_MENDELIAN_RANDOMISATION/SCRIPT/03_coloc_panel_genes.R",
+    "COLOC_SUSIE_mhc.csv": "05_MENDELIAN_RANDOMISATION/SCRIPT/04_coloc_susie_mhc.R",
+    "COLOC_combined_abf_susie.csv": "05_MENDELIAN_RANDOMISATION/SCRIPT/04_coloc_susie_mhc.R",
+    "mr_fs_summary.csv": "06_FEATURE_SELECTION/SCRIPT/01_feature_selection.R",
+    "mr_fs_consensus_female.csv": "06_FEATURE_SELECTION/SCRIPT/01_feature_selection.R",
+    "mr_fs_consensus_male.csv": "06_FEATURE_SELECTION/SCRIPT/01_feature_selection.R",
+    "mr_fs_selected_bymethod_female.csv": "06_FEATURE_SELECTION/SCRIPT/01_feature_selection.R",
+    "mr_fs_selected_bymethod_male.csv": "06_FEATURE_SELECTION/SCRIPT/01_feature_selection.R",
+    "mr_fs_summary_noMHC.csv": "06_FEATURE_SELECTION/SCRIPT/02_feature_selection_noMHC.R",
+    "PANEL_primary_vs_noMHC_membership.csv": "06_FEATURE_SELECTION/SCRIPT/02_feature_selection_noMHC.R",
+    "FS_venn_membership.csv": "06_FEATURE_SELECTION/SCRIPT/05_feature_selection_venn.R",
+    "mr_nested_cv_stability_female.csv": "07_MACHINE_LEARNING/SCRIPT/01_model_training_nested_cv.R",
+    "mr_nested_cv_stability_male.csv": "07_MACHINE_LEARNING/SCRIPT/01_model_training_nested_cv.R",
+    "mr_nested_cv_summary.csv": "07_MACHINE_LEARNING/SCRIPT/01_model_training_nested_cv.R",
+    "mr_elasticnet_summary.csv": "07_MACHINE_LEARNING/SCRIPT/02_model_training_elasticnet.R",
+    "mr_final_coefs_bysex.csv": "07_MACHINE_LEARNING/SCRIPT/03_model_training_final_panel.R",
+    "mr_final_panel_summary.csv": "07_MACHINE_LEARNING/SCRIPT/03_model_training_final_panel.R",
+    "PANEL_primary_vs_noMHC_nestedcv.csv": "07_MACHINE_LEARNING/SCRIPT/04_model_training_final_panel_noMHC.R",
+    "PANEL_primary_vs_noMHC_delong.csv": "07_MACHINE_LEARNING/SCRIPT/04_model_training_final_panel_noMHC.R",
+    "PANEL_primary_vs_noMHC_performance.csv": "07_MACHINE_LEARNING/SCRIPT/04_model_training_final_panel_noMHC.R",
+    "nested_cv_stability_female.csv": "07_MACHINE_LEARNING/SCRIPT/05_model_training_nested_cv_transcriptomewide.R",
+    "nested_cv_stability_male.csv": "07_MACHINE_LEARNING/SCRIPT/05_model_training_nested_cv_transcriptomewide.R",
+    "nested_cv_summary.csv": "07_MACHINE_LEARNING/SCRIPT/05_model_training_nested_cv_transcriptomewide.R",
+    "NESTED_CV_AUTHORITATIVE.csv": "07_MACHINE_LEARNING/SCRIPT/06_nested_cv_reconciliation.R",
+    "NESTED_CV_legacy_reconciliation.csv": "07_MACHINE_LEARNING/SCRIPT/06_nested_cv_reconciliation.R",
+    "mr_roc_panel_auc.csv": "08_MODEL_EVALUATION/SCRIPT/01_testing_blood_internal_external.R",
+    "mr_roc_pergene_auc.csv": "08_MODEL_EVALUATION/SCRIPT/01_testing_blood_internal_external.R",
+    "PANEL_auc_celladjusted.csv": "08_MODEL_EVALUATION/SCRIPT/02_testing_blood_celladjusted.R",
+    "PANEL_incremental_value_LRT.csv": "08_MODEL_EVALUATION/SCRIPT/02_testing_blood_celladjusted.R",
+    "PANEL_auc_celladjusted_summary.csv": "08_MODEL_EVALUATION/SCRIPT/02_testing_blood_celladjusted.R",
+    "mr_pergene_train_auc.csv": "08_MODEL_EVALUATION/SCRIPT/03_testing_blood_pergene_roc.R",
+    "diag_dca_female.csv": "08_MODEL_EVALUATION/SCRIPT/04_testing_blood_clinical_utility.R",
+    "diag_dca_male.csv": "08_MODEL_EVALUATION/SCRIPT/04_testing_blood_clinical_utility.R",
+    "19_testing_blood_clinical_utility.log": "08_MODEL_EVALUATION/SCRIPT/04_testing_blood_clinical_utility.R",
+    "val_synovium_pergene_female.csv": "09_CROSS_TISSUE_SYNOVIUM/SCRIPT/01_testing_synovium_external.R",
+    "val_synovium_pergene_male.csv": "09_CROSS_TISSUE_SYNOVIUM/SCRIPT/01_testing_synovium_external.R",
+    "crosstissue_panel_auc.csv": "09_CROSS_TISSUE_SYNOVIUM/SCRIPT/03_crosstissue_biomarker_discovery.R",
+    "pergene_auc_alltissues.csv": "09_CROSS_TISSUE_SYNOVIUM/SCRIPT/05_crosstissue_pergene_auc.R",
+    "MR35_crossancestry_female.csv": "10_CROSS_ANCESTRAL/SCRIPT/01_crossancestry_biomarker_mr.R",
+    "MR35_crossancestry_male.csv": "10_CROSS_ANCESTRAL/SCRIPT/01_crossancestry_biomarker_mr.R",
+    "MR35_crossancestry_summary.csv": "10_CROSS_ANCESTRAL/SCRIPT/01_crossancestry_biomarker_mr.R",
+    "MR35_instrument_transferability_female.csv": "10_CROSS_ANCESTRAL/SCRIPT/01_crossancestry_biomarker_mr.R",
+    "MR35_instrument_transferability_male.csv": "10_CROSS_ANCESTRAL/SCRIPT/01_crossancestry_biomarker_mr.R",
+    "CELL_fractions_train.csv": "02_DIFFERENTIAL_GENE_EXPRESSION/SCRIPT/04_deconvolution.R",
+    "CELL_fractions_holdout.csv": "02_DIFFERENTIAL_GENE_EXPRESSION/SCRIPT/04_deconvolution.R",
+    "CELL_fractions_external.csv": "02_DIFFERENTIAL_GENE_EXPRESSION/SCRIPT/04_deconvolution.R",
+    "CELL_mcpcounter_train.csv": "02_DIFFERENTIAL_GENE_EXPRESSION/SCRIPT/04_deconvolution.R",
+    "CELL_mcpcounter_external.csv": "02_DIFFERENTIAL_GENE_EXPRESSION/SCRIPT/04_deconvolution.R",
+    "CELL_fraction_group_tests.csv": "02_DIFFERENTIAL_GENE_EXPRESSION/SCRIPT/04_deconvolution.R",
+    "CELL_composition_pca.csv": "02_DIFFERENTIAL_GENE_EXPRESSION/SCRIPT/04_deconvolution.R",
+    "CELL_panel_gene_adjustment.csv": "02_DIFFERENTIAL_GENE_EXPRESSION/SCRIPT/04_deconvolution.R",
+    "DEG_celladjusted_female.csv": "02_DIFFERENTIAL_GENE_EXPRESSION/SCRIPT/04_deconvolution.R",
+    "DEG_celladjusted_male.csv": "02_DIFFERENTIAL_GENE_EXPRESSION/SCRIPT/04_deconvolution.R",
+    "DEG_celladjusted_summary.csv": "02_DIFFERENTIAL_GENE_EXPRESSION/SCRIPT/04_deconvolution.R",
+    "DEG_interaction_summary.csv": "02_DIFFERENTIAL_GENE_EXPRESSION/SCRIPT/03_dge_sensitivity.R",
+    "DEG_interaction_top.csv": "02_DIFFERENTIAL_GENE_EXPRESSION/SCRIPT/03_dge_sensitivity.R",
+    "DEG_interaction_model_comparison.csv": "02_DIFFERENTIAL_GENE_EXPRESSION/SCRIPT/06_interaction_report.R",
+    "DEG_interaction_full.csv": "02_DIFFERENTIAL_GENE_EXPRESSION/SCRIPT/06_interaction_report.R",
+    "DEG_interaction_significant.csv": "02_DIFFERENTIAL_GENE_EXPRESSION/SCRIPT/06_interaction_report.R",
+    "DEG_interaction_patterns.csv": "02_DIFFERENTIAL_GENE_EXPRESSION/SCRIPT/06_interaction_report.R",
+    "DEG_interaction_enrichment.csv": "02_DIFFERENTIAL_GENE_EXPRESSION/SCRIPT/06_interaction_report.R",
+    "enrich_GO_BP_female.csv": "12_FUNCTIONAL_ENRICHMENT/SCRIPT/10_pathway_enrichment.R",
+    "enrich_GO_BP_male.csv": "12_FUNCTIONAL_ENRICHMENT/SCRIPT/10_pathway_enrichment.R",
+    "enrich_KEGG_female.csv": "12_FUNCTIONAL_ENRICHMENT/SCRIPT/10_pathway_enrichment.R",
+    "enrich_KEGG_male.csv": "12_FUNCTIONAL_ENRICHMENT/SCRIPT/10_pathway_enrichment.R",
 }
 
 def scripts_for(src):
@@ -774,7 +781,12 @@ def scripts_for(src):
 
 def display_source(src):
     parts = [p.strip() for p in src.split(" + ")]
-    disp = [f"results/{p}" if p.startswith("logs/") else f"results/tables/{p}" for p in parts]
+    disp = []
+    for p in parts:
+        if p.startswith("logs/"):
+            disp.append(f"results/{p}"); continue
+        loc = locate(p)
+        disp.append(os.path.relpath(loc, ROOT) if loc else f"results/tables/{p}")
     return " + ".join(disp)
 
 def resolve_same(claims):
@@ -787,92 +799,6 @@ def resolve_same(claims):
             last = src
         out.append((cid, desc, val, src, how, sect))
     return out
-
-SECTION_METHODS_DOC = {
-    "2.4": "results/METHODS_2.4_WGCNA_expanded.md",
-    "2.6": "results/METHODS_2.6_mendelian_randomisation.md",
-    "2.7": "results/METHODS_2.7_colocalisation.md",
-    "2.8": "results/METHODS_2.8_feature_selection.md",
-    "2.9": "results/METHODS_2.9_diagnostic_model.md",
-    "2.11": "results/METHODS_2.11_crosstissue.md",
-    "2.12": "results/METHODS_2.12_crossancestry.md",
-    "2.13": "results/METHODS_2.13_functional_enrichment.md",
-    "2.14": "results/METHODS_2.14_deconvolution.md",
-    "2.15": "results/METHODS_2.15_clinical_utility_nomogram.md",
-}
-
-def write_markdown_report():
-    claims = resolve_same(CLAIMS)
-    by_section = {}
-    order = []
-    for cid, desc, val, src, how, sect in claims:
-        if sect not in by_section:
-            by_section[sect] = []
-            order.append(sect)
-        by_section[sect].append((cid, desc, val, src, how))
-
-    lines = []
-    lines.append("# Results - verification report")
-    lines.append("")
-    lines.append(f"_Generated {STAMP} by `scripts/verify_results_numbers.py`. Do not hand-edit - re-run the "
-                  "script to regenerate. Every number below is read directly out of a CSV in `results/tables/` "
-                  "(or a run log in `results/logs/`); none is retyped by hand._")
-    lines.append("")
-    lines.append(f"**{len(claims)} claims across {len(order)} sections**, organised by the canonical §2.1–§2.15 "
-                  "scheme in `results/METHODS_00_INDEX.md`. Each claim shows: the value, its claim ID (also a row "
-                  "in `results/RESULTS_PROVENANCE.tsv`), the exact source CSV/log it was read from, the R script "
-                  "that produced that source file, and the derivation (which column/filter was applied).")
-    lines.append("")
-    lines.append("## Contents")
-    lines.append("")
-    for sect in order:
-        anchor = sect.lower().replace(" ", "-").replace("(", "").replace(")", "").replace(",", "").replace(".", "").replace("/", "")
-        lines.append(f"- [§{sect}](#{anchor}) ({len(by_section[sect])} claims)")
-    lines.append("")
-    lines.append("---")
-    lines.append("")
-
-    for sect in order:
-        lines.append(f"## §{sect}")
-        lines.append("")
-        num = sect.split(" ", 1)[0]
-        doc = SECTION_METHODS_DOC.get(num)
-        if doc:
-            lines.append(f"_Methodology: see [`{doc}`](../{doc}) for the full specification of this step._")
-            lines.append("")
-        if sect.startswith("2.15"):
-            lines.append("> **Provenance note.** This section had no executed outputs anywhere in the repository "
-                          "before this report was built - `results/tables/diag_dca_{female,male}.csv` and "
-                          "`results/figures/new/fig_diag_validation_{female,male}.png/pdf` did not exist. "
-                          "`scripts/07_evaluate/19_testing_blood_clinical_utility.R` was run once "
-                          "(inputs: `data/processed/combined_train.rds`, `data/processed/new/ml_features.rds`, "
-                          "both already present) to generate them. The numbers below are read from that run's "
-                          "output, not asserted.")
-            lines.append("")
-        for cid, desc, val, src, how in by_section[sect]:
-            scr = ", ".join(f"`{s}`" for s in scripts_for(src))
-            lines.append(f"- **{desc}:** {val}")
-            lines.append(f"  <br>*[{cid}]* - source: `{display_source(src)}` ({how}) · script: {scr}")
-        lines.append("")
-
-    lines.append("---")
-    lines.append("")
-    lines.append("## How to verify any number above")
-    lines.append("")
-    lines.append("1. Find the claim's `[R-xxx]` tag.")
-    lines.append("2. Open `results/RESULTS_PROVENANCE.tsv` (same tag, one row) or the `results/tables/*.csv` "
-                  "file named in the source line directly above.")
-    lines.append("3. Apply the stated derivation (a column read, a filter, a set operation) by eye - every "
-                  "derivation here is a single filter/aggregation, not a multi-step calculation.")
-    lines.append("4. To re-derive from scratch, re-run the script named after `script:` and then "
-                  "`python3 scripts/verify_results_numbers.py`.")
-    lines.append("")
-    if MISSING:
-        lines.append(f"**Missing source files at generation time:** {', '.join(sorted(set(MISSING)))}")
-        lines.append("")
-
-    with open(MD, "w", encoding="utf-8") as fh:
-        fh.write("\n".join(lines) + "\n")
 
 # ---------------------------------------------------------------- output
 def main():
@@ -889,7 +815,6 @@ def main():
         for cid, desc, val, src, how, sect in resolved:
             w.writerow([cid, desc, val, src, how, sect, "; ".join(scripts_for(src))])
 
-    write_markdown_report()
 
     sel = [a for a in args if a.startswith("R-")]
     show = [c for c in CLAIMS if any(c[0].startswith(s) for s in sel)] if sel else CLAIMS
@@ -897,7 +822,6 @@ def main():
         print(f"{c[0]:<34} {c[2]}")
         print(f"{'':<34} src: {c[3]}  |  {c[4]}  |  §{c[5]}")
     print(f"\n{len(CLAIMS)} claims written to {os.path.relpath(OUT, ROOT)}")
-    print(f"Markdown report written to {os.path.relpath(MD, ROOT)}")
     if MISSING:
         print("WARNING - missing source files:", ", ".join(sorted(set(MISSING))))
 

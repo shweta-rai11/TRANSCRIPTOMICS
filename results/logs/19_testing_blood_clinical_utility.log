@@ -1,0 +1,13 @@
+Warning messages:
+1: package ‘Hmisc’ was built under R version 4.4.3 
+2: package ‘data.table’ was built under R version 4.4.3 
+
+n=145   Mean absolute error=0.036   Mean squared error=0.00155
+0.9 Quantile of absolute error=0.053
+
+wrote fig_diag_validation_female.png  (panel 6 genes, n=145, RA=86)
+
+n=38   Mean absolute error=0.112   Mean squared error=0.01286
+0.9 Quantile of absolute error=0.127
+
+wrote fig_diag_validation_male.png  (panel 6 genes, n=38, RA=17)

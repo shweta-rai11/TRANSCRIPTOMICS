@@ -1,15 +1,15 @@
 # =============================================================================
 # .gitignore — sex-stratified RA biomarker pipeline
 #
-# WHAT IS TRACKED: all code, all documentation, all results TABLES and FIGURES.
+# WHAT IS TRACKED: all code and every per-layer SCRIPT/, TABLE/ and FIGURE/ folder.
 # A reader can therefore see every reported number and every figure, and can tie
 # each one to the exact script version that produced it.
 #
 # WHAT IS NOT TRACKED: large binary intermediates and raw expression matrices.
 # These are regenerable from the scripts, and several exceed GitHub's file-size
 # limits. The cached network-derived artefacts (MR instruments, coloc regions)
-# are the exception that matters for reproducibility — see REPRODUCIBILITY.md
-# section 3 — and they must be archived alongside a release rather than in git.
+# are the exception that matters for reproducibility (data/processed/new/*.rds)
+# and they must be archived alongside a release rather than in git.
 # =============================================================================
 
 # ---- raw data (symlink to a sibling tree; not self-contained) ----------------
@@ -52,5 +52,5 @@ renv/staging/
 __pycache__/
 *.pyc
 
-# ---- Markdown docs (kept local, not pushed) -------------------------------
+# ---- Markdown drafts: never part of the thesis tree --------------------------
 *.md
